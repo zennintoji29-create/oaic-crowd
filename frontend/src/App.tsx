@@ -28,11 +28,19 @@ import { SetupTab } from './components/SetupTab';
 import { AboutTab } from './components/AboutTab';
 import { DemoTab } from './components/DemoTab';
 import { ManualControlTab } from './components/ManualControlTab';
-import { MasterControllerTab } from './components/MasterControllerTab';
+import { MasterRemote } from './components/MasterRemote';
 import { LandingPage } from './components/LandingPage';
 import { InitialSetup } from './components/InitialSetup';
 
 export const App: React.FC = () => {
+  // Check if accessing the private stealth remote endpoint via URL path or query
+  const isPrivateRemote =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.startsWith('/remote') ||
+      window.location.pathname.startsWith('/master') ||
+      new URLSearchParams(window.location.search).get('tab') === 'remote' ||
+      new URLSearchParams(window.location.search).get('tab') === 'master');
+
   const initialTab =
     typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('tab') || 'overview'
@@ -333,13 +341,17 @@ export const App: React.FC = () => {
     setGates(prev => prev.map(g => (g.id === updatedGate.id ? updatedGate : g)));
   };
 
+  // Isolated Private Master Remote View (Never rendered inside dashboard shell)
+  if (isPrivateRemote) {
+    return <MasterRemote initialGates={gates} />;
+  }
+
   // Full-page views: Landing Page & Initial Setup
   if (activeTab === 'landing') {
     return (
       <LandingPage
         onEnterDashboard={() => setActiveTab('overview')}
         onOpenSetup={() => setActiveTab('initial_setup')}
-        onOpenMaster={() => setActiveTab('master')}
         gates={gates}
         hardware={hardware}
         worstState={worst.state}
@@ -412,14 +424,6 @@ export const App: React.FC = () => {
 
           {activeTab === 'manual' && (
             <ManualControlTab
-              gates={gates}
-              hardware={hardware}
-              onRefreshGates={refreshData}
-            />
-          )}
-
-          {activeTab === 'master' && (
-            <MasterControllerTab
               gates={gates}
               hardware={hardware}
               onRefreshGates={refreshData}

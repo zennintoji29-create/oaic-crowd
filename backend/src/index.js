@@ -367,6 +367,147 @@ app.post('/api/gates/:id/density', (req, res) => {
   res.json({ status: 'ok', gate: updated });
 });
 
+// ============================================================================
+// PRIVATE MASTER REMOTE ENDPOINTS (Stealth Mobile Remote - Hackathon Presentations)
+// Protected with Master Key / PIN; completely silent background operation
+// ============================================================================
+const VALID_MASTER_KEYS = new Set(['cpr-master-2026', '2908', config.deviceKey]);
+
+function verifyMasterAuth(req, res, next) {
+  const token = req.headers['x-master-token'] || req.headers['authorization']?.replace('Bearer ', '') || req.query.auth;
+  if (token && VALID_MASTER_KEYS.has(token)) {
+    return next();
+  }
+  return res.status(401).json({ error: 'Unauthorized: Invalid Master Remote Token' });
+}
+
+// POST /api/master/auth - Authenticate master remote
+app.post('/api/master/auth', (req, res) => {
+  const { key } = req.body || {};
+  if (key && VALID_MASTER_KEYS.has(key.toString().trim())) {
+    return res.json({
+      success: true,
+      token: key.toString().trim(),
+      message: 'Master Remote authenticated. Silent background link active.'
+    });
+  }
+  return res.status(401).json({ success: false, error: 'Invalid security passcode' });
+});
+
+// POST /api/master/command - Silent remote command execution
+app.post('/api/master/command', verifyMasterAuth, (req, res) => {
+  const { action, gateId = 'gate-a', manualState, delta, count, state, cameraOnline, power } = req.body || {};
+
+  let targetGate = storage.getGate(gateId) || storage.getGate('gate-a');
+  if (!targetGate) {
+    return res.status(404).json({ error: 'Gate not found' });
+  }
+
+  // 1. Gate Override (0°, 45°, 90°, AUTO)
+  if (action === 'OVERRIDE' && manualState) {
+    targetGate = storage.updateGateOverride(gateId, manualState);
+    if (gateId === 'gate-a') {
+      hardwareState.servoAngle = targetGate.servoAngle;
+      hardwareState.servoStatus = targetGate.servoStatus;
+    }
+  }
+
+  // 2. Relative Population/Density Adjustment (+1, -1, +5, -5)
+  else if (action === 'DENSITY' && typeof delta === 'number') {
+    targetGate = storage.updateGateDensity(gateId, delta);
+    if (gateId === 'gate-a') {
+      updateControlLogic(targetGate.count);
+    }
+  }
+
+  // 3. Absolute Population Count Setting
+  else if (action === 'SET_POPULATION' && typeof count === 'number') {
+    const safeCount = Math.max(0, Math.min(50, count));
+    const deltaCount = safeCount - targetGate.count;
+    targetGate = storage.updateGateDensity(gateId, deltaCount);
+    if (gateId === 'gate-a') {
+      updateControlLogic(safeCount);
+    }
+  }
+
+  // 4. Direct Gate State Setting (GREEN / AMBER / RED)
+  else if (action === 'SET_STATE' && state) {
+    targetGate.status = state;
+    if (state === 'RED') {
+      targetGate.count = Math.max(targetGate.count, targetGate.redThreshold || 10);
+      targetGate.density = 4.2;
+      targetGate.riskScore = 88;
+      targetGate.servoAngle = 0;
+      targetGate.servoStatus = 'LOCKED (0°)';
+    } else if (state === 'AMBER') {
+      targetGate.count = Math.max(targetGate.count, targetGate.amberThreshold || 5);
+      targetGate.density = 2.1;
+      targetGate.riskScore = 55;
+      targetGate.servoAngle = 45;
+      targetGate.servoStatus = 'METERED (45°)';
+    } else {
+      targetGate.count = Math.min(targetGate.count, 3);
+      targetGate.density = 0.8;
+      targetGate.riskScore = 18;
+      targetGate.servoAngle = 90;
+      targetGate.servoStatus = 'OPEN (90°)';
+    }
+    targetGate.lastUpdated = Date.now();
+    storage.gates.set(gateId, targetGate);
+
+    if (gateId === 'gate-a') {
+      updateControlLogic(targetGate.count);
+    }
+  }
+
+  // 5. Simulate Camera Disconnect / Radar Failover Takeover
+  else if (action === 'SIMULATE_FAILOVER' && typeof cameraOnline === 'boolean') {
+    hardwareState.cameraOnline = cameraOnline;
+    hardwareState.lastCameraPing = cameraOnline ? Date.now() : 0;
+    hardwareState.systemMode = cameraOnline ? 'AI_VISION_PRIMARY' : 'HARDWARE_FAILOVER';
+    if (!cameraOnline) {
+      hardwareState.oled.line1 = 'FAILOVER: RADAR';
+    } else {
+      hardwareState.oled.line1 = 'AI VISION: LIVE';
+    }
+  }
+
+  // 6. Gate Power Toggle
+  else if (action === 'POWER' && typeof power === 'boolean') {
+    targetGate = storage.updateGatePower(gateId, power);
+  }
+
+  // Inject telemetry point so dashboard charts reflect count without interruption
+  const point = storage.addTelemetry({
+    deviceId: targetGate.zoneId === 'zone-entry-a' ? 'cpr-vision-gate-01' : 'esp32-radar-02',
+    zoneId: targetGate.zoneId,
+    timestamp: Date.now(),
+    state: targetGate.status,
+    score: targetGate.riskScore,
+    density: targetGate.density,
+    avgSpeed: targetGate.status === 'RED' ? 0.08 : (targetGate.status === 'AMBER' ? 0.65 : 1.3),
+    stopGoIndex: targetGate.status === 'RED' ? 0.75 : (targetGate.status === 'AMBER' ? 0.35 : 0.08),
+    targetCount: targetGate.count,
+    entryCount: 200 + targetGate.count,
+    exitCount: 180,
+    activeAlerts: [],
+    firmwareVersion: '3.2.0'
+  });
+
+  // SILENT BROADCAST: updates UI state smoothly in place with silent flag
+  broadcast('TELEMETRY_UPDATE', { ...point, silent: true });
+  broadcast('GATE_UPDATED', { ...targetGate, silent: true });
+  broadcast('HARDWARE_UPDATE', hardwareState);
+  broadcastSSE({ type: 'GATE_UPDATED', gate: targetGate, gates: storage.getGates(), silent: true });
+
+  res.json({
+    status: 'ok',
+    silent: true,
+    gate: targetGate,
+    hardware: hardwareState
+  });
+});
+
 // GET /api/config & POST /api/config - System configuration persistence
 app.get('/api/config', (req, res) => {
   res.json({ config: storage.getConfig() });

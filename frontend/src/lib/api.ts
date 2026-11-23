@@ -168,4 +168,34 @@ export async function triggerKeepAlivePing(): Promise<KeepAliveStats> {
   return data.keepAlive;
 }
 
+// ============================================================================
+// PRIVATE MASTER REMOTE API (Silent background presentation controls)
+// ============================================================================
+export async function authenticateMaster(key: string): Promise<{ success: boolean; token: string }> {
+  const res = await fetch(`${API_BASE}/master/auth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: key.trim() })
+  });
+  if (!res.ok) throw new Error('Invalid master authentication passcode');
+  return res.json();
+}
+
+export async function sendMasterCommand(token: string, payload: { action: string; [key: string]: any }): Promise<any> {
+  const res = await fetch(`${API_BASE}/master/command`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-master-token': token
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('AUTH_EXPIRED');
+    throw new Error('Failed to execute silent command');
+  }
+  return res.json();
+}
+
+
 

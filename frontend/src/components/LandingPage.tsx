@@ -21,7 +21,6 @@ import { GateState, HardwareActuatorState } from '../types';
 interface LandingPageProps {
   onEnterDashboard: () => void;
   onOpenSetup: () => void;
-  onOpenMaster: () => void;
   gates: GateState[];
   hardware: HardwareActuatorState | null;
   worstState: string;
@@ -30,7 +29,6 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({
   onEnterDashboard,
   onOpenSetup,
-  onOpenMaster,
   gates,
   hardware,
   worstState
@@ -79,15 +77,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Action CTAs */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={onOpenMaster}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-semibold rounded-lg bg-fuchsia-950/70 text-fuchsia-300 border border-fuchsia-700/60 hover:bg-fuchsia-900/80 transition shadow-sm"
-            title="Open Master Mobile Remote Control"
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Master Remote</span>
-          </button>
-
-          <button
             onClick={onOpenSetup}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-medium rounded-lg bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition"
           >
@@ -99,8 +88,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             onClick={onEnterDashboard}
             className="flex items-center gap-2 px-4 py-1.5 text-xs font-mono font-bold rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 transition shadow-lg shadow-cyan-500/25"
           >
-            <span>Enter Dashboard</span>
-            <ChevronRight className="w-4 h-4" />
+            <Tv className="w-3.5 h-3.5" />
+            <span>Launch Dashboard</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
@@ -145,11 +135,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </button>
 
           <button
-            onClick={onOpenMaster}
+            onClick={onOpenSetup}
             className="px-6 py-3 rounded-xl font-mono text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition flex items-center gap-2 transform hover:-translate-y-0.5"
           >
-            <Smartphone className="w-4 h-4 text-fuchsia-400" />
-            <span>Mobile Master Controller</span>
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <span>Configure Gate Parameters</span>
           </button>
         </div>
 
@@ -417,13 +407,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Card 5 */}
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-fuchsia-500/50 transition duration-300 group">
-            <div className="w-10 h-10 rounded-xl bg-fuchsia-950 flex items-center justify-center text-fuchsia-400 border border-fuchsia-800 group-hover:scale-110 transition">
-              <Smartphone className="w-5 h-5" />
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/50 transition duration-300 group">
+            <div className="w-10 h-10 rounded-xl bg-cyan-950 flex items-center justify-center text-cyan-400 border border-cyan-800 group-hover:scale-110 transition">
+              <Radio className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-white mt-4 font-mono">5. Master Remote Control</h3>
+            <h3 className="text-lg font-bold text-white mt-4 font-mono">5. Autonomous Actuator Control</h3>
             <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Dedicated mobile controller lets you walk around the exhibition and command Gate A, Gate B, density sliders, and emergency overrides from your phone.
+              Physical SG90 micro-servo barrier metering at 45°/0° and multi-channel traffic signal LEDs driven directly on-chip with sub-millisecond response.
             </p>
           </div>
 
@@ -459,16 +449,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Enter Main Dashboard
             </button>
             <button
-              onClick={onOpenMaster}
-              className="px-6 py-2.5 rounded-xl font-mono text-xs font-bold bg-slate-900 hover:bg-slate-800 text-fuchsia-300 border border-fuchsia-700/60 transition"
-            >
-              Open Mobile Master Controller
-            </button>
-            <button
               onClick={onOpenSetup}
               className="px-6 py-2.5 rounded-xl font-mono text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition"
             >
-              Gate Setup & Passcode
+              Gate Setup & Parameters
             </button>
           </div>
 

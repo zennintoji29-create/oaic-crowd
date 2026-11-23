@@ -98,30 +98,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           })}
         </div>
 
-        {/* Special Utility Links: Landing Page & Mobile Master Controller */}
+        {/* Special Utility Links: Landing Page */}
         <div className="pt-3 mt-3 border-t border-border-subtle flex flex-col gap-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2">
-            Remote & Presentation
-          </span>
-
-          {/* Master Controller Shortcut */}
-          <button
-            onClick={() => setActiveTab('master')}
-            className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded transition-all text-left border ${
-              activeTab === 'master'
-                ? 'bg-cyan-950/40 text-cyan-300 border-cyan-500 shadow-sm font-semibold'
-                : 'bg-surface-sunken/70 text-text-secondary border-border-subtle hover:border-cyan-500/50 hover:text-cyan-300'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Master Controller</span>
-            </div>
-            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-900/50 text-cyan-300 border border-cyan-700">
-              TOUCH
-            </span>
-          </button>
-
           {/* Landing Page Shortcut */}
           <button
             onClick={() => setActiveTab('landing')}
@@ -168,19 +146,6 @@ export const Navigation: React.FC<NavigationProps> = ({
             </button>
           );
         })}
-
-        {/* Master Controller Mobile Button */}
-        <button
-          onClick={() => setActiveTab('master')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs whitespace-nowrap transition-colors border ${
-            activeTab === 'master'
-              ? 'bg-cyan-950 text-cyan-300 border-cyan-500 font-semibold'
-              : 'bg-surface-sunken text-cyan-400 border-cyan-900/60 hover:border-cyan-500'
-          }`}
-        >
-          <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Master</span>
-        </button>
 
         {/* Landing Page Mobile Button */}
         <button
