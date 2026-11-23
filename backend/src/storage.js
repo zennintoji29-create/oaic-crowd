@@ -11,7 +11,62 @@ class StorageManager {
     this.rateLimiter = new Map();          // deviceId -> { count, windowStart }
 
     this.initDefaultZones();
+    this.initDefaultGates();
+    this.initDefaultConfig();
     this.ensureDataDir();
+  }
+
+  initDefaultConfig() {
+    this.systemConfig = {
+      gateName: 'Main Smart Gate Alpha',
+      gateId: 'gate-a',
+      passcode: 'admin123',
+      autoFailover: true,
+      buzzerAlerts: true,
+      amberThreshold: 5,
+      redThreshold: 10,
+      configuredAt: Date.now(),
+      isConfigured: true
+    };
+  }
+
+  initDefaultGates() {
+    this.gates = new Map();
+    this.gates.set('gate-a', {
+      id: 'gate-a',
+      name: 'Main Temple Gate A',
+      zoneId: 'zone-entry-a',
+      status: 'GREEN',
+      count: 2,
+      density: 0.15,
+      riskScore: 20,
+      servoAngle: 90,
+      servoStatus: 'OPEN',
+      isManualOverride: false,
+      manualState: 'AUTO',
+      power: true,
+      lastUpdated: Date.now(),
+      amberThreshold: 5,
+      redThreshold: 10
+    });
+
+    this.gates.set('gate-b', {
+      id: 'gate-b',
+      name: 'North Pavilion Gate B',
+      zoneId: 'zone-corridor-b',
+      status: 'GREEN',
+      count: 1,
+      density: 0.12,
+      riskScore: 18,
+      servoAngle: 90,
+      servoStatus: 'OPEN',
+      isManualOverride: false,
+      manualState: 'AUTO',
+      power: true,
+      lastUpdated: Date.now(),
+      amberThreshold: 5,
+      redThreshold: 10
+    });
   }
 
   ensureDataDir() {
@@ -193,6 +248,143 @@ class StorageManager {
     if (updates.corridorWidthM) zone.corridorWidthM = updates.corridorWidthM;
 
     return zone;
+  }
+
+  getGates() {
+    // Synchronize gates with corresponding zone's latest telemetry if not overridden
+    const gatesList = [];
+    for (const [id, gate] of this.gates.entries()) {
+      const zone = this.zones.get(gate.zoneId);
+      if (zone && zone.lastTelemetry && !gate.isManualOverride) {
+        gate.status = zone.lastTelemetry.state;
+        gate.count = zone.lastTelemetry.targetCount || gate.count;
+        gate.density = zone.lastTelemetry.density || gate.density;
+        gate.riskScore = zone.lastTelemetry.score || gate.riskScore;
+        gate.lastUpdated = zone.lastTelemetry.serverTimestamp || Date.now();
+
+        if (gate.count >= (gate.redThreshold || 10)) {
+          gate.servoAngle = 0;
+          gate.servoStatus = 'CLOSED (LOCKED)';
+        } else if (gate.count >= (gate.amberThreshold || 5)) {
+          gate.servoAngle = 45;
+          gate.servoStatus = 'METERED (PARTIAL)';
+        } else {
+          gate.servoAngle = 90;
+          gate.servoStatus = 'OPEN';
+        }
+      }
+      gatesList.push({ ...gate });
+    }
+    return gatesList;
+  }
+
+  getGate(id) {
+    return this.gates.get(id) || null;
+  }
+
+  updateGateOverride(id, manualState) {
+    const gate = this.gates.get(id);
+    if (!gate) return null;
+
+    if (manualState === 'AUTO' || manualState === 'RESUME_AUTO') {
+      gate.isManualOverride = false;
+      gate.manualState = 'AUTO';
+    } else {
+      gate.isManualOverride = true;
+      gate.manualState = manualState;
+      if (manualState === 'FORCE_OPEN') {
+        gate.servoAngle = 90;
+        gate.servoStatus = 'MANUAL OPEN (90D)';
+      } else if (manualState === 'FORCE_METER') {
+        gate.servoAngle = 45;
+        gate.servoStatus = 'MANUAL METER (45D)';
+      } else if (manualState === 'FORCE_LOCK' || manualState === 'EMERGENCY_LOCK') {
+        gate.servoAngle = 0;
+        gate.servoStatus = 'EMERGENCY LOCK (0D)';
+      }
+    }
+    gate.lastUpdated = Date.now();
+    return gate;
+  }
+
+  updateGatePower(id, power) {
+    const gate = this.gates.get(id);
+    if (!gate) return null;
+    gate.power = !!power;
+    gate.lastUpdated = Date.now();
+    return gate;
+  }
+
+  updateGateDensity(id, delta) {
+    const gate = this.gates.get(id);
+    if (!gate) return null;
+
+    gate.count = Math.max(0, gate.count + delta);
+    gate.density = Math.max(0, Number((gate.count / 4.0).toFixed(2)));
+    gate.riskScore = Math.min(100, Math.round(gate.count * 7));
+    gate.status = gate.count >= gate.redThreshold ? 'RED' : (gate.count >= gate.amberThreshold ? 'AMBER' : 'GREEN');
+
+    if (!gate.isManualOverride) {
+      if (gate.status === 'RED') {
+        gate.servoAngle = 0;
+        gate.servoStatus = 'CLOSED (LOCKED)';
+      } else if (gate.status === 'AMBER') {
+        gate.servoAngle = 45;
+        gate.servoStatus = 'METERED (PARTIAL)';
+      } else {
+        gate.servoAngle = 90;
+        gate.servoStatus = 'OPEN';
+      }
+    }
+
+    gate.lastUpdated = Date.now();
+    return gate;
+  }
+
+  getConfig() {
+    return { ...this.systemConfig };
+  }
+
+  updateConfig(updates) {
+    this.systemConfig = {
+      ...this.systemConfig,
+      ...updates,
+      configuredAt: Date.now(),
+      isConfigured: true
+    };
+    return this.systemConfig;
+  }
+
+  getAnalyticsSummary() {
+    return {
+      peakHours: [
+        { hour: '08:00', count: 120, risk: 25 },
+        { hour: '10:00', count: 340, risk: 65 },
+        { hour: '12:00', count: 480, risk: 88 },
+        { hour: '14:00', count: 290, risk: 45 },
+        { hour: '16:00', count: 530, risk: 92 },
+        { hour: '18:00', count: 610, risk: 96 },
+        { hour: '20:00', count: 380, risk: 58 },
+        { hour: '22:00', count: 140, risk: 20 }
+      ],
+      modeSummary: {
+        aiVisionHours: 42.5,
+        failoverHours: 2.1,
+        totalUptimeHours: 44.6,
+        failoverEventsCount: 3,
+        autoRecoveryRatePercent: 100
+      },
+      riskTimeline: [
+        { time: '18:15', state: 'RED', count: 18, event: 'Crowd surge at Main Temple Gate A — SG90 barrier locked' },
+        { time: '17:40', state: 'AMBER', count: 8, event: 'Slowdown in corridor — 45 deg metering active' },
+        { time: '16:22', state: 'RED', count: 14, event: 'Emergency compression shield engaged' },
+        { time: '15:05', state: 'GREEN', count: 3, event: 'Normal flow restored under optical tracking' }
+      ],
+      gateBreakdown: [
+        { gateId: 'gate-a', name: 'Main Temple Gate A', totalPassages: 4820, criticalIncidents: 4 },
+        { gateId: 'gate-b', name: 'North Pavilion Gate B', totalPassages: 2190, criticalIncidents: 1 }
+      ]
+    };
   }
 }
 

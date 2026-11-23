@@ -137,11 +137,13 @@ simulator.setBroadcastCallback(record => {
 wss.on('connection', ws => {
   console.log('[WS] Dashboard client connected. Total clients:', wss.clients.size);
 
-  // Send initial snapshot on connect (including hardware state)
+  // Send initial snapshot on connect (including hardware state, gates, and config)
   ws.send(JSON.stringify({
     type: 'INITIAL_STATE',
     data: {
       zones: storage.getZones(),
+      gates: storage.getGates(),
+      config: storage.getConfig(),
       alerts: storage.getAlerts(20),
       simulatorRunning: simulator.isRunning,
       hardware: hardwareState
@@ -290,7 +292,95 @@ app.get('/api/stream', (req, res) => {
 
 // GET /api/zones - Zone list with latest status
 app.get('/api/zones', (req, res) => {
-  res.json({ zones: storage.getZones(), hardware: hardwareState });
+  res.json({ zones: storage.getZones(), gates: storage.getGates(), hardware: hardwareState });
+});
+
+// GET /api/gates - Multi-gate list
+app.get('/api/gates', (req, res) => {
+  res.json({ gates: storage.getGates(), hardware: hardwareState });
+});
+
+// POST /api/gates/:id/override - Manual override for specific gate
+app.post('/api/gates/:id/override', (req, res) => {
+  const { id } = req.params;
+  const { manualState } = req.body || {};
+  const updated = storage.updateGateOverride(id, manualState || 'AUTO');
+  if (!updated) {
+    return res.status(404).json({ error: 'Gate not found' });
+  }
+
+  // If Gate A is controlled, keep physical ESP32 in sync
+  if (id === 'gate-a') {
+    hardwareState.servoAngle = updated.servoAngle;
+    hardwareState.servoStatus = updated.servoStatus;
+    updateControlLogic();
+  }
+
+  broadcast('GATE_UPDATED', updated);
+  broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates() });
+  res.json({ status: 'ok', gate: updated });
+});
+
+// POST /api/gates/:id/power - Toggle gate power
+app.post('/api/gates/:id/power', (req, res) => {
+  const { id } = req.params;
+  const { power } = req.body || {};
+  const updated = storage.updateGatePower(id, power);
+  if (!updated) return res.status(404).json({ error: 'Gate not found' });
+
+  broadcast('GATE_UPDATED', updated);
+  broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates() });
+  res.json({ status: 'ok', gate: updated });
+});
+
+// POST /api/gates/:id/density - Increase or decrease gate crowd count
+app.post('/api/gates/:id/density', (req, res) => {
+  const { id } = req.params;
+  const { delta } = req.body || {};
+  const updated = storage.updateGateDensity(id, typeof delta === 'number' ? delta : 1);
+  if (!updated) return res.status(404).json({ error: 'Gate not found' });
+
+  if (id === 'gate-a') {
+    updateControlLogic(updated.count);
+  }
+
+  // Inject point into storage so charts update
+  const point = storage.addTelemetry({
+    deviceId: updated.zoneId === 'zone-entry-a' ? 'cpr-vision-gate-01' : 'esp32-radar-02',
+    zoneId: updated.zoneId,
+    timestamp: Date.now(),
+    state: updated.status,
+    score: updated.riskScore,
+    density: updated.density,
+    avgSpeed: updated.status === 'RED' ? 0.08 : (updated.status === 'AMBER' ? 0.65 : 1.3),
+    stopGoIndex: updated.status === 'RED' ? 0.75 : (updated.status === 'AMBER' ? 0.35 : 0.08),
+    targetCount: updated.count,
+    entryCount: 200 + updated.count,
+    exitCount: 180,
+    activeAlerts: updated.status === 'RED' ? ['CRITICAL_STALL_DETECTED'] : [],
+    firmwareVersion: '3.2.0'
+  });
+
+  broadcast('TELEMETRY_UPDATE', point);
+  broadcast('GATE_UPDATED', updated);
+  broadcastSSE({ type: 'TELEMETRY_UPDATE', point, gate: updated, gates: storage.getGates() });
+  res.json({ status: 'ok', gate: updated });
+});
+
+// GET /api/config & POST /api/config - System configuration persistence
+app.get('/api/config', (req, res) => {
+  res.json({ config: storage.getConfig() });
+});
+
+app.post('/api/config', (req, res) => {
+  const updated = storage.updateConfig(req.body || {});
+  broadcast('CONFIG_UPDATED', updated);
+  res.json({ status: 'ok', config: updated });
+});
+
+// GET /api/analytics - Comprehensive crowd traffic & safety analytics
+app.get('/api/analytics', (req, res) => {
+  res.json({ analytics: storage.getAnalyticsSummary(), gates: storage.getGates() });
 });
 
 // GET /api/zones/:id/history - Recent time-series telemetry (default 10 minutes)
@@ -369,6 +459,8 @@ app.post('/api/simulate', (req, res) => {
 
   // Interactive Demo Sandbox Slider support
   if (typeof count === 'number') {
+    const targetGateId = (req.body && (req.body.gateId || req.body.zoneId === 'zone-corridor-b' ? 'gate-b' : 'gate-a')) || 'gate-a';
+    const targetZoneId = targetGateId === 'gate-b' ? 'zone-corridor-b' : 'zone-entry-a';
     const c = Math.max(0, count);
     const state = c >= 10 ? 'RED' : (c >= 5 ? 'AMBER' : 'GREEN');
     const score = Math.min(100, Math.round(c * 6.6));
@@ -381,12 +473,25 @@ app.post('/api/simulate', (req, res) => {
       hardwareState.systemMode = cameraOnline ? 'AI_VISION_PRIMARY' : 'HARDWARE_FAILOVER';
     }
 
-    updateControlLogic(c);
+    if (targetGateId === 'gate-a') {
+      updateControlLogic(c);
+    }
 
-    // Inject into storage for zone-entry-a so all charts, gauges, and badges update
+    const gate = storage.getGate(targetGateId);
+    if (gate) {
+      gate.count = c;
+      gate.density = density;
+      gate.riskScore = score;
+      gate.status = state;
+      gate.servoAngle = state === 'RED' ? 0 : (state === 'AMBER' ? 45 : 90);
+      gate.servoStatus = state === 'RED' ? 'CLOSED (LOCKED)' : (state === 'AMBER' ? 'METERED (PARTIAL)' : 'OPEN');
+      gate.lastUpdated = Date.now();
+    }
+
+    // Inject into storage for zone so all charts, gauges, and badges update
     const point = storage.addTelemetry({
-      deviceId: 'simulated-master-01',
-      zoneId: 'zone-entry-a',
+      deviceId: targetGateId === 'gate-b' ? 'esp32-radar-02' : 'simulated-master-01',
+      zoneId: targetZoneId,
       timestamp: Date.now(),
       state,
       score,
@@ -401,9 +506,10 @@ app.post('/api/simulate', (req, res) => {
     });
 
     broadcast('TELEMETRY_UPDATE', point);
-    broadcastSSE({ type: 'TELEMETRY_UPDATE', point, hardware: hardwareState });
+    if (gate) broadcast('GATE_UPDATED', gate);
+    broadcastSSE({ type: 'TELEMETRY_UPDATE', point, hardware: hardwareState, gates: storage.getGates() });
 
-    return res.json({ status: 'ok', simulatedCount: c, hardware: hardwareState });
+    return res.json({ status: 'ok', simulatedCount: c, gateId: targetGateId, hardware: hardwareState, gates: storage.getGates() });
   }
 
   if (action === 'start') {

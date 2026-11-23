@@ -79,4 +79,48 @@ export interface KeepAliveStats {
   lastLatencyMs: number;
 }
 
+export interface GateState {
+  id: string;              // 'gate-a', 'gate-b'
+  name: string;            // 'Main Temple Gate A', 'North Pavilion Gate B'
+  zoneId: string;          // 'zone-entry-a', 'zone-corridor-b'
+  status: CrowdState;      // 'GREEN' | 'AMBER' | 'RED' | 'OFFLINE'
+  count: number;
+  density: number;
+  riskScore: number;
+  servoAngle: number;      // 0, 45, 90
+  servoStatus: string;     // 'OPEN', 'METERED (PARTIAL)', 'CLOSED (LOCKED)'
+  isManualOverride: boolean;
+  manualState: 'AUTO' | 'FORCE_OPEN' | 'FORCE_METER' | 'FORCE_LOCK';
+  power: boolean;          // Gate active / offline
+  lastUpdated: number;
+  amberThreshold: number;  // Default 5
+  redThreshold: number;    // Default 10
+}
+
+export interface SystemConfig {
+  gateName: string;
+  gateId: string;
+  passcode: string;
+  autoFailover: boolean;
+  buzzerAlerts: boolean;
+  amberThreshold: number;
+  redThreshold: number;
+  configuredAt: number;
+  isConfigured: boolean;
+}
+
+export interface TrafficAnalytics {
+  peakHours: { hour: string; count: number; risk: number }[];
+  modeSummary: {
+    aiVisionHours: number;
+    failoverHours: number;
+    totalUptimeHours: number;
+    failoverEventsCount: number;
+    autoRecoveryRatePercent: number;
+  };
+  riskTimeline: { time: string; state: string; count: number; event: string }[];
+  gateBreakdown: { gateId: string; name: string; totalPassages: number; criticalIncidents: number }[];
+}
+
+
 

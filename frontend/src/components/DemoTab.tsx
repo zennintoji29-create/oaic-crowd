@@ -156,6 +156,11 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
 
 export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
   const [selectedInspector, setSelectedInspector] = useState<string>('webcam');
+  const [selectedGateId, setSelectedGateId] = useState<string>('gate-a');
+  const [gatePower, setGatePower] = useState<boolean>(true);
+  const [amberThreshold, setAmberThreshold] = useState<number>(5);
+  const [redThreshold, setRedThreshold] = useState<number>(10);
+  const [sensitivityMode, setSensitivityMode] = useState<'LOW' | 'BALANCED' | 'HIGH'>('BALANCED');
   const [simulatedCount, setSimulatedCount] = useState<number>(hardware?.currentCount ?? 2);
   const [isSimulatingCameraFail, setIsSimulatingCameraFail] = useState<boolean>(
     hardware ? hardware.systemMode === 'HARDWARE_FAILOVER' : false
@@ -168,7 +173,7 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
     setSimulatedCount(val);
     try {
       setIsSyncing(true);
-      await simulateSandbox(val, !isSimulatingCameraFail);
+      await simulateSandbox(val, !isSimulatingCameraFail, selectedGateId);
     } catch (e) {
       console.warn('Simulation sync error:', e);
     } finally {
@@ -180,7 +185,7 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
     setSimulatedCount(val);
     try {
       setIsSyncing(true);
-      await simulateSandbox(val, !isSimulatingCameraFail);
+      await simulateSandbox(val, !isSimulatingCameraFail, selectedGateId);
     } catch (e) {
       console.warn('Simulation scenario error:', e);
     } finally {
@@ -193,7 +198,7 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
     setIsSimulatingCameraFail(nextFail);
     try {
       setIsSyncing(true);
-      await simulateSandbox(simulatedCount, !nextFail);
+      await simulateSandbox(simulatedCount, !nextFail, selectedGateId);
     } catch (e) {
       console.warn('Simulation failover error:', e);
     } finally {
@@ -201,15 +206,18 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
     }
   };
 
-  // Compute dynamic visual representations
+  // Compute dynamic visual representations with user-adjustable thresholds
+  const effectiveAmber = sensitivityMode === 'LOW' ? amberThreshold + 2 : (sensitivityMode === 'HIGH' ? amberThreshold - 1 : amberThreshold);
+  const effectiveRed = sensitivityMode === 'LOW' ? redThreshold + 3 : (sensitivityMode === 'HIGH' ? redThreshold - 2 : redThreshold);
+
   const count = hardware?.currentCount ?? simulatedCount;
   const isFailover = hardware ? hardware.systemMode === 'HARDWARE_FAILOVER' : isSimulatingCameraFail;
-  const isRed = count >= 10;
-  const isAmber = count >= 5 && count < 10;
-  const isGreen = count < 5;
+  const isRed = count >= effectiveRed;
+  const isAmber = count >= effectiveAmber && count < effectiveRed;
+  const isGreen = count < effectiveAmber;
 
-  const servoAngle = isRed ? 0 : (isAmber ? 45 : 90);
-  const servoText = isRed ? 'LOCKED (0°)' : (isAmber ? 'METERED (45°)' : 'OPEN (90°)');
+  const servoAngle = !gatePower ? 0 : (isRed ? 0 : (isAmber ? 45 : 90));
+  const servoText = !gatePower ? 'STANDBY (OFF)' : (isRed ? 'LOCKED (0°)' : (isAmber ? 'METERED (45°)' : 'OPEN (90°)'));
 
   // Render crowds inside the visual schematic
   const openCount = Math.min(4, Math.max(1, Math.round(count * 0.3) + 1));
@@ -219,66 +227,182 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
     <div className="flex flex-col gap-4 p-3 md:p-5 max-w-7xl mx-auto w-full">
       
       {/* Top Interactive Sandbox Toolbar */}
-      <section className="bg-surface-raised border border-border-strong rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-xl">
-        <div className="flex-1 w-full flex flex-col md:flex-row items-center gap-4">
-          <div className="flex items-center gap-2 min-w-[220px]">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-text-muted">
-              Live Crowd Slider:
-            </span>
-            <span className={`px-3 py-1 rounded-lg border text-sm font-mono font-black ${
-              isRed 
-                ? 'bg-rose-950/80 text-rose-300 border-rose-700' 
-                : (isAmber ? 'bg-amber-950/80 text-amber-300 border-amber-700' : 'bg-emerald-950/80 text-emerald-300 border-emerald-700')
-            }`}>
-              {count} Persons {isSyncing ? '...' : ''}
-            </span>
+      <section className="bg-surface-raised border border-border-strong rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+        {/* Row 1: Gate Selection, Power Toggle, Sensitivity Modes & Threshold Fine-Tuning */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-subtle">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Gate Selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-mono text-text-muted uppercase">GATE:</span>
+              <div className="flex bg-surface-sunken p-0.5 rounded-lg border border-border-strong text-xs font-bold">
+                <button
+                  onClick={() => setSelectedGateId('gate-a')}
+                  className={`px-2.5 py-1 rounded transition-colors ${
+                    selectedGateId === 'gate-a' ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Gate A (Temple)
+                </button>
+                <button
+                  onClick={() => setSelectedGateId('gate-b')}
+                  className={`px-2.5 py-1 rounded transition-colors ${
+                    selectedGateId === 'gate-b' ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Gate B (Pavilion)
+                </button>
+              </div>
+            </div>
+
+            {/* Gate Power Toggle */}
+            <button
+              onClick={() => setGatePower(!gatePower)}
+              className={`px-2.5 py-1 rounded text-xs font-mono font-bold border transition-colors flex items-center gap-1.5 ${
+                gatePower
+                  ? 'bg-emerald-950 text-emerald-300 border-emerald-600'
+                  : 'bg-rose-950 text-rose-300 border-rose-600'
+              }`}
+            >
+              <span>{gatePower ? 'GATE POWER: ON' : 'GATE POWER: OFF (STANDBY)'}</span>
+            </button>
+
+            {/* Sensitivity Modes */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-mono text-text-muted uppercase">SENSITIVITY:</span>
+              <div className="flex bg-surface-sunken p-0.5 rounded-lg border border-border-strong text-xs font-bold">
+                <button
+                  onClick={() => setSensitivityMode('LOW')}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    sensitivityMode === 'LOW' ? 'bg-amber-950 text-amber-300 border border-amber-700' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  title="Low sensitivity: requires higher crowd cluster to trigger alerts"
+                >
+                  Low Sensitivity
+                </button>
+                <button
+                  onClick={() => setSensitivityMode('BALANCED')}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    sensitivityMode === 'BALANCED' ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Balanced
+                </button>
+                <button
+                  onClick={() => setSensitivityMode('HIGH')}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    sensitivityMode === 'HIGH' ? 'bg-rose-950 text-rose-300 border border-rose-700' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  High
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex-1 w-full flex items-center gap-3">
-            <span className="text-xs font-mono text-text-muted">0</span>
-            <input
-              type="range"
-              min="0"
-              max="25"
-              value={count}
-              onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
-              className="w-full h-2.5 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
-            />
-            <span className="text-xs font-mono text-text-muted">25+</span>
+
+          {/* Threshold Inc / Dec Controls */}
+          <div className="flex items-center gap-4 text-xs font-mono">
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-muted text-[11px]">Amber Thr:</span>
+              <div className="flex items-center bg-surface-sunken border border-border-strong rounded px-1">
+                <button
+                  onClick={() => setAmberThreshold(prev => Math.max(2, prev - 1))}
+                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
+                >
+                  -
+                </button>
+                <span className="px-1.5 font-bold text-amber-400">{amberThreshold}</span>
+                <button
+                  onClick={() => setAmberThreshold(prev => Math.min(redThreshold - 1, prev + 1))}
+                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-muted text-[11px]">Red Thr:</span>
+              <div className="flex items-center bg-surface-sunken border border-border-strong rounded px-1">
+                <button
+                  onClick={() => setRedThreshold(prev => Math.max(amberThreshold + 1, prev - 1))}
+                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
+                >
+                  -
+                </button>
+                <span className="px-1.5 font-bold text-rose-400">{redThreshold}</span>
+                <button
+                  onClick={() => setRedThreshold(prev => Math.min(30, prev + 1))}
+                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Quick Presets & Failover Toggle */}
-        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
-          <span className="text-[11px] font-mono text-text-muted font-semibold mr-1">SCENARIOS:</span>
-          <button
-            onClick={() => handleScenarioClick(2)}
-            className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-subtle text-emerald-400 text-xs font-mono font-bold transition"
-          >
-            Normal (2)
-          </button>
-          <button
-            onClick={() => handleScenarioClick(7)}
-            className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-subtle text-amber-400 text-xs font-mono font-bold transition"
-          >
-            Elevated (7)
-          </button>
-          <button
-            onClick={() => handleScenarioClick(15)}
-            className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-subtle text-rose-400 text-xs font-mono font-bold transition"
-          >
-            Surge Alert (15)
-          </button>
-          <button
-            onClick={handleToggleFailover}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition ${
-              isFailover
-                ? 'bg-amber-500 text-slate-950 border-amber-300 animate-pulse'
-                : 'bg-amber-950/80 hover:bg-amber-900 border-amber-600/70 text-amber-200'
-            }`}
-          >
-            <span>⚡</span>
-            <span>{isFailover ? 'Restore AI Camera' : 'Simulate Camera Failure'}</span>
-          </button>
+        {/* Row 2: Live Crowd Slider & Scenario Presets */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 pt-1">
+          <div className="flex-1 w-full flex flex-col md:flex-row items-center gap-4">
+            <div className="flex items-center gap-2 min-w-[220px]">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-text-muted">
+                Live Crowd Slider:
+              </span>
+              <span className={`px-3 py-1 rounded-lg border text-sm font-mono font-black ${
+                isRed 
+                  ? 'bg-rose-950/80 text-rose-300 border-rose-700' 
+                  : (isAmber ? 'bg-amber-950/80 text-amber-300 border-amber-700' : 'bg-emerald-950/80 text-emerald-300 border-emerald-700')
+              }`}>
+                {count} Persons {isSyncing ? '...' : ''}
+              </span>
+            </div>
+            <div className="flex-1 w-full flex items-center gap-3">
+              <span className="text-xs font-mono text-text-muted">0</span>
+              <input
+                type="range"
+                min="0"
+                max="25"
+                value={count}
+                onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
+                className="w-full h-2.5 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
+              />
+              <span className="text-xs font-mono text-text-muted">25+</span>
+            </div>
+          </div>
+
+          {/* Quick Presets & Failover Toggle */}
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
+            <span className="text-[11px] font-mono text-text-muted font-semibold mr-1">SCENARIOS:</span>
+            <button
+              onClick={() => handleScenarioClick(2)}
+              className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-subtle text-emerald-400 text-xs font-mono font-bold transition"
+            >
+              Normal (2)
+            </button>
+            <button
+              onClick={() => handleScenarioClick(7)}
+              className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-subtle text-amber-400 text-xs font-mono font-bold transition"
+            >
+              Elevated (7)
+            </button>
+            <button
+              onClick={() => handleScenarioClick(15)}
+              className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-subtle text-rose-400 text-xs font-mono font-bold transition"
+            >
+              Surge Alert (15)
+            </button>
+            <button
+              onClick={handleToggleFailover}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition ${
+                isFailover
+                  ? 'bg-amber-500 text-slate-950 border-amber-300 animate-pulse'
+                  : 'bg-amber-950/80 hover:bg-amber-900 border-amber-600/70 text-amber-200'
+              }`}
+            >
+              <span>⚡</span>
+              <span>{isFailover ? 'Restore AI Camera' : 'Simulate Camera Failure'}</span>
+            </button>
+          </div>
         </div>
       </section>
 
