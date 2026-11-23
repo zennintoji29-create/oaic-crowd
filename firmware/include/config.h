@@ -6,6 +6,38 @@
  * ============================================================================
  * CROWD PRESSURE RADAR - SYSTEM CONFIGURATION & CALIBRATION
  * ============================================================================
+ * 
+ * THEORETICAL CITATIONS & FORMULA GROUNDING:
+ * 1. Walkway Level of Service (LoS):
+ *    John J. Fruin, "Pedestrian Planning and Design", Metropolitan Association of
+ *    Urban Designers and Environmental Planners (MAUDEP), 1971.
+ *    TRB Highway Capacity Manual (HCM 2010), Chapter 23.
+ *    - LoS C/D boundary: 0.72 p/m² (normal flow begins to restrict)
+ *    - LoS D/E boundary: 1.08 p/m² (queue shuffling)
+ * 2. Crowd Crush Hazard (Compressive Mechanics):
+ *    G. Keith Still, "Introduction to Crowd Science", CRC Press, 2014.
+ *    Dirk Helbing et al., "Dynamics of crowd disasters", Phys. Rev. E, 2007.
+ *    - Walkway LoS F (2.17 p/m²) is slow queuing, NOT physical crush hazard.
+ *    - Mechanical crush forces occur at 3.50 - 4.50+ p/m².
+ * 
+ * SENSOR HARDWARE SPECIFICATION & DEGRADED MODE:
+ * - Bench Hardware: HLK-LD2410C 24GHz FMCW Radar (single-target presence, distance, energy)
+ *   combined with VL53L0X ToF (depth < 1.2m) and IR break-beam counter.
+ * - Degraded Mode Topology: Single-file corridor gate aperture (60-90 cm width).
+ * - Degraded Logic: IR beam + ToF provide throughput (PPM: people/min).
+ *   LD2410C radar detects stationary dwell time at the bottleneck gate.
+ *   Throughput collapse while dwell rises indicates a physical stall -> AMBER, then RED.
+ * 
+ * GATE SAFETY & FAIL-OPEN SPECIFICATION:
+ * - Hub Heartbeat Loss: ESP32 MUST NOT fail open. A Wi-Fi drop or hub loss maintains
+ *   autonomous local state machine and metering to preserve crowd safety.
+ * - Fail-Open Paths: Immediate unpowered/open state on:
+ *     (a) Hardware Watchdog Timeout (WDT) or kernel panic reset
+ *     (b) Unrecoverable local sensor bus failure (I2C/UART fault)
+ *     (c) Manual Emergency Stop (E-Stop)
+ * - Industrial Actuation Note: An SG90 micro-servo holds last position upon power cut.
+ *   In production installations, an electromagnetic latch with spring- or gravity-loaded
+ *   drop-arm barrier is utilized to achieve fail-open by default upon total power loss.
  */
 
 // ----------------------------------------------------------------------------
@@ -79,6 +111,23 @@ constexpr uint32_t DURATION_DEESCALATE_MS     = 10000; // Must stay below thresh
 constexpr int SERVO_OPEN_ANGLE           = 0;     // Unobstructed flow
 constexpr int SERVO_CLOSED_ANGLE         = 90;    // Barrier deployed across queue
 constexpr uint32_t SERVO_RESET_DELAY_MS  = 30000; // 30 seconds of continuous GREEN before gate resets
+
+// ----------------------------------------------------------------------------
+// Degraded Mode (LD2410C + ToF + IR Beam) Calibration Constants
+// ----------------------------------------------------------------------------
+constexpr uint32_t DEGRADED_BASELINE_WARMUP_MS   = 60000; // 60s baseline warmup
+constexpr float    DEGRADED_BASELINE_INITIAL_PPM = 20.0f; // Nominal baseline before warmup
+constexpr float    DEGRADED_ABSOLUTE_MIN_PPM     = 2.0f;  // Throughput below 2 PPM is ALWAYS a stall
+constexpr float    DEGRADED_AMBER_RATIO          = 0.40f; // Drop below 40% baseline -> AMBER
+constexpr float    DEGRADED_RED_RATIO            = 0.15f; // Drop below 15% baseline -> RED
+constexpr uint32_t DEGRADED_AMBER_DWELL_MS       = 3500;  // 3.5s stationary dwell -> AMBER
+constexpr uint32_t DEGRADED_RED_DWELL_MS         = 6000;  // 6.0s stationary dwell -> RED
+
+// Fail-Open Safety Definitions
+constexpr bool FAIL_OPEN_ON_WDT_PANIC     = true; // WDT timeout or abort() fails open
+constexpr bool FAIL_OPEN_ON_SENSOR_FAULT  = true; // Hardware I2C/UART bus fault fails open
+constexpr bool FAIL_OPEN_ON_ESTOP         = true; // E-stop triggers fail-open
+constexpr bool FAIL_OPEN_ON_HUB_LOSS      = false; // HUB LOSS MUST NOT FAIL OPEN (autonomous metering continues)
 
 // ----------------------------------------------------------------------------
 // Periodic Task Timers (ms)

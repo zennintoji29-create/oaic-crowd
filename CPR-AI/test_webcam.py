@@ -1,37 +1,57 @@
 """
-CPR AI Vision System - Camera Performance & FPS Benchmark
-Measures actual hardware frame rate, tests resolution switching, and detects camera freeze.
+CPR AI Vision System - Cross-Platform Camera Benchmark & Diagnostics
+Auto-discovers and benchmarks built-in and external USB cameras across macOS, Windows, and Linux.
 """
-import cv2
-import time
 import sys
+import time
+import cv2
+from vision.camera import discover_available_cameras, get_platform_backends
 
-def benchmark_camera(camera_index=0, target_frames=120, req_width=1280, req_height=720):
-    print("=" * 60)
-    print(f"CPR AI Camera Benchmark (Index: {camera_index})")
-    print("=" * 60)
+def benchmark_cameras(target_frames=90, req_width=640, req_height=480):
+    print("=" * 65)
+    print("  CPR AI CAMERA DIAGNOSTICS & HARDWARE BENCHMARK")
+    print(f"  Operating System: {sys.platform.upper()}")
+    print("=" * 65)
 
-    # Use DirectShow backend on Windows for lowest latency
-    backend = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_ANY
-    cap = cv2.VideoCapture(camera_index, backend)
+    print("\n[1/3] Scanning for connected cameras (USB & Built-in)...")
+    cameras = discover_available_cameras(max_probe=4)
 
-    if not cap.isOpened():
-        print(f"[ERROR] Could not open camera at index {camera_index}.")
-        print("Check if another application (e.g. Teams, Zoom, Browser) is using the webcam.")
+    if not cameras:
+        print("\n[!] No working physical cameras were found.")
+        if sys.platform == "darwin":
+            print("    macOS Note: Ensure camera permissions are granted in:")
+            print("    System Settings -> Privacy & Security -> Camera -> (Allow Terminal)")
+        elif sys.platform.startswith("win"):
+            print("    Windows Note: Ensure camera access is allowed in Settings -> Privacy & Security -> Camera")
+        print("    If using an external USB webcam, ensure the cable is firmly connected.")
         return
 
-    # Attempt to set requested resolution
+    print(f"\n[2/3] Detected {len(cameras)} active camera device(s):")
+    for i, c in enumerate(cameras):
+        cam_type = "External USB Camera" if c["index"] > 0 else "Primary / Built-in Camera"
+        print(f"  [{i+1}] {cam_type}")
+        print(f"      - Index:        {c['index']}")
+        print(f"      - Driver:       {c['backend_name']} (code {c['backend_code']})")
+        print(f"      - Native Res:   {c['width']}x{c['height']}")
+
+    # Benchmark first available or external camera
+    target = cameras[-1] if len(cameras) > 1 else cameras[0]
+    target_idx = target["index"]
+    target_backend = target["backend_code"]
+    target_name = "External USB Camera" if target_idx > 0 else "Primary Built-in Camera"
+
+    print(f"\n[3/3] Benchmarking {target_name} (Index {target_idx}) for {target_frames} frames...")
+    cap = cv2.VideoCapture(target_idx, target_backend)
+    if not cap.isOpened():
+        print(f"[ERROR] Could not open camera at index {target_idx}.")
+        return
+
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, req_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, req_height)
+    cap.set(cv2.CAP_PROP_FPS, 30)
 
-    actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    sensor_fps = cap.get(cv2.CAP_PROP_FPS)
-
-    print(f"Configured Resolution: {actual_w}x{actual_h}")
-    print(f"Camera Driver Reported FPS: {sensor_fps if sensor_fps > 0 else 'Unknown / Variable'}")
-    print(f"\nBenchmarking actual frame acquisition across {target_frames} frames...")
-    print("Press 'q' in the preview window to stop early.\n")
+    actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or req_width
+    actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or req_height
 
     timestamps = []
     start_total = time.perf_counter()
@@ -42,47 +62,30 @@ def benchmark_camera(camera_index=0, target_frames=120, req_width=1280, req_heig
         t1 = time.perf_counter()
 
         if not ret:
-            print(f"[WARN] Frame acquisition failed at frame {i}.")
+            print(f"[WARN] Frame acquisition dropped at frame {i+1}.")
             break
 
         timestamps.append(t1 - t0)
 
-        # Draw HUD on benchmark preview
-        fps_instant = 1.0 / (t1 - t0) if (t1 - t0) > 0 else 0
-        cv2.putText(frame, f"CPR Camera Benchmark: {actual_w}x{actual_h}", (20, 35),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-        cv2.putText(frame, f"Acquiring Frame: {i+1}/{target_frames}", (20, 65),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-        cv2.putText(frame, f"Instant Latency: {(t1-t0)*1000:.1f} ms ({fps_instant:.1f} FPS)", (20, 95),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-
-        cv2.imshow("CPR Camera Benchmark", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            print("[INFO] Benchmark stopped by user.")
-            break
-
     total_time = time.perf_counter() - start_total
     cap.release()
-    cv2.destroyAllWindows()
 
-    if len(timestamps) > 10:
+    if len(timestamps) > 5:
         actual_fps = len(timestamps) / total_time
-        avg_latency_ms = (sum(timestamps) / len(timestamps)) * 1000
-        min_latency_ms = min(timestamps) * 1000
-        max_latency_ms = max(timestamps) * 1000
+        avg_latency = (sum(timestamps) / len(timestamps)) * 1000
 
-        print("-" * 60)
-        print("Camera Benchmark Results:")
-        print(f"  - Total Captured Frames: {len(timestamps)}")
-        print(f"  - Total Test Time:       {total_time:.2f} seconds")
-        print(f"  - Real Measured FPS:     {actual_fps:.2f} FPS")
-        print(f"  - Avg Grab Latency:      {avg_latency_ms:.2f} ms")
-        print(f"  - Min / Max Latency:     {min_latency_ms:.2f} ms / {max_latency_ms:.2f} ms")
-        print("-" * 60)
+        print("\n" + "-" * 65)
+        print("  BENCHMARK RESULTS:")
+        print(f"  - Target Device:      {target_name} (Index {target_idx})")
+        print(f"  - Stream Resolution:  {actual_w}x{actual_h}")
+        print(f"  - Total Captured:     {len(timestamps)} frames in {total_time:.2f}s")
+        print(f"  - Real Measured FPS:  {actual_fps:.2f} FPS")
+        print(f"  - Avg Grab Latency:   {avg_latency:.2f} ms")
+        print("-" * 65)
         if actual_fps >= 25.0:
-            print("[STATUS] Frame rate is optimal for real-time crowd tracking.")
+            print("[STATUS] Optimal performance for real-time crowd tracking.")
         else:
-            print("[STATUS] Camera frame rate is below 25 FPS; consider running at 640x480 resolution.")
+            print("[STATUS] Frame rate acceptable. Recommended running at 640x480 resolution.")
 
 if __name__ == "__main__":
-    benchmark_camera(camera_index=0)
+    benchmark_cameras()

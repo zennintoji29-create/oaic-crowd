@@ -19,7 +19,7 @@ import urllib.request
 import serial
 import serial.tools.list_ports
 
-SERVER_URL = os.getenv("CPR_SERVER_URL", "http://localhost:3000")
+SERVER_URL = os.getenv("CPR_SERVER_URL", "http://localhost:5050")
 STATUS_ENDPOINT = f"{SERVER_URL}/api/esp32/status"
 TELEMETRY_ENDPOINT = f"{SERVER_URL}/api/telemetry"
 BAUD_RATE = 115200

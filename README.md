@@ -1,6 +1,53 @@
 # oaic-crowd — Crowd Pressure Radar (CPR)
 
-> **Odisha AI Hackathon 2026: An autonomous, privacy-first crowd-crush early-warning system for festivals, pilgrimages, and temple queue corridors using 24 GHz mmWave radar and IoT telemetry.**
+> **Odisha AI Hackathon 2026: An autonomous, hybrid Edge AI & IoT crowd-safety early-warning system for festival, temple, and mass gathering corridors combining YOLO11n Computer Vision with 24 GHz mmWave radar and IoT telemetry.**
+
+---
+
+## 📚 Theoretical Citations & Mathematical Grounding
+
+The CPR safety engine is grounded strictly in academic crowd science and pedestrian transport engineering:
+
+1. **Walkway Level of Service (LoS)**:
+   - **Primary Citation**: John J. Fruin, *"Pedestrian Planning and Design"*, Metropolitan Association of Urban Designers and Environmental Planners (MAUDEP), 1971.
+   - **Industry Standard**: Transportation Research Board (TRB), *"Highway Capacity Manual"* (HCM 2010), Chapter 23: Off-Street Pedestrian Facilities.
+   - **Walkway LoS Scale**:
+     - **LoS A**: $> 3.24\text{ m}^2/\text{p}\ (< 0.31\text{ p/m}^2)$ — Free pedestrian flow.
+     - **LoS B**: $2.32 - 3.24\text{ m}^2/\text{p}\ (0.31 - 0.43\text{ p/m}^2)$ — Fluid flow, minor conflicts.
+     - **LoS C**: $1.39 - 2.32\text{ m}^2/\text{p}\ (0.43 - 0.72\text{ p/m}^2)$ — Normal walking speeds.
+     - **LoS D**: $0.93 - 1.39\text{ m}^2/\text{p}\ (0.72 - 1.08\text{ p/m}^2)$ — Flow restricted, bypasses difficult (**C/D Boundary: GREEN $\to$ AMBER**).
+     - **LoS E**: $0.46 - 0.93\text{ m}^2/\text{p}\ (1.08 - 2.17\text{ p/m}^2)$ — Capacity limit, shuffling queue.
+     - **LoS F**: $< 0.46\text{ m}^2/\text{p}\ (> 2.17\text{ p/m}^2)$ — Flow breakdown and queue jam.
+
+2. **Compressive Crowd Crush Mechanics**:
+   - **Citations**: G. Keith Still, *"Introduction to Crowd Science"*, CRC Press, 2014; Dirk Helbing, Anders Johansson, Habib Zein Al-Abideen, *"Dynamics of crowd disasters: An empirical study"*, Physical Review E 75(4), 046109, 2007.
+   - **Two-Tier Safety Scale**: Walkway LoS F ($2.17\text{ p/m}^2$) represents congested slow walking, **not** fatal crowd collapse. True compressive physical forces start emerging at $3.50\text{ p/m}^2$ and become critical at $4.0 - 5.0+\text{ p/m}^2$.
+   - **CPR Thresholds**:
+     - **GREEN $\to$ AMBER Warning**: Governed by Fruin Walkway LoS ($0.72 - 1.08\text{ p/m}^2$).
+     - **AMBER $\to$ RED Emergency**: Governed by Compressive Hazard Scale ($\ge 3.50\text{ p/m}^2$ or severe stall with high density).
+
+---
+
+## 🔬 Hardware Specifications & Degraded Mode Fallback
+
+### Sensor Inventory & Limitations
+- **Primary AI Vision**: USB / IP Camera streaming at $640 \times 480$ @ 30 FPS with YOLO11n + ByteTrack and 4-point planar floor homography.
+- **Radar Hardware**: Confirmed **HLK-LD2410C** 24 GHz FMCW radar (Breadboard 1). It detects human presence, moving/stationary distance, and energy gates across a single-file zone. **It cannot count dense crowds in an open plaza.**
+- **Optical Sensors**: VL53L0X Time-of-Flight distance sensor ($< 1.2\text{ m}$ reliable range) + IR break-beam counter (Breadboard 2).
+
+### Degraded Mode Architecture ("Stall Detection + Metering")
+When camera vision collapses or disconnects, the system switches to **Degraded Mode** tailored for a single-file corridor bottleneck ($60 - 90\text{ cm}$ gate aperture):
+- **Throughput ($PPM$)**: Measured continuously by IR break-beam triggers and ToF distance fluctuations (people per minute).
+- **Stall & Dwell ($s$)**: Measured by the HLK-LD2410C radar monitoring stationary presence at the gate aperture.
+- **Rolling Baseline ($PPM$)**: A rolling EMA baseline ($\alpha = 0.05$) adapts to natural flow during GREEN. **Crucially, baseline updates are frozen during non-GREEN states.** An absolute floor ($< 2.0\text{ PPM}$) ensures near-zero throughput with stationary dwell is always flagged as a bottleneck stall.
+
+### Gate Safety & Fail-Open Philosophy
+- **Hub Loss / Wi-Fi Disconnect**: The ESP32 node **MUST NOT fail open**. If network link to the dashboard drops, the ESP32 autonomously executes its local state machine and continues metering the gate.
+- **Fail-Open Triggers**: Gate actuator immediately opens upon:
+  1. Firmware crash or Hardware Watchdog (WDT) reset.
+  2. Local sensor bus failure (I2C/UART bus fault).
+  3. Manual emergency stop (E-stop).
+- **Physical Actuator Disclaimer**: The bench demonstration utilizes an SG90 micro-servo (which holds last position when unpowered). In production, an electromagnetic latch with a **spring- or gravity-loaded drop-arm barrier** is mandatory to ensure mechanical fail-open upon total electrical power loss.
 
 ---
 
@@ -91,10 +138,31 @@ crowd-pressure-radar/
 
 ## ⚡ Quick Start: 3 Ways to Run
 
+### Method 0: Master CPR Launcher (macOS / Linux)
+```bash
+# Run one script to start Telemetry Server (Port 5050), Browser Dashboards, and AI Vision Engine:
+./start_cpr.sh
+```
+
+### Video Dataset Replay Mode & Bench Geometry
+```bash
+# Replay video dataset with calibrated metric ground plane (e.g. PETS 2009 Benchmark - CC BY 4.0):
+python3 CPR-AI/main.py --video path/to/dataset.mp4 --ground-width 2.0 --ground-length 3.0
+
+# Replay video dataset with unknown floor geometry (reports "Relative Density (norm)"):
+python3 CPR-AI/main.py --video path/to/dataset.mp4 --uncalibrated
+
+# Run with bench demo zone (1.5m x 2.0m = 3.0 m²):
+python3 CPR-AI/main.py --bench
+
+# Run unit tests:
+cd CPR-AI && python3 -m unittest discover -s tests -v
+```
+
 ### Method 1: Instant Browser Simulation on Wokwi (No Hardware)
 1. Open [Wokwi ESP32 Simulator](https://wokwi.com/projects/new/esp32).
-2. Replace `diagram.json` with the contents of [`firmware/diagram.json`](file:///C:/Users/subha/.gemini/antigravity/scratch/crowd-pressure-radar/firmware/diagram.json).
-3. Replace `sketch.ino` with [`firmware/wokwi_sketch.ino`](file:///C:/Users/subha/.gemini/antigravity/scratch/crowd-pressure-radar/firmware/wokwi_sketch.ino).
+2. Replace `diagram.json` with the contents of [`firmware/diagram.json`](file:///Users/subhadip/subhansu'/oaic-crowd/firmware/diagram.json).
+3. Replace `sketch.ino` with [`firmware/wokwi_sketch.ino`](file:///Users/subhadip/subhansu'/oaic-crowd/firmware/wokwi_sketch.ino).
 4. In `libraries.txt`, add:
    ```text
    ArduinoJson

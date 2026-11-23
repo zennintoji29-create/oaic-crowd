@@ -57,10 +57,16 @@ class PersonTrackState:
 
 
 class MovementTracker:
-    def __init__(self, stationary_speed_thresh: float = 25.0, stationary_dwell_thresh: float = 3.0):
+    def __init__(
+        self,
+        stationary_speed_thresh: float = 25.0,
+        stationary_dwell_thresh: float = 3.0,
+        smoothing_window: int = 6
+    ):
         self.tracks: Dict[int, PersonTrackState] = {}
         self.stationary_speed_thresh = stationary_speed_thresh
         self.stationary_dwell_thresh = stationary_dwell_thresh
+        self.smoothing_window = smoothing_window
 
     def update_tracks(self, detections: Dict[int, Tuple[int, int]], current_time: float):
         """

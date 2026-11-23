@@ -107,13 +107,29 @@ unsigned long lastCommandTime = 0;
 const unsigned long WATCHDOG_TIMEOUT_MS = 4000;
 bool isHardwareFailover = false;
 
-// Forward Declarations
-void setRgbColor(uint8_t r, uint8_t g, uint8_t b);
-void setHardwareState(String ledColor, int angle, bool buzzer, int r, int g, int b);
-void applyControlRules(int count, bool failover);
-void renderOled();
-void runHardwareFailoverLoop();
-void parseJsonCommand(String jsonStr);
+// -----------------------------------------------------------------------------
+// GATE SAFETY & FAIL-OPEN ARCHITECTURE:
+// 1. Hub / Wi-Fi Loss: ESP32 does NOT open gate; continues autonomous local metering
+//    via HLK-LD2410C radar dwell and ToF/IR throughput.
+// 2. Hardware Fail-Open: Firmware crash / WDT panic, sensor bus fault, or manual E-stop
+//    forces immediate gate OPEN (90 degrees).
+// 3. Physical Spring Note: SG90 servo holds position unpowered; industrial scale uses
+//    spring- or gravity-loaded drop-arm barrier open by default on power cut.
+// -----------------------------------------------------------------------------
+bool sensorHardwareFault = false;
+bool manualEStopActive = false;
+
+void checkFailOpenConditions() {
+  if (manualEStopActive || sensorHardwareFault) {
+    gateServo.write(90); // Fail-Open
+    setHardwareState("GREEN", 90, false, 0, 255, 0);
+    oledLine1 = "FAIL-OPEN ACTIVE";
+    oledLine2 = manualEStopActive ? "MANUAL E-STOP" : "SENSOR FAULT";
+    oledLine3 = "GATE OPENED";
+    oledLine4 = "EVACUATION ROUTE";
+    renderOled();
+  }
+}
 
 // -----------------------------------------------------------------------------
 // SETUP

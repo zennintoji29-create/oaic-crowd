@@ -6,8 +6,10 @@ import time
 import json
 import urllib.request
 
-TELEMETRY_URL = "http://localhost:3000/api/telemetry"
-STATUS_URL = "http://localhost:3000/api/esp32/status"
+import os
+PORT = os.getenv("CPR_PORT", "5050")
+TELEMETRY_URL = f"http://localhost:{PORT}/api/telemetry"
+STATUS_URL = f"http://localhost:{PORT}/api/esp32/status"
 
 def send_yolo_detection(count, state_label, density, score):
     payload = {

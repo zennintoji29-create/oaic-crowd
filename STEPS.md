@@ -11,9 +11,9 @@ Wokwi lets you simulate the full ESP32 circuit, SSD1306 OLED, LEDs, active buzze
 ### 1.1 Create the Wokwi Project
 1. Open [https://wokwi.com](https://wokwi.com) and click **ESP32** -> **ESP32 DevKit v4** (or open [https://wokwi.com/projects/new/esp32](https://wokwi.com/projects/new/esp32)).
 2. Click the **diagram.json** tab on the top-right of the code editor.
-3. Replace the contents of `diagram.json` completely with the contents of [`firmware/diagram.json`](file:///C:/Users/subha/.gemini/antigravity/scratch/crowd-pressure-radar/firmware/diagram.json).
+3. Replace the contents of `diagram.json` completely with the contents of [`firmware/diagram.json`](file:///Users/subhadip/subhansu'/oaic-crowd/firmware/diagram.json).
 4. In the code tab (`sketch.ino`), you can either:
-   - **Option A (Instant Single-File Run)**: Paste the contents of [`firmware/wokwi_sketch.ino`](file:///C:/Users/subha/.gemini/antigravity/scratch/crowd-pressure-radar/firmware/wokwi_sketch.ino).
+   - **Option A (Instant Single-File Run)**: Paste the contents of [`firmware/wokwi_sketch.ino`](file:///Users/subhadip/subhansu'/oaic-crowd/firmware/wokwi_sketch.ino).
    - **Option B (Multi-File Modular Run)**: Use Wokwi's tab menu (+) to add `pins.h`, `config.h`, `radar_driver.h`, `mock_radar.h`, `analytics.h`, `state_machine.h`, `actuators.h`, `display.h`, `network.h`, and paste `main.cpp` into `sketch.ino`.
 5. Open the library manager tab (`libraries.txt`) in Wokwi and paste:
    ```text
@@ -240,5 +240,34 @@ Open your browser at `http://localhost:5173`.
 | **Servo chatters or vibrates violently** | Floating signal pin or PWM timer conflict. | Ensure `ESP32PWM::allocateTimer()` is called prior to `servo.attach()`. Confirm common ground between ESP32 and external 5V supply. |
 | **WiFi connection fails in Wokwi** | Incorrect virtual SSID. | In Wokwi simulation, SSID must strictly be `"Wokwi-GUEST"` with an empty password `""`. |
 | **Wokwi reports HTTP POST error (-1 or connection refused)** | ESP32 trying to access `localhost:3000`. | Wokwi is a cloud virtual machine and cannot reach `localhost`. Deploy backend publicly or run an ngrok/Cloudflare tunnel and put the HTTPS URL into `config.h`. |
-| **IR Break-Beam false triggers** | Ambient sunlight saturation or misalignment. | Align emitter and receiver lenses with a shroud or tube. Ensure 250ms software debounce in `isrEntryBeam()` is active. |
+---
+
+## Part 7: AI Vision Pipeline & Degraded Mode Verification
+
+### 7.1 Run State Machine Unit Tests
+Verify all synthetic transition cases, Schmitt-trigger hysteresis, camera health evaluation, measured failover latency, and gate safety logic:
+```bash
+cd CPR-AI
+python3 -m unittest discover -s tests -v
+```
+All 14 tests should report `OK`.
+
+### 7.2 Run Master Hybrid System
+Launch the complete hybrid system:
+```bash
+# Full stack launch: Node.js server (Port 5050), Dashboards, and AI Vision:
+./start_cpr.sh
+```
+
+### 7.3 CLI Options for Camera & Video Datasets
+```bash
+# Replay video dataset with calibrated metric ground plane (e.g. PETS 2009 Benchmark - CC BY 4.0):
+python3 CPR-AI/main.py --video path/to/dataset.mp4 --ground-width 2.0 --ground-length 3.0
+
+# Replay video without metric calibration (reports Relative Density):
+python3 CPR-AI/main.py --video path/to/dataset.mp4 --uncalibrated
+
+# Run with bench demo zone geometry (1.5m x 2.0m = 3.0 m²):
+python3 CPR-AI/main.py --bench
+```
 
