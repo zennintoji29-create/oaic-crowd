@@ -1,6 +1,16 @@
 import fs from 'fs';
 import path from 'path';
 import { config } from './config.js';
+import {
+  isSupabaseEnabled,
+  dbUpsertOperator,
+  dbLoadOperators,
+  dbInsertTelemetry,
+  dbInsertAlert,
+  dbLoadAlerts,
+  dbUpsertGate,
+  dbUpsertSystemConfig
+} from './supabase.js';
 
 class StorageManager {
   constructor() {
@@ -16,6 +26,27 @@ class StorageManager {
     this.initDefaultConfig();
     this.ensureDataDir();
     this.loadUsers();
+    this.hydrateFromSupabase();
+  }
+
+  async hydrateFromSupabase() {
+    if (!isSupabaseEnabled()) return;
+    try {
+      const [remoteOps, remoteAlerts] = await Promise.all([
+        dbLoadOperators(),
+        dbLoadAlerts(100)
+      ]);
+      remoteOps.forEach((u) => {
+        if (u?.email && !this.users.has(u.email.toLowerCase())) {
+          this.users.set(u.email.toLowerCase(), u);
+        }
+      });
+      if (remoteAlerts.length > 0 && this.alerts.length === 0) {
+        this.alerts = remoteAlerts;
+      }
+    } catch (err) {
+      console.warn('[STORAGE] Supabase hydration error:', err.message);
+    }
   }
 
   getUsersFilePath() {
@@ -65,6 +96,7 @@ class StorageManager {
     };
     this.users.set(normEmail, user);
     this.saveUsers();
+    dbUpsertOperator(user);
     return user;
   }
 
@@ -74,6 +106,7 @@ class StorageManager {
     user.setupComplete = true;
     this.users.set(user.email, user);
     this.saveUsers();
+    dbUpsertOperator(user);
     return user;
   }
 
@@ -221,6 +254,7 @@ class StorageManager {
           : `WARNING: Crowd density buildup approaching threshold in ${zone.name} (Risk: ${score})`
       };
       this.alerts.unshift(alert);
+      dbInsertAlert(alert);
 
       // Keep last 500 alerts in memory
       if (this.alerts.length > 500) {
@@ -238,6 +272,7 @@ class StorageManager {
       buffer.shift();
     }
 
+    dbInsertTelemetry(record);
     return record;
   }
 
@@ -394,6 +429,7 @@ class StorageManager {
         lastUpdated: now
       };
       this.gates.set(id, next);
+      dbUpsertGate(next);
       updated.push(next);
     }
     return updated;
@@ -436,6 +472,7 @@ class StorageManager {
       configuredAt: Date.now(),
       isConfigured: true
     };
+    dbUpsertSystemConfig(this.systemConfig);
     return this.systemConfig;
   }
 

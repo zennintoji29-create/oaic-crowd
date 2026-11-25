@@ -55,3 +55,8 @@ Version 8 (2026-11-26)
 - Made Initial Setup (/setup) a one-time onboarding step after Sign Up; once completed, setupComplete is persisted per operator so subsequent logins go straight to /dashboard.
 - Fixed browser camera preview in Setup.tsx by persisting MediaStream in state and attaching videoRef.current.srcObject via useEffect, plus auto-requesting camera permission on Step 2.
 - Elevated Dashboard visual hierarchy: layered surface elevation in index.css, status-accented KPI cards in OverviewTab, and status-colored top borders on GateCard.
+
+Version 9 (2026-11-26)
+- Integrated Supabase PostgreSQL client (@supabase/supabase-js) in backend/src/supabase.js and wired non-blocking persistence for operators, gate states, telemetry logs, alerts, and system config in storage.js with automatic local fallback when SUPABASE_URL is unset.
+- Added backend/supabase_schema.sql and updated backend/.env.example with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
+- Upgraded OverviewTab 10-minute risk chart to an AreaChart with subtle emerald gradient fill and refined obsidian-slate surface tokens in tokens.css.

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -252,41 +252,49 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <section className="p-5 flat-panel">
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 mb-4">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight font-mono">
+            <h3 className="text-base font-bold text-text-primary tracking-tight">
               Dynamic Crowd Pressure Trend (Last 10 Minutes)
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-text-secondary mt-0.5">
               Live score (0–100) plotted against Amber (50) and Red (75) safety thresholds.
             </p>
           </div>
-          <div className="text-xs font-mono text-cyan-400">
-            Source: <span className="font-semibold text-white">Main Temple Gate A</span>
+          <div className="text-xs text-accent font-medium">
+            Source: <span className="font-semibold text-text-primary">Main Temple Gate A</span>
           </div>
         </div>
 
-        <div className="h-64 w-full">
+        <div className="h-64 w-full rounded-md bg-surface-sunken border border-border-subtle p-2">
           {chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-xs font-mono text-slate-500">
+            <div className="h-full flex items-center justify-center text-xs text-text-muted">
               Connecting to live telemetry feed...
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 12, right: 120, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <AreaChart data={chartData} margin={{ top: 12, right: 100, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="overviewPressureFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
                 <XAxis
                   dataKey="time"
                   stroke="#64748b"
                   tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tickLine={false}
                 />
                 <YAxis
                   domain={[0, 100]}
                   stroke="#64748b"
                   tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#334155',
+                    backgroundColor: '#0d1424',
+                    borderColor: 'rgba(148,163,184,0.26)',
                     borderRadius: '8px',
                     color: '#f8fafc',
                     fontSize: '12px'
@@ -296,26 +304,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 />
                 <ReferenceLine
                   y={50}
-                  stroke="#fbbf24"
+                  stroke="#f59e0b"
                   strokeDasharray="4 4"
-                  label={{ value: 'Amber (50)', fill: '#fbbf24', fontSize: 11, position: 'right' }}
+                  label={{ value: 'Amber (50)', fill: '#f59e0b', fontSize: 11, position: 'right' }}
                 />
                 <ReferenceLine
                   y={75}
-                  stroke="#f43f5e"
+                  stroke="#ef4444"
                   strokeDasharray="4 4"
-                  label={{ value: 'Red Alert (75)', fill: '#f43f5e', fontSize: 11, position: 'right' }}
+                  label={{ value: 'Red Alert (75)', fill: '#ef4444', fontSize: 11, position: 'right' }}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="score"
                   name="Risk Pressure"
-                  stroke="#22d3ee"
-                  strokeWidth={2.5}
+                  stroke="#10b981"
+                  fill="url(#overviewPressureFill)"
+                  strokeWidth={2.25}
                   dot={false}
                   isAnimationActive={false}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
