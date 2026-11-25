@@ -76,3 +76,6 @@ Version 12 (2026-11-26)
 - Applied TailAdmin Free Tailwind Dashboard Template design system across the CPR dashboard:
   * Loaded Outfit font in index.html and updated tokens.css with TailAdmin dark surfaces (#101828, #171f2f, #0c111d, #1d2939) and brand accent (#465fff / #7592ff).
   * Updated GlobalHeader, Navigation active/inactive menu pills, OverviewTab TailAdmin KPI cards (48px icon badges + status pills), and AreaChart styling.
+
+Version 13 (2026-11-26)
+- Redesigned Landing.tsx in the Mintlify dark visual aesthetic: near-black (#08090a) background, flowing curved emerald/mint SVG wave mesh (EmeraldWaveMesh), hairline 1px white/[0.08] bento borders, dark glass (#0d0f11) telemetry preview window, white pill primary CTAs, and minimal typography while preserving all existing content and functionality.

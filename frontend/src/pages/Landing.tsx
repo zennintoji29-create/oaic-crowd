@@ -15,8 +15,7 @@ import {
   Activity,
   Pause,
   Play,
-  Zap,
-  Server
+  Zap
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,6 +35,49 @@ const INITIAL_SERIES = [
   { t: '10:08', pressure: 38, count: 19 },
   { t: '10:10', pressure: 35, count: 17 }
 ];
+
+/* Flowing Mint/Emerald Curved Wave Lines (Mintlify-style) */
+const EmeraldWaveMesh: React.FC<{ className?: string; idPrefix?: string }> = ({
+  className = '',
+  idPrefix = 'mintWave'
+}) => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 1440 520"
+    fill="none"
+    preserveAspectRatio="none"
+    className={`pointer-events-none select-none ${className}`}
+  >
+    <defs>
+      <linearGradient id={`${idPrefix}-grad-a`} x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#18e299" stopOpacity="0" />
+        <stop offset="35%" stopColor="#18e299" stopOpacity="0.45" />
+        <stop offset="70%" stopColor="#10b981" stopOpacity="0.3" />
+        <stop offset="100%" stopColor="#0d9373" stopOpacity="0" />
+      </linearGradient>
+      <linearGradient id={`${idPrefix}-grad-b`} x1="0%" y1="80%" x2="100%" y2="10%">
+        <stop offset="0%" stopColor="#0d9373" stopOpacity="0" />
+        <stop offset="50%" stopColor="#34d399" stopOpacity="0.35" />
+        <stop offset="100%" stopColor="#18e299" stopOpacity="0" />
+      </linearGradient>
+    </defs>
+    {Array.from({ length: 14 }).map((_, idx) => {
+      const offset = idx * 14;
+      const yStart = 490 - offset * 0.75;
+      const c1y = 330 + offset * 0.4;
+      const c2y = 140 - offset * 0.5;
+      const yEnd = 20 + offset * 0.65;
+      return (
+        <path
+          key={idx}
+          d={`M -80 ${yStart} C 360 ${c1y}, 920 ${c2y}, 1520 ${yEnd}`}
+          stroke={`url(#${idx % 2 === 0 ? `${idPrefix}-grad-a` : `${idPrefix}-grad-b`})`}
+          strokeWidth={idx % 3 === 0 ? '1.35' : '0.85'}
+        />
+      );
+    })}
+  </svg>
+);
 
 export const Landing: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,8 +136,8 @@ export const Landing: React.FC = () => {
   };
 
   const navLinks = [
-    { href: '#features', label: 'Features' },
-    { href: '#how-it-works', label: 'How it works' },
+    { href: '#features', label: 'Platform' },
+    { href: '#how-it-works', label: 'Architecture' },
     { href: '#pricing', label: 'Pricing' },
     { href: '#contact', label: 'Contact' }
   ];
@@ -213,43 +255,51 @@ export const Landing: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-dvh bg-[#0F172A] text-slate-50 flex flex-col safe-area-shell">
-      {/* Sticky Glassmorphic Top Navigation */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0F172A]/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[64px] flex items-center justify-between gap-4">
+    <div className="min-h-dvh bg-[#08090a] text-neutral-100 flex flex-col safe-area-shell selection:bg-[#18e299]/25 selection:text-white">
+      {/* Sticky Minimal Top Navigation */}
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#08090a]/85 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 min-h-[60px] flex items-center justify-between gap-4">
           <Link
             to="/"
-            className="flex items-center gap-2.5 text-sm sm:text-base font-semibold tracking-tight text-white min-h-[44px] px-1 rounded cursor-pointer"
+            className="flex items-center gap-2 text-sm font-semibold tracking-tight text-white min-h-[44px] px-1 rounded"
           >
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-400">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#18e299]/15 border border-[#18e299]/35 text-[#18e299]">
               <ShieldCheck className="w-4 h-4" aria-hidden="true" />
             </span>
-            <span>CPR Analytics</span>
+            <span>CPR</span>
           </Link>
 
-          <nav aria-label="Primary" className="hidden lg:flex items-center gap-6">
+          <nav aria-label="Primary" className="hidden lg:flex items-center gap-7">
             {navLinks.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="text-sm font-medium text-slate-300 hover:text-white py-2 px-1 rounded transition-colors cursor-pointer"
+                className="text-[13px] font-medium text-neutral-400 hover:text-white py-2 transition-colors"
               >
                 {item.label}
               </a>
             ))}
+          </nav>
+
+          <div className="hidden lg:flex items-center gap-2.5">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center min-h-[36px] px-3.5 py-1.5 rounded-full text-[13px] font-medium text-neutral-300 hover:text-white transition-colors"
             >
-              <Lock className="w-4 h-4" aria-hidden="true" />
-              <span>Operator login</span>
+              Sign in
             </Link>
-          </nav>
+            <a
+              href="#contact"
+              className="inline-flex items-center justify-center min-h-[36px] px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-[13px] font-semibold transition-colors"
+            >
+              Request pilot
+            </a>
+          </div>
 
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="lg:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg border border-white/15 bg-slate-800/70 text-white cursor-pointer"
+            className="lg:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg border border-white/[0.1] bg-white/[0.04] text-white"
             aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={mobileMenuOpen}
           >
@@ -260,14 +310,14 @@ export const Landing: React.FC = () => {
         {mobileMenuOpen && (
           <nav
             aria-label="Mobile navigation"
-            className="lg:hidden border-t border-white/10 bg-[#0F172A]/95 backdrop-blur-md px-4 py-3 flex flex-col gap-1"
+            className="lg:hidden border-t border-white/[0.08] bg-[#08090a]/95 backdrop-blur-md px-4 py-3 flex flex-col gap-1"
           >
             {navLinks.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-white/5"
+                className="min-h-[44px] flex items-center px-3 rounded-lg text-sm font-medium text-neutral-300 hover:bg-white/[0.05] hover:text-white"
               >
                 {item.label}
               </a>
@@ -275,7 +325,7 @@ export const Landing: React.FC = () => {
             <Link
               to="/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="mt-2 min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold"
+              className="mt-2 min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold"
             >
               <Lock className="w-4 h-4" aria-hidden="true" />
               <span>Operator login</span>
@@ -285,122 +335,138 @@ export const Landing: React.FC = () => {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section with Real-Time Data Visualization Glass Card */}
-        <section className="relative overflow-hidden border-b border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            <div className="lg:col-span-6 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/15 text-xs font-medium text-emerald-400">
-                <Server className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Real-time crowd telemetry & gate control</span>
+        {/* Hero Section with Flowing Emerald Wave Mesh */}
+        <section className="relative overflow-hidden border-b border-white/[0.08]">
+          {/* Subtle top radial emerald ambience + diagonal flowing wave lines */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[420px] rounded-full bg-[#18e299]/[0.07] blur-[110px]"
+          />
+          <EmeraldWaveMesh
+            idPrefix="heroWave"
+            className="absolute inset-0 w-full h-full opacity-80"
+          />
+
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-16 sm:pt-20 sm:pb-24">
+            <div className="max-w-2xl space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.1] text-xs font-medium text-neutral-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#18e299]" aria-hidden="true" />
+                <span>Autonomous crowd safety telemetry</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl xl:text-5xl font-bold tracking-tight text-white leading-tight">
-                Prevent crowd crush before chokepoints stall.
+              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-semibold tracking-[-0.025em] text-white leading-[1.08]">
+                Crowd crush prevention infrastructure.
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-xl">
-                Crowd Pressure Radar fuses 24 GHz radar, laser ranging, and edge computer vision into one clear operations dashboard—metering gate inflow automatically even without internet.
+              <p className="text-base sm:text-lg text-neutral-400 leading-relaxed max-w-xl">
+                Crowd Pressure Radar fuses 24 GHz radar, laser ranging, and edge computer vision into one operations platform—metering gate inflow automatically even without internet.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <a
                   href="#contact"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
                 >
                   <span>Request a pilot</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </a>
                 <Link
                   to="/login"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg border border-white/15 bg-white/5 backdrop-blur-md hover:bg-white/10 text-white text-sm font-semibold transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-white text-sm font-medium transition-colors"
                 >
-                  <Lock className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+                  <Lock className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
                   <span>Operator login</span>
                 </Link>
               </div>
             </div>
 
-            {/* Real-Time Data Visualization Glassmorphism Card */}
-            <div className="lg:col-span-6">
-              <div className="rounded-xl bg-slate-900/65 backdrop-blur-md border border-white/15 p-5 sm:p-6 shadow-md space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-                  <div>
-                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
-                      Sample Telemetry Stream • Gate A
-                    </span>
-                    <span className="text-base font-semibold text-white">
-                      Corridor Pressure & Flow
-                    </span>
+            {/* Mintlify-style Framed Dark Glass Dashboard Preview */}
+            <div className="mt-12 rounded-2xl border border-white/[0.1] bg-[#0d0f11]/90 backdrop-blur-xl overflow-hidden shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)]">
+              {/* Top Window Bar */}
+              <div className="px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-white/[0.02] flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5" aria-hidden="true">
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold ${
-                        isBusy
-                          ? 'bg-amber-950/80 border-amber-500/40 text-amber-300'
-                          : 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>{isBusy ? 'Busy' : 'Clear'}</span>
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setPreviewPaused((p) => !p)}
-                      aria-label={previewPaused ? 'Resume live preview' : 'Pause live preview'}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 transition-colors cursor-pointer"
-                    >
-                      {previewPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  <span className="text-xs font-medium text-neutral-400">
+                    Sample Telemetry Stream • Gate A
+                  </span>
                 </div>
 
-                {/* Live KPI Strip */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-slate-950/60 border border-white/10 p-3">
-                    <span className="text-xs text-slate-400 block">People</span>
-                    <span className="text-2xl font-bold text-white tabular-nums mt-0.5 block">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-medium ${
+                      isBusy
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                        : 'bg-[#18e299]/10 border-[#18e299]/30 text-[#18e299]'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>{isBusy ? 'Busy' : 'Clear'}</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPaused((p) => !p)}
+                    aria-label={previewPaused ? 'Resume live preview' : 'Pause live preview'}
+                    className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 transition-colors"
+                  >
+                    {previewPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 sm:p-6 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
+                    <span className="text-xs text-neutral-500 block">People detected</span>
+                    <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
                       {latestPoint.count}
                     </span>
                   </div>
-                  <div className="rounded-lg bg-slate-950/60 border border-white/10 p-3">
-                    <span className="text-xs text-slate-400 block">Pressure</span>
-                    <span className="text-2xl font-bold text-emerald-400 tabular-nums mt-0.5 block">
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
+                    <span className="text-xs text-neutral-500 block">Pressure score</span>
+                    <span className="text-2xl font-semibold text-[#18e299] tabular-nums mt-1 block">
                       {latestPoint.pressure}
                     </span>
                   </div>
-                  <div className="rounded-lg bg-slate-950/60 border border-white/10 p-3">
-                    <span className="text-xs text-slate-400 block">Gate Angle</span>
-                    <span className="text-2xl font-bold text-white tabular-nums mt-0.5 block">
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
+                    <span className="text-xs text-neutral-500 block">Barrier angle</span>
+                    <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
                       {isBusy ? '45°' : '90°'}
                     </span>
                   </div>
                 </div>
 
-                {/* Recharts Real-Time Area Chart */}
-                <div className="h-44 w-full rounded-lg bg-slate-950/50 border border-white/10 p-2">
+                <div className="h-52 w-full rounded-xl bg-[#08090a]/70 border border-white/[0.07] p-3">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={series} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                      <XAxis dataKey="t" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} domain={[0, 80]} />
+                      <defs>
+                        <linearGradient id="mintlifyAreaFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#18e299" stopOpacity={0.28} />
+                          <stop offset="95%" stopColor="#18e299" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                      <XAxis dataKey="t" stroke="#737373" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#737373" fontSize={11} tickLine={false} axisLine={false} domain={[0, 80]} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0f172a',
-                          borderColor: 'rgba(255,255,255,0.15)',
-                          borderRadius: '8px',
+                          backgroundColor: '#0d0f11',
+                          borderColor: 'rgba(255,255,255,0.12)',
+                          borderRadius: '10px',
                           fontSize: '12px',
-                          color: '#f8fafc'
+                          color: '#fafafa'
                         }}
                       />
                       <Area
                         type="monotone"
                         dataKey="pressure"
                         name="Pressure Score"
-                        stroke="#22c55e"
-                        fill="#22c55e"
-                        fillOpacity={0.18}
+                        stroke="#18e299"
+                        fill="url(#mintlifyAreaFill)"
                         strokeWidth={2}
                         isAnimationActive={false}
                       />
@@ -412,54 +478,81 @@ export const Landing: React.FC = () => {
           </div>
         </section>
 
-        {/* Trust Badges Strip */}
-        <section aria-label="System trust indicators" className="border-b border-white/10 bg-slate-900/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {trustBadges.map((badge) => {
-              const Icon = badge.icon;
-              return (
-                <div
-                  key={badge.label}
-                  className="rounded-lg bg-white/5 border border-white/10 p-4 flex items-center gap-3"
-                >
-                  <div className="h-10 w-10 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-                    <Icon className="w-5 h-5" aria-hidden="true" />
+        {/* Hairline Trust Grid (Mintlify-style divided grid) */}
+        <section aria-label="System trust indicators" className="border-b border-white/[0.08]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-4 space-y-2">
+              <p className="text-sm text-neutral-400 leading-relaxed">
+                Built for high-density corridors, temple queues, and transit hubs where optical cameras alone fail.
+              </p>
+            </div>
+            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 border border-white/[0.08] rounded-xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-white/[0.08]">
+              {trustBadges.map((badge, idx) => {
+                const Icon = badge.icon;
+                return (
+                  <div
+                    key={badge.label}
+                    className={`p-5 bg-[#0b0c0e] flex items-center gap-3.5 ${
+                      idx >= 2 ? 'sm:border-t sm:border-white/[0.08]' : ''
+                    }`}
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center text-[#18e299] shrink-0">
+                      <Icon className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-white">{badge.label}</div>
+                      <div className="text-xs text-neutral-500">{badge.detail}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-white">{badge.label}</div>
-                    <div className="text-xs text-slate-400">{badge.detail}</div>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        {/* Feature Highlights with Icons (Glassmorphism Cards) */}
-        <section id="features" className="border-b border-white/10 py-14 sm:py-18">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-            <div className="max-w-2xl">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                Engineered for reliability at physical chokepoints
-              </h2>
-              <p className="mt-2 text-base text-slate-300">
-                Every subsystem is built to keep monitoring and metering gates when visibility or connectivity degrades.
-              </p>
+        {/* Bento Feature Grid */}
+        <section id="features" className="relative border-b border-white/[0.08] py-16 sm:py-24 overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div className="max-w-xl space-y-2">
+                <h2 className="text-2xl sm:text-4xl font-semibold text-white tracking-[-0.02em]">
+                  One platform for your entire corridor stack.
+                </h2>
+                <p className="text-sm sm:text-base text-neutral-400">
+                  Every subsystem is built to keep monitoring and metering gates when visibility or connectivity degrades.
+                </p>
+              </div>
+              <a
+                href="#contact"
+                className="inline-flex items-center justify-center min-h-[38px] px-4 py-1.5 rounded-full bg-white text-[#08090a] hover:bg-neutral-200 text-xs font-semibold transition-colors self-start sm:self-auto"
+              >
+                Request pilot
+              </a>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feat) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-white/[0.08] rounded-2xl overflow-hidden bg-[#0b0c0e]">
+              {features.map((feat, idx) => {
                 const Icon = feat.icon;
                 return (
                   <article
                     key={feat.title}
-                    className="rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/15 p-6 space-y-3 hover:border-emerald-400/40 transition-colors"
+                    className={`relative p-6 sm:p-7 space-y-3 border-white/[0.08] ${
+                      idx % 3 !== 2 ? 'lg:border-r' : ''
+                    } ${idx < 3 ? 'lg:border-b' : ''} ${
+                      idx % 2 === 0 ? 'md:border-r lg:border-r-0' : ''
+                    } border-b md:border-b lg:last:border-b-0 overflow-hidden`}
                   >
-                    <div className="h-10 w-10 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-                      <Icon className="w-5 h-5" aria-hidden="true" />
+                    {idx === 0 && (
+                      <EmeraldWaveMesh
+                        idPrefix="bentoWave"
+                        className="absolute inset-0 w-full h-full opacity-35"
+                      />
+                    )}
+                    <div className="relative z-10 h-9 w-9 rounded-lg bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center text-[#18e299]">
+                      <Icon className="w-4 h-4" aria-hidden="true" />
                     </div>
-                    <h3 className="text-lg font-semibold text-white">{feat.title}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">{feat.description}</p>
+                    <h3 className="relative z-10 text-base font-semibold text-white">{feat.title}</h3>
+                    <p className="relative z-10 text-sm text-neutral-400 leading-relaxed">{feat.description}</p>
                   </article>
                 );
               })}
@@ -467,47 +560,63 @@ export const Landing: React.FC = () => {
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="border-b border-white/10 py-14 sm:py-18 bg-slate-900/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-            <div className="max-w-2xl">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                How it works
+        {/* Architecture & Scale Metrics (Mintlify 4-step + metric strip) */}
+        <section id="how-it-works" className="relative border-b border-white/[0.08] py-16 sm:py-24 overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
+            <div className="max-w-xl space-y-2">
+              <h2 className="text-2xl sm:text-4xl font-semibold text-white tracking-[-0.02em]">
+                Built to respond in milliseconds.
               </h2>
-              <p className="mt-2 text-base text-slate-300">
+              <p className="text-sm sm:text-base text-neutral-400">
                 Four stages from local sensing to physical gate metering.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {steps.map((step) => {
                 const Icon = step.icon;
                 return (
                   <div
                     key={step.num}
-                    className="rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/15 p-5 space-y-3"
+                    className="rounded-xl bg-[#0d0f11] border border-white/[0.08] p-5 space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-emerald-400">STEP {step.num}</span>
-                      <Icon className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+                      <span className="text-xs font-medium text-[#18e299]">STEP {step.num}</span>
+                      <Icon className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
                     </div>
                     <h3 className="text-base font-semibold text-white">{step.title}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">{step.text}</p>
+                    <p className="text-sm text-neutral-400 leading-relaxed">{step.text}</p>
                   </div>
                 );
               })}
+            </div>
+
+            {/* Minimal Metric Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-8 border-t border-white/[0.08]">
+              <div>
+                <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight">257 ms</div>
+                <div className="text-xs text-neutral-500 mt-1">End-to-end physical barrier actuation</div>
+              </div>
+              <div>
+                <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight">24 GHz</div>
+                <div className="text-xs text-neutral-500 mt-1">FMCW radar penetrates smoke and darkness</div>
+              </div>
+              <div>
+                <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight">99.99%</div>
+                <div className="text-xs text-neutral-500 mt-1">Autonomous edge failover continuity</div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Pricing Table */}
-        <section id="pricing" className="border-b border-white/10 py-14 sm:py-18">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-            <div className="max-w-2xl">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                Transparent deployment pricing
+        <section id="pricing" className="border-b border-white/[0.08] py-16 sm:py-24">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+            <div className="max-w-xl space-y-2">
+              <h2 className="text-2xl sm:text-4xl font-semibold text-white tracking-[-0.02em]">
+                Transparent deployment pricing.
               </h2>
-              <p className="mt-2 text-base text-slate-300">
+              <p className="text-sm sm:text-base text-neutral-400">
                 Start with a single benchtop pilot pod or scale across full temple and transit corridors.
               </p>
             </div>
@@ -516,33 +625,39 @@ export const Landing: React.FC = () => {
               {pricingTiers.map((tier) => (
                 <div
                   key={tier.name}
-                  className={`rounded-xl backdrop-blur-md p-6 flex flex-col justify-between space-y-6 ${
+                  className={`relative rounded-2xl p-6 flex flex-col justify-between space-y-6 overflow-hidden ${
                     tier.highlighted
-                      ? 'bg-slate-800/70 border-2 border-emerald-500/70 shadow-md'
-                      : 'bg-slate-900/60 border border-white/15'
+                      ? 'bg-[#0d0f11] border border-[#18e299]/50'
+                      : 'bg-[#0b0c0e] border border-white/[0.08]'
                   }`}
                 >
-                  <div className="space-y-4">
+                  {tier.highlighted && (
+                    <EmeraldWaveMesh
+                      idPrefix="pricingWave"
+                      className="absolute inset-0 w-full h-full opacity-25"
+                    />
+                  )}
+                  <div className="relative z-10 space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-white">{tier.name}</h3>
+                      <h3 className="text-base font-semibold text-white">{tier.name}</h3>
                       {tier.highlighted && (
-                        <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-semibold">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#18e299]/15 border border-[#18e299]/35 text-[#18e299] text-xs font-medium">
                           Recommended
                         </span>
                       )}
                     </div>
 
                     <div>
-                      <span className="text-3xl font-bold text-white">{tier.price}</span>
-                      <span className="text-xs text-slate-400 block mt-1">{tier.period}</span>
+                      <span className="text-3xl font-semibold text-white">{tier.price}</span>
+                      <span className="text-xs text-neutral-500 block mt-1">{tier.period}</span>
                     </div>
 
-                    <p className="text-sm text-slate-300 leading-relaxed">{tier.description}</p>
+                    <p className="text-sm text-neutral-400 leading-relaxed">{tier.description}</p>
 
-                    <ul className="space-y-2.5 pt-2 border-t border-white/10">
+                    <ul className="space-y-2.5 pt-3 border-t border-white/[0.08]">
                       {tier.features.map((item) => (
-                        <li key={item} className="flex items-start gap-2 text-sm text-slate-200">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" aria-hidden="true" />
+                        <li key={item} className="flex items-start gap-2 text-sm text-neutral-300">
+                          <CheckCircle2 className="w-4 h-4 text-[#18e299] shrink-0 mt-0.5" aria-hidden="true" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -551,10 +666,10 @@ export const Landing: React.FC = () => {
 
                   <a
                     href="#contact"
-                    className={`min-h-[44px] inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                    className={`relative z-10 min-h-[44px] inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
                       tier.highlighted
-                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                        : 'bg-white/5 hover:bg-white/10 border border-white/15 text-white'
+                        ? 'bg-white hover:bg-neutral-200 text-[#08090a]'
+                        : 'bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-white'
                     }`}
                   >
                     {tier.cta}
@@ -566,13 +681,13 @@ export const Landing: React.FC = () => {
         </section>
 
         {/* Pilot Contact Section */}
-        <section id="contact" className="py-14 sm:py-18">
-          <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+        <section id="contact" className="relative py-16 sm:py-24 overflow-hidden">
+          <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-[-0.02em]">
                 Request a pilot
               </h2>
-              <p className="mt-2 text-sm text-slate-300">
+              <p className="text-sm text-neutral-400">
                 Share your venue details to schedule a benchtop or corridor evaluation.
               </p>
             </div>
@@ -580,10 +695,10 @@ export const Landing: React.FC = () => {
             <form
               onSubmit={handleContactSubmit}
               noValidate
-              className="rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/15 p-6 space-y-4"
+              className="rounded-2xl bg-[#0d0f11] border border-white/[0.08] p-6 space-y-4"
             >
               <div>
-                <label htmlFor="pilot-name" className="block text-sm font-medium text-slate-200 mb-1">
+                <label htmlFor="pilot-name" className="block text-xs font-medium text-neutral-300 mb-1.5">
                   Name
                 </label>
                 <input
@@ -591,7 +706,7 @@ export const Landing: React.FC = () => {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg bg-slate-950/80 border border-white/15 text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full min-h-[44px] px-3.5 py-2 text-sm rounded-lg bg-[#08090a] border border-white/[0.12] text-white focus:outline-none focus:border-[#18e299]"
                 />
                 {formErrors.name && (
                   <p className="mt-1 text-xs text-rose-400">{formErrors.name}</p>
@@ -599,7 +714,7 @@ export const Landing: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="pilot-org" className="block text-sm font-medium text-slate-200 mb-1">
+                <label htmlFor="pilot-org" className="block text-xs font-medium text-neutral-300 mb-1.5">
                   Organization
                 </label>
                 <input
@@ -607,7 +722,7 @@ export const Landing: React.FC = () => {
                   type="text"
                   value={organization}
                   onChange={(e) => setOrganization(e.target.value)}
-                  className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg bg-slate-950/80 border border-white/15 text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full min-h-[44px] px-3.5 py-2 text-sm rounded-lg bg-[#08090a] border border-white/[0.12] text-white focus:outline-none focus:border-[#18e299]"
                 />
                 {formErrors.organization && (
                   <p className="mt-1 text-xs text-rose-400">{formErrors.organization}</p>
@@ -615,7 +730,7 @@ export const Landing: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="pilot-email" className="block text-sm font-medium text-slate-200 mb-1">
+                <label htmlFor="pilot-email" className="block text-xs font-medium text-neutral-300 mb-1.5">
                   Email
                 </label>
                 <input
@@ -623,7 +738,7 @@ export const Landing: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg bg-slate-950/80 border border-white/15 text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full min-h-[44px] px-3.5 py-2 text-sm rounded-lg bg-[#08090a] border border-white/[0.12] text-white focus:outline-none focus:border-[#18e299]"
                 />
                 {formErrors.email && (
                   <p className="mt-1 text-xs text-rose-400">{formErrors.email}</p>
@@ -632,14 +747,14 @@ export const Landing: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold transition-colors cursor-pointer"
+                className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
               >
                 <Mail className="w-4 h-4" aria-hidden="true" />
                 <span>Send pilot request</span>
               </button>
 
               {submitted && (
-                <p className="text-xs text-emerald-400 font-medium">
+                <p className="text-xs text-[#18e299] font-medium">
                   Your email client has been opened with the pilot request details.
                 </p>
               )}
@@ -648,9 +763,9 @@ export const Landing: React.FC = () => {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 bg-slate-900/60 py-6 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+      {/* Minimal Footer */}
+      <footer className="border-t border-white/[0.08] bg-[#08090a] py-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-500">
           <span>CPR (Crowd Pressure Radar) • Built at SOA University, Bhubaneswar</span>
           <span>Contact: pilot@cpr-safety.org • Prototype for demonstration and learning</span>
         </div>
