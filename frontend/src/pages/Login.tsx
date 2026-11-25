@@ -28,7 +28,7 @@ export const Login: React.FC = () => {
       .then((res) => {
         if (!active) return;
         setSessionToken(res.token);
-        const isSetupDone = res.setupComplete || sessionStorage.getItem('cpr_setup_complete') === 'true';
+        const isSetupDone = sessionStorage.getItem('cpr_setup_complete') === 'true';
         navigate(isSetupDone ? '/dashboard' : '/setup', { replace: true });
       })
       .catch(() => {
@@ -70,7 +70,7 @@ export const Login: React.FC = () => {
       const res = await authenticateMaster(credential);
       setSessionToken(res.token);
       setFailedAttempts(0);
-      const isSetupDone = res.setupComplete || sessionStorage.getItem('cpr_setup_complete') === 'true';
+      const isSetupDone = sessionStorage.getItem('cpr_setup_complete') === 'true';
       navigate(isSetupDone ? '/dashboard' : '/setup', { replace: true });
     } catch {
       const nextAttempts = failedAttempts + 1;

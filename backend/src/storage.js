@@ -315,6 +315,29 @@ class StorageManager {
     return gate;
   }
 
+  resetAllGates() {
+    const now = Date.now();
+    const updated = [];
+    for (const [id, gate] of this.gates.entries()) {
+      const next = {
+        ...gate,
+        status: 'GREEN',
+        count: 0,
+        density: 0,
+        riskScore: 0,
+        servoAngle: 90,
+        servoStatus: 'OPEN',
+        isManualOverride: false,
+        manualState: 'AUTO',
+        power: true,
+        lastUpdated: now
+      };
+      this.gates.set(id, next);
+      updated.push(next);
+    }
+    return updated;
+  }
+
   updateGateDensity(id, delta) {
     const gate = this.gates.get(id);
     if (!gate) return null;

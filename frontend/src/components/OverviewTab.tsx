@@ -22,6 +22,7 @@ interface OverviewTabProps {
   hardware?: HardwareActuatorState | null;
   onSelectZone: (zoneId: string) => void;
   onGateUpdated?: (updatedGate: GateState) => void;
+  onResetAll?: () => void;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -30,9 +31,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   worstState,
   hardware,
   onSelectZone,
-  onGateUpdated
+  onGateUpdated,
+  onResetAll
 }) => {
   const [history, setHistory] = useState<TelemetryPoint[]>([]);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
 
   // Default fallback gates if not loaded yet
   const displayGates = gates.length > 0 ? gates : [
@@ -126,20 +129,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
         <button
           type="button"
+          disabled={isResetting}
           onClick={async () => {
+            setIsResetting(true);
             try {
               const resetGates = await resetAllGates();
               if (onGateUpdated && Array.isArray(resetGates)) {
                 resetGates.forEach((g) => onGateUpdated(g));
               }
+              if (onResetAll) onResetAll();
             } catch (e) {
               console.warn('Reset failed:', e);
+            } finally {
+              setIsResetting(false);
             }
           }}
-          className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-status-danger-border bg-status-danger-bg text-status-danger-text hover:opacity-90 text-xs sm:text-sm font-semibold transition-opacity self-start sm:self-auto"
+          className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-status-danger-border bg-status-danger-bg text-status-danger-text hover:opacity-90 text-xs sm:text-sm font-semibold transition-opacity self-start sm:self-auto disabled:opacity-50"
         >
           <RotateCcw className="w-4 h-4" aria-hidden="true" />
-          <span>Reset</span>
+          <span>{isResetting ? 'Resetting...' : 'Reset'}</span>
         </button>
       </div>
 

@@ -7,7 +7,6 @@ import {
   Bell,
   Sliders,
   ShieldCheck,
-  ExternalLink,
   LogOut,
   MoreVertical,
   Menu,
@@ -181,16 +180,8 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
           </div>
 
-          {/* Bottom Utility Links (Always fits without scroll) */}
+          {/* Bottom Utility Action */}
           <div className="pt-2 border-t border-border-subtle flex flex-col gap-1">
-            <Link
-              to="/"
-              className="min-h-[44px] flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md text-text-muted hover:text-text-primary hover:bg-surface-sunken transition-colors"
-            >
-              <ExternalLink className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
-              <span>Landing Page</span>
-            </Link>
-
             {onLogout && (
               <button
                 type="button"
@@ -265,6 +256,19 @@ export const Navigation: React.FC<NavigationProps> = ({
               <span>System Setup</span>
             </button>
 
+            <Link
+              to="/sandbox"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium ${
+                activeTab === 'sandbox'
+                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                  : 'text-text-secondary hover:bg-surface-sunken'
+              }`}
+            >
+              <Cpu className="w-4 h-4 text-accent" aria-hidden="true" />
+              <span>Hardware Demo</span>
+            </Link>
+
             <button
               type="button"
               onClick={() => {
@@ -281,15 +285,6 @@ export const Navigation: React.FC<NavigationProps> = ({
               <span>About & Safety</span>
             </button>
 
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-sunken"
-            >
-              <ExternalLink className="w-4 h-4" aria-hidden="true" />
-              <span>Landing Page</span>
-            </Link>
-
             {onLogout && (
               <button
                 type="button"
@@ -303,16 +298,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <span>Logout</span>
               </button>
             )}
-
-            {/* Hardware Demo last item */}
-            <Link
-              to="/sandbox"
-              onClick={() => setMobileMenuOpen(false)}
-              className="min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-text-secondary hover:bg-surface-sunken"
-            >
-              <Cpu className="w-4 h-4 text-accent" aria-hidden="true" />
-              <span>Hardware Demo</span>
-            </Link>
           </nav>
         )}
       </div>

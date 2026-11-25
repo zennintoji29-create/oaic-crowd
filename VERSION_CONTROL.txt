@@ -43,3 +43,9 @@ Version 6 (2026-11-26)
   * Updated Setup.tsx to use min-h-dvh, safe-area-shell, and flat-panel styling.
   * Removed 5 unused legacy component files (InitialSetup.tsx, LandingPage.tsx, ManualControlTab.tsx, Navbar.tsx, ZoneCard.tsx) and cleaned up unused imports in DemoTab.tsx, ZoneDetailTab.tsx, and Setup.tsx.
   * Verified frontend unit tests (vitest), TypeScript compilation + Vite production build, and backend syntax check.
+
+Version 7 (2026-11-26)
+- Fixed Reset button (POST /api/gates/reset-all & RESET_ALL): now resets gate count, density, riskScore, status (GREEN), servoAngle (90), manualState (AUTO), power (true), and hardwareState.currentCount (0) with live telemetry broadcast and frontend refresh.
+- Fixed first-visit Login -> Setup -> Dashboard flow in Login.tsx using per-session cpr_setup_complete check so first visit always routes through /setup before /dashboard.
+- Removed Landing Page link from both desktop and mobile Navigation menus.
+- Standardized Navigation menu order (desktop & mobile): Overview -> Zone Details -> Alerts & History -> System Setup -> Hardware Demo -> About & Safety (last) -> Logout.

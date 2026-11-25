@@ -339,6 +339,7 @@ const AppRoutes: React.FC = () => {
                     hardware={hardware}
                     onSelectZone={handleSelectZone}
                     onGateUpdated={handleGateUpdated}
+                    onResetAll={refreshData}
                   />
                 )}
                 {dashboardTab === 'detail' && (

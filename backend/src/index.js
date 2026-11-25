@@ -314,17 +314,30 @@ app.get('/api/stream', (req, res) => {
 
 // POST /api/gates/reset-all - Reset all gates to AUTO live mode (protected)
 app.post('/api/gates/reset-all', requireMasterAuth, (req, res) => {
-  const allGates = storage.getGates();
-  const updatedGates = allGates.map((g) => {
-    storage.updateGatePower(g.id, true);
-    return storage.updateGateOverride(g.id, 'AUTO');
-  });
+  const updatedGates = storage.resetAllGates();
+  hardwareState.currentCount = 0;
   hardwareState.cameraOnline = true;
   hardwareState.lastCameraPing = Date.now();
   hardwareState.systemMode = 'AI_VISION_PRIMARY';
-  updateControlLogic(hardwareState.currentCount);
+  updateControlLogic(0);
   updatedGates.forEach((g) => {
-    if (g) broadcast('GATE_UPDATED', g);
+    if (g) {
+      broadcast('GATE_UPDATED', g);
+      const pt = storage.addTelemetry({
+        deviceId: g.zoneId === 'zone-entry-a' ? 'esp32-radar-01' : 'esp32-radar-02',
+        zoneId: g.zoneId,
+        timestamp: Date.now(),
+        state: 'GREEN',
+        score: 0,
+        density: 0,
+        avgSpeed: 1.3,
+        stopGoIndex: 0.05,
+        targetCount: 0,
+        entryCount: 0,
+        exitCount: 0
+      });
+      broadcast('TELEMETRY_UPDATE', pt);
+    }
   });
   broadcast('HARDWARE_UPDATE', hardwareState);
   res.json({ status: 'ok', gates: updatedGates, hardware: hardwareState });
@@ -561,18 +574,14 @@ app.post('/api/master/command', requireMasterAuth, (req, res) => {
 
   // 7. Reset everything back to live data
   else if (action === 'RESET_ALL') {
-    const allGates = storage.getGates();
-    allGates.forEach((g) => {
-      storage.updateGateOverride(g.id, 'AUTO');
-      storage.updateGatePower(g.id, true);
-    });
+    const resetGates = storage.resetAllGates();
+    hardwareState.currentCount = 0;
     hardwareState.cameraOnline = true;
     hardwareState.lastCameraPing = Date.now();
     hardwareState.systemMode = 'AI_VISION_PRIMARY';
-    updateControlLogic(hardwareState.currentCount);
+    updateControlLogic(0);
     targetGate = storage.getGate(gateId) || storage.getGate('gate-a');
-    allGates.forEach((g) => {
-      const fresh = storage.getGate(g.id);
+    resetGates.forEach((fresh) => {
       if (fresh) broadcast('GATE_UPDATED', { ...fresh, silent: true });
     });
   }
