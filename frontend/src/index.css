@@ -24,17 +24,18 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
-/* TailAdmin Card Surfaces */
+/* Mintlify Dark Glass Card Surfaces */
 .flat-panel {
-  background-color: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(13, 15, 17, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
+  backdrop-filter: blur(12px);
   box-shadow: var(--shadow-sm);
 }
 
 .flat-panel-sunken {
-  background-color: var(--surface-sunken);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(8, 9, 10, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-md);
 }
 

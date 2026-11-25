@@ -290,7 +290,11 @@ const AppRoutes: React.FC = () => {
 
   // Shared Dashboard Shell for /dashboard and /sandbox
   const renderShell = (activeKey: string, content: React.ReactNode) => (
-    <div className="min-h-dvh flex flex-col bg-surface-base text-text-primary antialiased safe-area-shell">
+    <div className="relative min-h-dvh flex flex-col bg-[#08090a] text-text-primary antialiased safe-area-shell overflow-x-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[360px] rounded-full bg-[#18e299]/[0.05] blur-[120px] z-0"
+      />
       <GlobalHeader
         worstState={worst.state}
         worstZoneName={worst.zoneName}

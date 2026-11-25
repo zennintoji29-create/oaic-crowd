@@ -117,13 +117,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Consistent Page Header */}
-      <div className="flat-panel p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+      {/* Consistent Page Header with Mintlify Flowing Wave Accent */}
+      <div className="relative overflow-hidden flat-panel p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 900 180"
+          fill="none"
+          preserveAspectRatio="none"
+          className="pointer-events-none select-none absolute inset-0 w-full h-full opacity-45"
+        >
+          <defs>
+            <linearGradient id="dashHeaderWave" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#18e299" stopOpacity="0" />
+              <stop offset="50%" stopColor="#18e299" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <path
+              key={i}
+              d={`M -40 ${170 - i * 14} C 260 ${120 + i * 8}, 600 ${40 - i * 10}, 940 ${15 + i * 12}`}
+              stroke="url(#dashHeaderWave)"
+              strokeWidth="1"
+            />
+          ))}
+        </svg>
+        <div className="relative z-10">
+          <h2 className="text-lg sm:text-xl font-semibold text-white tracking-[-0.015em]">
             Gate Overview
           </h2>
-          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
+          <p className="text-xs sm:text-sm text-neutral-400 mt-0.5">
             Live gate status, people count, and pressure trends. Pinned values stay until Reset.
           </p>
         </div>
@@ -188,17 +211,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {/* System Mode */}
         <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
-          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
-            <Radio className="w-5 h-5 text-[#7592ff]" aria-hidden="true" />
+          <div className="w-11 h-11 rounded-xl bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center">
+            <Radio className="w-5 h-5 text-[#18e299]" aria-hidden="true" />
           </div>
           <div className="mt-5 flex items-end justify-between gap-2">
             <div>
-              <span className="text-sm text-text-muted block">Active Sensor</span>
-              <span className="text-xl font-bold text-text-primary mt-1 block">
+              <span className="text-sm text-neutral-400 block">Active Sensor</span>
+              <span className="text-xl font-semibold text-white mt-1 block">
                 {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'Radar' : 'AI Vision'}
               </span>
             </div>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#465fff]/15 text-[#7592ff]">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
               {hardware?.systemMode === 'HARDWARE_FAILOVER' ? '24 GHz' : 'CUDA'}
             </span>
           </div>
@@ -206,17 +229,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {/* Monitored Gates */}
         <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
-          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
-            <Lock className="w-5 h-5 text-[#7592ff]" aria-hidden="true" />
+          <div className="w-11 h-11 rounded-xl bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-[#18e299]" aria-hidden="true" />
           </div>
           <div className="mt-5 flex items-end justify-between gap-2">
             <div>
-              <span className="text-sm text-text-muted block">Smart Gates</span>
-              <span className="text-2xl font-bold text-text-primary tabular-nums mt-1 block">
+              <span className="text-sm text-neutral-400 block">Smart Gates</span>
+              <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
                 {displayGates.length}
               </span>
             </div>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-status-clear-bg text-status-clear-text">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
               Online
             </span>
           </div>
@@ -224,17 +247,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {/* Total Crowd Count */}
         <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
-          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
-            <Activity className="w-5 h-5 text-[#7592ff]" aria-hidden="true" />
+          <div className="w-11 h-11 rounded-xl bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center">
+            <Activity className="w-5 h-5 text-[#18e299]" aria-hidden="true" />
           </div>
           <div className="mt-5 flex items-end justify-between gap-2">
             <div>
-              <span className="text-sm text-text-muted block">People Monitored</span>
-              <span className="text-2xl font-bold text-text-primary tabular-nums mt-1 block">
+              <span className="text-sm text-neutral-400 block">People Monitored</span>
+              <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
                 {displayGates.reduce((acc, g) => acc + g.count, 0)}
               </span>
             </div>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#465fff]/15 text-[#7592ff]">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
               Live
             </span>
           </div>
@@ -296,33 +319,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <AreaChart data={chartData} margin={{ top: 12, right: 100, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="overviewPressureFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#465fff" stopOpacity={0.32} />
-                    <stop offset="95%" stopColor="#465fff" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#18e299" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#18e299" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1d2939" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis
                   dataKey="time"
-                  stroke="#98a2b3"
-                  tick={{ fontSize: 11, fill: '#98a2b3' }}
+                  stroke="#737373"
+                  tick={{ fontSize: 11, fill: '#a1a1aa' }}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0, 100]}
-                  stroke="#98a2b3"
-                  tick={{ fontSize: 11, fill: '#98a2b3' }}
+                  stroke="#737373"
+                  tick={{ fontSize: 11, fill: '#a1a1aa' }}
                   tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#171f2f',
-                    borderColor: '#344054',
+                    backgroundColor: '#0d0f11',
+                    borderColor: 'rgba(255,255,255,0.12)',
                     borderRadius: '10px',
-                    color: '#f8fafc',
+                    color: '#fafafa',
                     fontSize: '12px'
                   }}
                   formatter={(val: number) => [`${val.toFixed(1)} / 100`, 'Risk Pressure Score']}
-                  labelStyle={{ color: '#98a2b3', fontSize: '11px' }}
+                  labelStyle={{ color: '#a1a1aa', fontSize: '11px' }}
                 />
                 <ReferenceLine
                   y={50}
@@ -340,9 +363,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   type="monotone"
                   dataKey="score"
                   name="Risk Pressure"
-                  stroke="#465fff"
+                  stroke="#18e299"
                   fill="url(#overviewPressureFill)"
-                  strokeWidth={2.25}
+                  strokeWidth={2}
                   dot={false}
                   isAnimationActive={false}
                 />

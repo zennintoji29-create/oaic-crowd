@@ -79,3 +79,6 @@ Version 12 (2026-11-26)
 
 Version 13 (2026-11-26)
 - Redesigned Landing.tsx in the Mintlify dark visual aesthetic: near-black (#08090a) background, flowing curved emerald/mint SVG wave mesh (EmeraldWaveMesh), hairline 1px white/[0.08] bento borders, dark glass (#0d0f11) telemetry preview window, white pill primary CTAs, and minimal typography while preserving all existing content and functionality.
+
+Version 14 (2026-11-26)
+- Unified the entire Dashboard (tokens.css, index.css, GlobalHeader, Navigation, OverviewTab, App shell) with the exact Mintlify visual system: #08090a near-black canvas, #0d0f11 dark glass panels, 1px white/[0.08] hairline borders, #18e299 mint/emerald flowing wave accents and chart gradient fill, and Inter typography.

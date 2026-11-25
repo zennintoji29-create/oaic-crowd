@@ -26,7 +26,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   onGoDashboard
 }) => {
   return (
-    <header className="border-b border-border-subtle bg-surface-raised/95 backdrop-blur-sm sticky top-0 z-30">
+    <header className="border-b border-white/[0.08] bg-[#08090a]/85 backdrop-blur-md sticky top-0 z-30">
       <div className="px-4 py-2 sm:px-6 flex flex-wrap items-center justify-between gap-3">
         {/* Top-Left Hyperlink to Dashboard */}
         <Link
@@ -36,17 +36,17 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           title="Go directly to Dashboard Overview"
         >
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#465fff] text-white shadow-sm">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#18e299]/15 border border-[#18e299]/35 text-[#18e299]">
               <ShieldCheck className="w-4 h-4" aria-hidden="true" />
             </span>
-            <span className="text-base font-bold text-text-primary tracking-tight">
+            <span className="text-base font-semibold text-white tracking-tight">
               Crowd Pressure Radar
             </span>
-            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#465fff]/15 text-[#7592ff] border border-[#465fff]/30">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25">
               HLK-LD2410
             </span>
           </div>
-          <p className="text-xs text-text-muted pl-10.5">
+          <p className="text-xs text-neutral-400 pl-10.5">
             Early warning for crowd crush. Anonymous radar & edge vision.
           </p>
         </Link>

@@ -66,7 +66,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       ) : (
         <nav
           aria-label="Primary navigation"
-          className="hidden lg:flex flex-col w-56 shrink-0 border-r border-border-subtle bg-surface-raised p-2.5 sticky top-[61px] h-[calc(100dvh-61px)] overflow-hidden justify-between"
+          className="hidden lg:flex flex-col w-56 shrink-0 border-r border-white/[0.08] bg-[#0b0c0e]/95 p-2.5 sticky top-[61px] h-[calc(100dvh-61px)] overflow-hidden justify-between"
         >
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between px-2 py-1 mb-0.5">
@@ -94,14 +94,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                   onClick={() => setActiveTab(item.id)}
                   className={`min-h-[44px] flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
                     isActive
-                      ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                      ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
+                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <span className="flex items-center gap-2.5 truncate">
                     <Icon
-                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#7592ff]' : 'text-text-muted'}`}
+                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#18e299]' : 'text-neutral-500'}`}
                       aria-hidden="true"
                     />
                     <span className="truncate">{item.label}</span>
@@ -131,11 +131,11 @@ export const Navigation: React.FC<NavigationProps> = ({
                       to={item.to}
                       className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                          ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
+                          : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#7592ff]' : 'text-text-muted'}`} aria-hidden="true" />
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#18e299]' : 'text-neutral-500'}`} aria-hidden="true" />
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -147,12 +147,12 @@ export const Navigation: React.FC<NavigationProps> = ({
                     onClick={() => setActiveTab(item.id)}
                     className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
                       isActive
-                        ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                        ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
+                        : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#7592ff]' : 'text-text-muted'}`} aria-hidden="true" />
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#18e299]' : 'text-neutral-500'}`} aria-hidden="true" />
                     <span>{item.label}</span>
                   </button>
                 );
@@ -166,13 +166,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                 onClick={() => setActiveTab('about')}
                 className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
                   activeTab === 'about'
-                    ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                    ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
                 aria-current={activeTab === 'about' ? 'page' : undefined}
               >
                 <ShieldCheck
-                  className={`w-4 h-4 shrink-0 ${activeTab === 'about' ? 'text-[#7592ff]' : 'text-text-muted'}`}
+                  className={`w-4 h-4 shrink-0 ${activeTab === 'about' ? 'text-[#18e299]' : 'text-neutral-500'}`}
                   aria-hidden="true"
                 />
                 <span>About & Safety</span>

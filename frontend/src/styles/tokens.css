@@ -5,8 +5,8 @@
    ============================================================================ */
 
 :root {
-  /* TailAdmin Typography */
-  --font-family-sans: 'Outfit', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Mintlify Typography */
+  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Spacing & Radii */
   --space-unit: 0.25rem;
@@ -14,29 +14,29 @@
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
 
-  /* TailAdmin Shadows */
-  --shadow-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.2), 0px 1px 2px 0px rgba(16, 24, 40, 0.12);
-  --shadow-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.25), 0px 2px 4px -2px rgba(16, 24, 40, 0.15);
+  /* Shadows */
+  --shadow-sm: 0px 4px 20px -4px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0px 16px 48px -12px rgba(0, 0, 0, 0.75);
 
-  /* TailAdmin Dark Surfaces */
-  --surface-base: #101828;
-  --surface-raised: #171f2f;
-  --surface-sunken: #0c111d;
-  --surface-overlay: #1d2939;
+  /* Mintlify Near-Black Surfaces */
+  --surface-base: #08090a;
+  --surface-raised: #0d0f11;
+  --surface-sunken: #0b0c0e;
+  --surface-overlay: #14171a;
 
-  /* Borders */
-  --border-subtle: #1d2939;
-  --border-strong: #344054;
+  /* Hairline Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
 
   /* Text */
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --text-secondary: #d0d5dd;
-  --text-muted: #98a2b3;
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
 
-  /* TailAdmin Brand Accent (#465fff / #7592ff) */
-  --accent-default: #465fff;
-  --accent-hover: #3641f5;
-  --accent-focus-ring: #7592ff;
+  /* Mintlify Emerald/Mint Accent (#18e299) */
+  --accent-default: #18e299;
+  --accent-hover: #10b981;
+  --accent-focus-ring: #34d399;
 
   /* Status Colors: Clear (Green), Busy (Amber), Crowded (Orange), Danger (Red) */
   --status-clear-text: #4ade80;
