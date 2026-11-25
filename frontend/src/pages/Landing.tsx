@@ -6,16 +6,10 @@ import {
   Eye,
   Cpu,
   ArrowRight,
-  ShieldCheck,
-  Lock
+  ShieldCheck
 } from 'lucide-react';
 
 export const Landing: React.FC = () => {
-  const isFirstVisitComplete =
-    typeof window !== 'undefined' &&
-    sessionStorage.getItem('cpr_setup_complete') === 'true';
-  const dashboardTarget = isFirstVisitComplete ? '/dashboard' : '/login';
-
   const fitCards = [
     {
       title: 'Temple Trusts & Pilgrimage',
@@ -86,21 +80,13 @@ export const Landing: React.FC = () => {
             <span>CPR Crowd Pressure Radar</span>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              to="/dashboard"
-              className="px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:text-white rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-900/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
-            >
-              <Lock className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Operator Login</span>
-            </Link>
-          </div>
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+          >
+            <span>Open dashboard</span>
+            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </Link>
         </nav>
       </header>
 
@@ -124,18 +110,11 @@ export const Landing: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
-                  to={dashboardTarget}
+                  to="/dashboard"
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   <span>Open dashboard</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </Link>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-lg border border-slate-700 hover:border-emerald-500/60 bg-slate-900 hover:bg-slate-800/80 text-slate-100 font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                >
-                  <Lock className="w-4 h-4 text-emerald-400" aria-hidden="true" />
-                  <span>Operator login</span>
                 </Link>
               </div>
             </div>
@@ -146,16 +125,12 @@ export const Landing: React.FC = () => {
                 className="relative w-72 h-72 sm:w-80 sm:h-80 rounded-full border border-emerald-500/30 bg-slate-900/80 shadow-[0_0_60px_rgba(16,185,129,0.12)] flex items-center justify-center overflow-hidden"
                 aria-hidden="true"
               >
-                {/* Concentric Range Rings */}
                 <div className="absolute w-56 h-56 rounded-full border border-emerald-500/20" />
                 <div className="absolute w-36 h-36 rounded-full border border-emerald-500/20" />
                 <div className="absolute w-16 h-16 rounded-full border border-emerald-500/30" />
-
-                {/* Crosshair Axes */}
                 <div className="absolute inset-x-0 h-px bg-emerald-500/15" />
                 <div className="absolute inset-y-0 w-px bg-emerald-500/15" />
 
-                {/* Rotating Conic Sweep */}
                 <div
                   className="absolute inset-0 rounded-full animate-radar-sweep"
                   style={{
@@ -164,7 +139,6 @@ export const Landing: React.FC = () => {
                   }}
                 />
 
-                {/* Pulsing Crowd Blips */}
                 <span className="absolute top-[26%] left-[62%] h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399] animate-radar-blip" />
                 <span
                   className="absolute top-[58%] left-[30%] h-3.5 w-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_#fbbf24] animate-radar-blip"
@@ -175,10 +149,8 @@ export const Landing: React.FC = () => {
                   style={{ animationDelay: '1.3s' }}
                 />
 
-                {/* Center Emitter Dot */}
                 <span className="relative z-10 h-3 w-3 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20" />
 
-                {/* Corner Telemetry Label */}
                 <div className="absolute bottom-4 inset-x-0 text-center font-mono text-[10px] tracking-widest uppercase text-emerald-400/80">
                   HLK-LD2410 • 24 GHz
                 </div>
@@ -266,10 +238,10 @@ export const Landing: React.FC = () => {
         <section className="py-16 sm:py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
             <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Monitor live telemetry or configure your gate hardware.
+              Monitor live telemetry and smart gate status.
             </h2>
             <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto">
-              Inspect real-time gate states on the public operations dashboard, or sign in as an operator to calibrate zones and control actuators.
+              Real-time crowd pressure monitoring, zone analytics, and autonomous gate metering.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link
@@ -278,12 +250,6 @@ export const Landing: React.FC = () => {
               >
                 <span>Open dashboard</span>
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
-              </Link>
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-lg border border-slate-700 hover:border-emerald-500/60 bg-slate-900 text-slate-100 font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-              >
-                <span>Operator login</span>
               </Link>
             </div>
           </div>

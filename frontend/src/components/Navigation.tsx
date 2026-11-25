@@ -7,13 +7,11 @@ import {
   Bell,
   Sliders,
   ShieldCheck,
-  SlidersHorizontal,
   ExternalLink,
-  Lock,
+  LogOut,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
-import { getSessionToken } from '../lib/api';
 
 export interface NavTabItem {
   id: string;
@@ -27,26 +25,26 @@ interface NavigationProps {
   activeTab: string;
   setActiveTab: (tabId: string) => void;
   alertCount: number;
+  onLogout?: () => void;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
   activeTab,
   setActiveTab,
-  alertCount
+  alertCount,
+  onLogout
 }) => {
   const [navHidden, setNavHidden] = useState(false);
-  const isAuthenticated = Boolean(getSessionToken());
 
-  const publicNavItems: NavTabItem[] = [
+  const mainNavItems: NavTabItem[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'detail', label: 'Zone Details', icon: Radar },
     { id: 'alerts', label: 'Alerts & History', icon: Bell, count: alertCount },
     { id: 'about', label: 'About & Safety', icon: ShieldCheck }
   ];
 
-  const operatorNavItems: NavTabItem[] = [
+  const toolItems: NavTabItem[] = [
     { id: 'setup', label: 'System Setup', icon: Sliders, to: '/setup' },
-    { id: 'remote', label: 'Manual Controls', icon: SlidersHorizontal, to: '/remote' },
     // Hardware Demo placed last
     { id: 'sandbox', label: 'Hardware Demo', icon: Cpu, to: '/sandbox' }
   ];
@@ -69,7 +67,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       ) : (
         <nav
           aria-label="Primary navigation"
-          className="hidden md:flex flex-col w-60 shrink-0 border-r border-border-subtle bg-surface-raised p-3 gap-1 min-h-[calc(100vh-85px)] justify-between"
+          className="hidden md:flex flex-col w-60 shrink-0 border-r border-border-subtle bg-surface-raised p-3 gap-1 min-h-[calc(100vh-72px)] justify-between"
         >
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between px-2 py-1.5 mb-1">
@@ -87,7 +85,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               </button>
             </div>
 
-            {publicNavItems.map((item) => {
+            {mainNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -119,45 +117,33 @@ export const Navigation: React.FC<NavigationProps> = ({
               );
             })}
 
-            {isAuthenticated && (
-              <div className="pt-3 mt-2 border-t border-border-subtle flex flex-col gap-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2 py-1">
-                  Operator Tools
-                </span>
-                {operatorNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <Link
-                      key={item.id}
-                      to={item.to || '/dashboard'}
-                      className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded transition-all focus-visible:outline ${
-                        isActive
-                          ? 'bg-surface-sunken text-text-primary border border-emerald-500/50 font-semibold'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken/60'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-text-muted'}`} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+            <div className="pt-3 mt-2 border-t border-border-subtle flex flex-col gap-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2 py-1">
+                Configuration & Demo
+              </span>
+              {toolItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.to || '/dashboard'}
+                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded transition-all focus-visible:outline ${
+                      isActive
+                        ? 'bg-surface-sunken text-text-primary border border-emerald-500/50 font-semibold'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken/60'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-text-muted'}`} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Utility Links */}
+          {/* Footer Utility Links */}
           <div className="pt-3 mt-3 border-t border-border-subtle flex flex-col gap-1.5">
-            {!isAuthenticated && (
-              <Link
-                to="/login"
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
-              >
-                <Lock className="w-3.5 h-3.5 shrink-0" />
-                <span>Operator Login</span>
-              </Link>
-            )}
-
             <Link
               to="/"
               className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded text-text-muted hover:text-text-primary hover:bg-surface-sunken transition-colors"
@@ -165,6 +151,17 @@ export const Navigation: React.FC<NavigationProps> = ({
               <ExternalLink className="w-3.5 h-3.5 text-text-muted shrink-0" />
               <span>Landing Page</span>
             </Link>
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded text-rose-300 bg-rose-950/30 border border-rose-800/50 hover:bg-rose-950/70 transition-colors text-left"
+              >
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <span>Logout</span>
+              </button>
+            )}
           </div>
         </nav>
       )}
@@ -173,7 +170,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       <div className="md:hidden border-b border-border-subtle bg-surface-raised flex items-center justify-between px-2 py-1.5 shrink-0">
         {!navHidden ? (
           <nav aria-label="Mobile navigation" className="flex items-center overflow-x-auto gap-1 flex-1 scrollbar-none">
-            {publicNavItems.map((item) => {
+            {mainNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -193,15 +190,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               );
             })}
 
-            {!isAuthenticated && (
-              <Link
-                to="/login"
-                className="flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 font-semibold"
-              >
-                <Lock className="w-3 h-3" />
-                <span>Login</span>
-              </Link>
-            )}
+            <Link
+              to="/setup"
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap text-text-secondary hover:text-text-primary"
+            >
+              <span>Setup</span>
+            </Link>
 
             <Link
               to="/"
@@ -210,34 +204,28 @@ export const Navigation: React.FC<NavigationProps> = ({
               <span>Home</span>
             </Link>
 
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/setup"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap text-text-secondary hover:text-text-primary"
-                >
-                  <span>Setup</span>
-                </Link>
-                <Link
-                  to="/remote"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap text-text-secondary hover:text-text-primary"
-                >
-                  <span>Manual Controls</span>
-                </Link>
-                {/* Hardware Demo last item on the right */}
-                <Link
-                  to="/sandbox"
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap ${
-                    activeTab === 'sandbox'
-                      ? 'bg-surface-sunken text-emerald-400 border border-emerald-500 font-semibold'
-                      : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Hardware Demo</span>
-                </Link>
-              </>
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="px-2.5 py-1.5 rounded text-xs whitespace-nowrap text-rose-300 font-semibold"
+              >
+                Logout
+              </button>
             )}
+
+            {/* Hardware Demo last item on the right */}
+            <Link
+              to="/sandbox"
+              className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap ${
+                activeTab === 'sandbox'
+                  ? 'bg-surface-sunken text-emerald-400 border border-emerald-500 font-semibold'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Hardware Demo</span>
+            </Link>
           </nav>
         ) : (
           <span className="text-xs font-mono text-text-muted px-2">Navigation hidden</span>

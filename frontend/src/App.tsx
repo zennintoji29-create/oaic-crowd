@@ -20,7 +20,8 @@ import {
   fetchAlerts,
   controlSimulator,
   fetchHardwareStatus,
-  fetchGates
+  fetchGates,
+  clearSessionToken
 } from './lib/api';
 import { GlobalHeader } from './components/GlobalHeader';
 import { Navigation } from './components/Navigation';
@@ -275,6 +276,14 @@ const AppRoutes: React.FC = () => {
     setGates((prev) => prev.map((g) => (g.id === updatedGate.id ? updatedGate : g)));
   };
 
+  const handleLogout = useCallback(() => {
+    try {
+      clearSessionToken();
+    } finally {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
   // Shared Dashboard Shell for /dashboard and /sandbox
   const renderShell = (activeKey: string, content: React.ReactNode) => (
     <div className="min-h-screen flex flex-col bg-surface-base text-text-primary antialiased">
@@ -285,6 +294,7 @@ const AppRoutes: React.FC = () => {
         isStale={isStale}
         simulatorRunning={simulatorRunning}
         onToggleSimulator={handleToggleSimulator}
+        onLogout={handleLogout}
       />
       <div className="flex-1 flex flex-col md:flex-row">
         <Navigation
@@ -296,6 +306,7 @@ const AppRoutes: React.FC = () => {
             }
           }}
           alertCount={alerts.length}
+          onLogout={handleLogout}
         />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{content}</main>
       </div>
@@ -307,33 +318,37 @@ const AppRoutes: React.FC = () => {
       {/* Public Landing Page */}
       <Route path="/" element={<Landing />} />
 
-      {/* Public Read-Only Dashboard */}
+      {/* Protected Dashboard (requires login) */}
       <Route
         path="/dashboard"
-        element={renderShell(
-          dashboardTab,
-          <>
-            {dashboardTab === 'overview' && (
-              <OverviewTab
-                zones={zones}
-                gates={gates}
-                worstState={worst.state}
-                hardware={hardware}
-                onSelectZone={handleSelectZone}
-                onGateUpdated={handleGateUpdated}
-              />
+        element={
+          <RequireAuth>
+            {renderShell(
+              dashboardTab,
+              <>
+                {dashboardTab === 'overview' && (
+                  <OverviewTab
+                    zones={zones}
+                    gates={gates}
+                    worstState={worst.state}
+                    hardware={hardware}
+                    onSelectZone={handleSelectZone}
+                    onGateUpdated={handleGateUpdated}
+                  />
+                )}
+                {dashboardTab === 'detail' && (
+                  <ZoneDetailTab
+                    zones={zones}
+                    selectedZoneId={selectedZoneId}
+                    onSelectZoneId={setSelectedZoneId}
+                  />
+                )}
+                {dashboardTab === 'alerts' && <AlertsTab alerts={alerts} />}
+                {dashboardTab === 'about' && <AboutTab />}
+              </>
             )}
-            {dashboardTab === 'detail' && (
-              <ZoneDetailTab
-                zones={zones}
-                selectedZoneId={selectedZoneId}
-                onSelectZoneId={setSelectedZoneId}
-              />
-            )}
-            {dashboardTab === 'alerts' && <AlertsTab alerts={alerts} />}
-            {dashboardTab === 'about' && <AboutTab />}
-          </>
-        )}
+          </RequireAuth>
+        }
       />
 
       {/* Public Operator Login */}

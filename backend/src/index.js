@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import helmet from 'helmet';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
@@ -25,6 +26,7 @@ if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.add('http://127.0.0.1:5173');
 }
 
+app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.has(origin)) {
@@ -34,7 +36,7 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 
 // ----------------------------------------------------------------------------
 // Central Hardware & Actuator State (ESP32 Master & Failover)
@@ -310,8 +312,8 @@ app.get('/api/stream', (req, res) => {
   });
 });
 
-// POST /api/gates/reset-all - Reset all gates to AUTO live mode
-app.post('/api/gates/reset-all', (req, res) => {
+// POST /api/gates/reset-all - Reset all gates to AUTO live mode (protected)
+app.post('/api/gates/reset-all', requireMasterAuth, (req, res) => {
   const allGates = storage.getGates();
   const updatedGates = allGates.map((g) => {
     storage.updateGatePower(g.id, true);
@@ -338,8 +340,8 @@ app.get('/api/gates', (req, res) => {
   res.json({ gates: storage.getGates(), hardware: hardwareState });
 });
 
-// POST /api/gates/:id/override - Manual override for specific gate
-app.post('/api/gates/:id/override', (req, res) => {
+// POST /api/gates/:id/override - Manual override for specific gate (protected)
+app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
   const { id } = req.params;
   const { manualState } = req.body || {};
   const updated = storage.updateGateOverride(id, manualState || 'AUTO');
@@ -359,8 +361,8 @@ app.post('/api/gates/:id/override', (req, res) => {
   res.json({ status: 'ok', gate: updated });
 });
 
-// POST /api/gates/:id/power - Toggle gate power
-app.post('/api/gates/:id/power', (req, res) => {
+// POST /api/gates/:id/power - Toggle gate power (protected)
+app.post('/api/gates/:id/power', requireMasterAuth, (req, res) => {
   const { id } = req.params;
   const { power } = req.body || {};
   const updated = storage.updateGatePower(id, power);
@@ -371,8 +373,8 @@ app.post('/api/gates/:id/power', (req, res) => {
   res.json({ status: 'ok', gate: updated });
 });
 
-// POST /api/gates/:id/density - Increase or decrease gate crowd count
-app.post('/api/gates/:id/density', (req, res) => {
+// POST /api/gates/:id/density - Increase or decrease gate crowd count (protected)
+app.post('/api/gates/:id/density', requireMasterAuth, (req, res) => {
   const { id } = req.params;
   const { delta } = req.body || {};
   const updated = storage.updateGateDensity(id, typeof delta === 'number' ? delta : 1);
@@ -467,6 +469,11 @@ app.post('/api/master/auth', masterAuthLimiter, async (req, res) => {
   } catch (err) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
+});
+
+// GET /api/master/verify - Verify active JWT session
+app.get('/api/master/verify', requireMasterAuth, (req, res) => {
+  res.json({ valid: true, expiresAt: req.masterUser?.exp || null });
 });
 
 // POST /api/master/command - Silent remote command execution (JWT protected)
