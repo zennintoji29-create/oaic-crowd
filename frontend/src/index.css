@@ -24,18 +24,20 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
-/* Consistent Surface Panels */
+/* Consistent Surface Panels with Layered Elevation */
 .flat-panel {
   background-color: var(--surface-raised);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  border-top-color: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.45);
 }
 
 .flat-panel-sunken {
   background-color: var(--surface-sunken);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 /* Accessible Keyboard & TV Remote Focus Ring */

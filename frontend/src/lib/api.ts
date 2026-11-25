@@ -201,6 +201,43 @@ export async function triggerKeepAlivePing(): Promise<KeepAliveStats> {
 }
 
 // ============================================================================
+// OPERATOR AUTHENTICATION (EMAIL + PHONE + PASSWORD)
+// ============================================================================
+export async function signupOperator(
+  email: string,
+  phone: string,
+  password: string
+): Promise<{ success: boolean; token: string; setupComplete: boolean }> {
+  const res = await fetch(`${API_BASE}/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim(), phone: phone.trim(), password })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to create account');
+  }
+  return data;
+}
+
+export async function loginOperator(
+  email: string,
+  password: string
+): Promise<{ success: boolean; token: string; setupComplete: boolean }> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim(), password })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 429) throw new Error('Too many login attempts. Please wait.');
+    throw new Error(data.error || 'Invalid email or password');
+  }
+  return data;
+}
+
+// ============================================================================
 // PROTECTED MASTER REMOTE API
 // ============================================================================
 export async function authenticateMaster(

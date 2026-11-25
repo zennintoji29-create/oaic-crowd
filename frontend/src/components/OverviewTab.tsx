@@ -152,67 +152,69 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </div>
 
       {/* 1. Overall System Summary Cards */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 font-mono">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Threat Level */}
-        <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
+        <div className={`flat-panel p-4 flex flex-col justify-between border-t-2 ${
           isRed
-            ? 'bg-rose-950/40 border-rose-600/80 text-rose-300'
-            : (isAmber ? 'bg-amber-950/40 border-amber-600/80 text-amber-300' : 'bg-slate-900/60 border-slate-800 text-slate-300')
+            ? 'border-t-status-danger-chart'
+            : (isAmber ? 'border-t-status-building-chart' : 'border-t-status-clear-chart')
         }`}>
           <div className="flex items-center justify-between text-xs">
-            <span className="uppercase text-slate-400">Global Threat</span>
-            {isRed ? <ShieldAlert className="w-4 h-4 text-rose-400" /> : (isAmber ? <AlertTriangle className="w-4 h-4 text-amber-400" /> : <ShieldCheck className="w-4 h-4 text-emerald-400" />)}
+            <span className="uppercase font-semibold tracking-wider text-text-muted">Global Threat</span>
+            {isRed ? <ShieldAlert className="w-4 h-4 text-status-danger-text" /> : (isAmber ? <AlertTriangle className="w-4 h-4 text-status-building-text" /> : <ShieldCheck className="w-4 h-4 text-status-clear-text" />)}
           </div>
-          <div className="mt-2">
-            <span className="text-xl md:text-2xl font-black block">
-              {worstState === 'RED' ? 'CRITICAL (LOCKED)' : (worstState === 'AMBER' ? 'ELEVATED (METER)' : 'NORMAL FLOW')}
+          <div className="mt-3">
+            <span className={`text-xl font-bold block ${
+              isRed ? 'text-status-danger-text' : (isAmber ? 'text-status-building-text' : 'text-status-clear-text')
+            }`}>
+              {worstState === 'RED' ? 'Critical (Locked)' : (worstState === 'AMBER' ? 'Elevated (Meter)' : 'Normal Flow')}
             </span>
-            <span className="text-[10px] text-slate-500">Autonomous Gate Shield Active</span>
+            <span className="text-xs text-text-muted mt-0.5 block">Autonomous Gate Shield Active</span>
           </div>
         </div>
 
         {/* System Mode */}
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-slate-300 flex flex-col justify-between">
+        <div className="flat-panel p-4 flex flex-col justify-between border-t-2 border-t-accent">
           <div className="flex items-center justify-between text-xs">
-            <span className="uppercase text-slate-400">Active Sensor Node</span>
-            <Radio className="w-4 h-4 text-cyan-400" />
+            <span className="uppercase font-semibold tracking-wider text-text-muted">Active Sensor Node</span>
+            <Radio className="w-4 h-4 text-accent" />
           </div>
-          <div className="mt-2">
-            <span className="text-xl md:text-2xl font-bold text-cyan-300 block">
-              {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'RADAR FAILOVER' : 'AI VISION (CUDA)'}
+          <div className="mt-3">
+            <span className="text-xl font-bold text-text-primary block">
+              {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'Radar Failover' : 'AI Vision (CUDA)'}
             </span>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-xs text-text-muted mt-0.5 block">
               {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'HLK-LD2410 24GHz FMCW' : 'RTX 3050 @ 17.6 FPS'}
             </span>
           </div>
         </div>
 
         {/* Monitored Gates */}
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-slate-300 flex flex-col justify-between">
+        <div className="flat-panel p-4 flex flex-col justify-between border-t-2 border-t-accent">
           <div className="flex items-center justify-between text-xs">
-            <span className="uppercase text-slate-400">Connected Portals</span>
-            <Lock className="w-4 h-4 text-emerald-400" />
+            <span className="uppercase font-semibold tracking-wider text-text-muted">Connected Portals</span>
+            <Lock className="w-4 h-4 text-accent" />
           </div>
-          <div className="mt-2">
-            <span className="text-xl md:text-2xl font-black text-white block">
+          <div className="mt-3">
+            <span className="text-xl font-bold text-text-primary tabular-nums block">
               {displayGates.length} Smart Gates
             </span>
-            <span className="text-[10px] text-slate-500">Gate A & Gate B Online</span>
+            <span className="text-xs text-text-muted mt-0.5 block">Gate A & Gate B Online</span>
           </div>
         </div>
 
         {/* Total Crowd Count */}
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-slate-300 flex flex-col justify-between">
+        <div className="flat-panel p-4 flex flex-col justify-between border-t-2 border-t-accent">
           <div className="flex items-center justify-between text-xs">
-            <span className="uppercase text-slate-400">Total Monitored</span>
-            <Activity className="w-4 h-4 text-blue-400" />
+            <span className="uppercase font-semibold tracking-wider text-text-muted">Total Monitored</span>
+            <Activity className="w-4 h-4 text-accent" />
           </div>
-          <div className="mt-2">
-            <span className="text-xl md:text-2xl font-black text-white block">
+          <div className="mt-3">
+            <span className="text-xl font-bold text-text-primary tabular-nums block">
               {displayGates.reduce((acc, g) => acc + g.count, 0)} Persons
             </span>
-            <span className="text-[10px] text-slate-500">Across Active Entry Chutes</span>
+            <span className="text-xs text-text-muted mt-0.5 block">Across Active Entry Chutes</span>
           </div>
         </div>
 
@@ -221,15 +223,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {/* 2. Gate Cards Grid: Gate A and Gate B Prominently Displayed */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-300">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">
               Portal Gate Modules ({displayGates.length})
             </h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">
+            <span className="text-xs font-medium px-2 py-0.5 rounded bg-surface-sunken text-accent border border-border-strong">
               Live Inflow Control
             </span>
           </div>
-          <span className="text-xs text-slate-400 hidden sm:inline">
+          <span className="text-xs text-text-muted hidden sm:inline">
             Each gate features independent automated metering & manual override
           </span>
         </div>

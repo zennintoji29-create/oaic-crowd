@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -95,10 +95,52 @@ export const Setup: React.FC = () => {
     'Gate D'
   ]);
 
-  // Step 2: Webcam device index
+  // Step 2: Webcam device index & persistent browser stream
   const [webcamIndex, setWebcamIndex] = useState<number>(0);
   const [previewActive, setPreviewActive] = useState<boolean>(false);
   const [previewNote, setPreviewNote] = useState<string>('');
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  const requestCameraStream = useCallback(async () => {
+    setStepError(null);
+    setPreviewActive(true);
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = cameraStream?.active
+          ? cameraStream
+          : await navigator.mediaDevices.getUserMedia({ video: true });
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setPreviewNote(`Camera permission allowed — live feed active (mapped to index ${webcamIndex}).`);
+      } else {
+        setPreviewNote(`Browser mediaDevices unavailable — using device index ${webcamIndex}.`);
+      }
+    } catch {
+      setPreviewNote(`Please allow camera permission in your browser address bar to stream live video (index ${webcamIndex}).`);
+    }
+  }, [cameraStream, webcamIndex]);
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream, previewActive, step]);
+
+  useEffect(() => {
+    if (step === 2 && !cameraStream) {
+      requestCameraStream();
+    }
+  }, [step, cameraStream, requestCameraStream]);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, [cameraStream]);
 
   // Step 3: ESP32 base URL
   const [esp32Url, setEsp32Url] = useState<string>('http://192.168.1.50');
@@ -129,21 +171,7 @@ export const Setup: React.FC = () => {
   };
 
   const handlePreviewWebcam = async () => {
-    setStepError(null);
-    setPreviewActive(true);
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setPreviewNote(`Live browser camera preview active (mapped to index ${webcamIndex}).`);
-      } else {
-        setPreviewNote(`Simulated preview frame for device index ${webcamIndex}.`);
-      }
-    } catch {
-      setPreviewNote(`Camera permission unavailable in browser — showing simulated preview for device index ${webcamIndex}.`);
-    }
+    await requestCameraStream();
   };
 
   const handlePingEsp32 = async () => {

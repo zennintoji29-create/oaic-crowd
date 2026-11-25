@@ -489,6 +489,73 @@ app.get('/api/master/verify', requireMasterAuth, (req, res) => {
   res.json({ valid: true, expiresAt: req.masterUser?.exp || null });
 });
 
+// POST /api/auth/signup - Register operator with email, phone number, and password
+app.post('/api/auth/signup', masterAuthLimiter, async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const phone = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Valid email address is required' });
+  }
+  if (!phone || phone.replace(/[^0-9]/g, '').length < 7) {
+    return res.status(400).json({ error: 'Valid phone number is required' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+  if (!config.jwtSecret) {
+    return res.status(500).json({ error: 'Authentication service not configured' });
+  }
+  if (storage.getUserByEmail(email)) {
+    return res.status(409).json({ error: 'An account with this email already exists' });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = storage.createUser({ email, phone, passwordHash });
+    const token = jwt.sign({ role: 'operator', email: user.email }, config.jwtSecret, { expiresIn: '8h' });
+    return res.status(201).json({
+      success: true,
+      token,
+      setupComplete: false,
+      user: { email: user.email, phone: user.phone }
+    });
+  } catch {
+    return res.status(500).json({ error: 'Failed to create account' });
+  }
+});
+
+// POST /api/auth/login - Sign in with email and password
+app.post('/api/auth/login', masterAuthLimiter, async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+  if (!email || !password || !config.jwtSecret) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  try {
+    const user = storage.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    const token = jwt.sign({ role: 'operator', email: user.email }, config.jwtSecret, { expiresIn: '8h' });
+    return res.json({
+      success: true,
+      token,
+      setupComplete: Boolean(user.setupComplete),
+      user: { email: user.email, phone: user.phone }
+    });
+  } catch {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+});
+
 // POST /api/master/command - Silent remote command execution (JWT protected)
 app.post('/api/master/command', requireMasterAuth, (req, res) => {
   const { action, gateId = 'gate-a', manualState, delta, count, state, cameraOnline, power } = req.body || {};
@@ -627,6 +694,9 @@ app.get('/api/config', (req, res) => {
 
 app.post('/api/config', requireMasterAuth, (req, res) => {
   const updated = storage.updateConfig(req.body || {});
+  if (req.body?.setupComplete && req.masterUser?.email) {
+    storage.markUserSetupComplete(req.masterUser.email);
+  }
   broadcast('CONFIG_UPDATED', updated);
   res.json({ status: 'ok', config: updated });
 });

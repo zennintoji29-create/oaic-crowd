@@ -9,11 +9,72 @@ class StorageManager {
     this.alerts = [];                      // Historical alerts list
     this.commandQueues = new Map();        // deviceId -> Array of queued commands
     this.rateLimiter = new Map();          // deviceId -> { count, windowStart }
+    this.users = new Map();                // email -> { email, phone, passwordHash, setupComplete, createdAt }
 
     this.initDefaultZones();
     this.initDefaultGates();
     this.initDefaultConfig();
     this.ensureDataDir();
+    this.loadUsers();
+  }
+
+  getUsersFilePath() {
+    return path.join(config.dataDir, 'users.json');
+  }
+
+  loadUsers() {
+    try {
+      const file = this.getUsersFilePath();
+      if (fs.existsSync(file)) {
+        const raw = fs.readFileSync(file, 'utf-8');
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          list.forEach((u) => {
+            if (u && u.email) this.users.set(u.email.toLowerCase(), u);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[STORAGE] Could not load users:', err.message);
+    }
+  }
+
+  saveUsers() {
+    try {
+      this.ensureDataDir();
+      const file = this.getUsersFilePath();
+      fs.writeFileSync(file, JSON.stringify(Array.from(this.users.values()), null, 2));
+    } catch (err) {
+      console.warn('[STORAGE] Could not save users:', err.message);
+    }
+  }
+
+  getUserByEmail(email) {
+    if (!email) return null;
+    return this.users.get(String(email).trim().toLowerCase()) || null;
+  }
+
+  createUser({ email, phone, passwordHash }) {
+    const normEmail = String(email).trim().toLowerCase();
+    const user = {
+      email: normEmail,
+      phone: String(phone || '').trim(),
+      passwordHash,
+      setupComplete: false,
+      createdAt: Date.now()
+    };
+    this.users.set(normEmail, user);
+    this.saveUsers();
+    return user;
+  }
+
+  markUserSetupComplete(email) {
+    const user = this.getUserByEmail(email);
+    if (!user) return null;
+    user.setupComplete = true;
+    this.users.set(user.email, user);
+    this.saveUsers();
+    return user;
   }
 
   initDefaultConfig() {

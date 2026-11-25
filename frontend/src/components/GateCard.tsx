@@ -93,8 +93,16 @@ export const GateCard: React.FC<GateCardProps> = ({
     }
   };
 
+  const topBorderClass = isRed
+    ? 'border-t-2 border-t-status-danger-chart'
+    : isAmber
+    ? 'border-t-2 border-t-status-building-chart'
+    : isGreen
+    ? 'border-t-2 border-t-status-clear-chart'
+    : 'border-t-2 border-t-border-strong';
+
   return (
-    <div className="flat-panel p-5 flex flex-col justify-between gap-4">
+    <div className={`flat-panel ${topBorderClass} p-5 flex flex-col justify-between gap-4`}>
       <div>
         {/* Header: Gate ID, Name, Status Badge, Power Toggle */}
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">

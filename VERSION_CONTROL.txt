@@ -49,3 +49,9 @@ Version 7 (2026-11-26)
 - Fixed first-visit Login -> Setup -> Dashboard flow in Login.tsx using per-session cpr_setup_complete check so first visit always routes through /setup before /dashboard.
 - Removed Landing Page link from both desktop and mobile Navigation menus.
 - Standardized Navigation menu order (desktop & mobile): Overview -> Zone Details -> Alerts & History -> System Setup -> Hardware Demo -> About & Safety (last) -> Logout.
+
+Version 8 (2026-11-26)
+- Implemented Sign Up (email, phone number, password) and Sign In (email, password) via POST /api/auth/signup and POST /api/auth/login with bcrypt + JWT and persistent user records in backend/data/users.json.
+- Made Initial Setup (/setup) a one-time onboarding step after Sign Up; once completed, setupComplete is persisted per operator so subsequent logins go straight to /dashboard.
+- Fixed browser camera preview in Setup.tsx by persisting MediaStream in state and attaching videoRef.current.srcObject via useEffect, plus auto-requesting camera permission on Step 2.
+- Elevated Dashboard visual hierarchy: layered surface elevation in index.css, status-accented KPI cards in OverviewTab, and status-colored top borders on GateCard.
