@@ -9,7 +9,12 @@ export const config = {
   masterPinHash: process.env.MASTER_PIN_HASH || '',
   masterKeyHash: process.env.MASTER_KEY_HASH || '',
   supabaseUrl: process.env.SUPABASE_URL || '',
-  supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '',
+  supabaseServiceKey:
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    '',
   dataDir: process.env.DATA_DIR || './data',
   rateLimitReqPerSec: parseInt(process.env.RATE_LIMIT_REQ_PER_SEC || '10', 10),
   historyRetentionMinutes: 10,

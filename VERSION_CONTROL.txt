@@ -67,3 +67,7 @@ Version 10 (2026-11-26)
   * Resolved all strict TypeScript noUnusedLocals/noUnusedParameters warnings in OverviewTab.tsx, StateBadge.tsx, and formatter.ts.
   * Added dbUpsertGate sync to updateGateOverride and updateGatePower in storage.js.
   * Verified end-to-end API flow (401 guard, signup, 409 duplicate check, token verify, gate override/density, full reset-all, and persistent one-time setupComplete).
+
+Version 11 (2026-11-26)
+- Added support for Supabase's SUPABASE_SECRET_KEY and SUPABASE_PUBLISHABLE_KEY environment variable names in backend/src/config.js alongside SUPABASE_SERVICE_ROLE_KEY.
+- Updated backend/.env.example and local backend/.env with the Supabase project URL (https://rwsovtceaxzgsnyjyeke.supabase.co).
