@@ -70,7 +70,12 @@ export const Login: React.FC = () => {
       const res = await authenticateMaster(credential);
       setSessionToken(res.token);
       setFailedAttempts(0);
-      navigate(res.setupComplete ? '/remote' : '/setup', { replace: true });
+      const isSetupDone = res.setupComplete || sessionStorage.getItem('cpr_setup_complete') === 'true';
+      if (!isSetupDone) {
+        navigate('/setup', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch {
       const nextAttempts = failedAttempts + 1;
       setFailedAttempts(nextAttempts);

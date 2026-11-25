@@ -11,9 +11,9 @@ import {
 } from 'recharts';
 import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState } from '../types';
 import { GateCard } from './GateCard';
-import { fetchZoneHistory } from '../lib/api';
+import { fetchZoneHistory, resetAllGates } from '../lib/api';
 import { formatSystemActions } from '../lib/formatter';
-import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock, RotateCcw } from 'lucide-react';
 
 interface OverviewTabProps {
   zones: ZoneInfo[];
@@ -114,7 +114,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-6">
-      
+      {/* Reset to Live Data Bar */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold text-text-primary">Live Gate Overview</h2>
+          <p className="text-xs text-text-secondary">
+            Manual values stay pinned until you press Reset to return to live telemetry.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const resetGates = await resetAllGates();
+              if (onGateUpdated && Array.isArray(resetGates)) {
+                resetGates.forEach((g) => onGateUpdated(g));
+              }
+            } catch (e) {
+              console.warn('Reset failed:', e);
+            }
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-strong bg-surface-raised hover:bg-surface-sunken text-xs font-semibold text-text-primary transition-colors"
+        >
+          <RotateCcw className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+          <span>Reset</span>
+        </button>
+      </div>
+
       {/* 1. Overall System Summary Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 font-mono">
         

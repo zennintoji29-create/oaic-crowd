@@ -310,6 +310,24 @@ app.get('/api/stream', (req, res) => {
   });
 });
 
+// POST /api/gates/reset-all - Reset all gates to AUTO live mode
+app.post('/api/gates/reset-all', (req, res) => {
+  const allGates = storage.getGates();
+  const updatedGates = allGates.map((g) => {
+    storage.updateGatePower(g.id, true);
+    return storage.updateGateOverride(g.id, 'AUTO');
+  });
+  hardwareState.cameraOnline = true;
+  hardwareState.lastCameraPing = Date.now();
+  hardwareState.systemMode = 'AI_VISION_PRIMARY';
+  updateControlLogic(hardwareState.currentCount);
+  updatedGates.forEach((g) => {
+    if (g) broadcast('GATE_UPDATED', g);
+  });
+  broadcast('HARDWARE_UPDATE', hardwareState);
+  res.json({ status: 'ok', gates: updatedGates, hardware: hardwareState });
+});
+
 // GET /api/zones - Zone list with latest status
 app.get('/api/zones', (req, res) => {
   res.json({ zones: storage.getZones(), gates: storage.getGates(), hardware: hardwareState });
@@ -532,6 +550,24 @@ app.post('/api/master/command', requireMasterAuth, (req, res) => {
   // 6. Gate Power Toggle
   else if (action === 'POWER' && typeof power === 'boolean') {
     targetGate = storage.updateGatePower(gateId, power);
+  }
+
+  // 7. Reset everything back to live data
+  else if (action === 'RESET_ALL') {
+    const allGates = storage.getGates();
+    allGates.forEach((g) => {
+      storage.updateGateOverride(g.id, 'AUTO');
+      storage.updateGatePower(g.id, true);
+    });
+    hardwareState.cameraOnline = true;
+    hardwareState.lastCameraPing = Date.now();
+    hardwareState.systemMode = 'AI_VISION_PRIMARY';
+    updateControlLogic(hardwareState.currentCount);
+    targetGate = storage.getGate(gateId) || storage.getGate('gate-a');
+    allGates.forEach((g) => {
+      const fresh = storage.getGate(g.id);
+      if (fresh) broadcast('GATE_UPDATED', { ...fresh, silent: true });
+    });
   }
 
   // Inject telemetry point so dashboard charts reflect count without interruption
@@ -772,16 +808,12 @@ server.listen(config.port, () => {
 ============================================================
   HTTP & WebSocket Server: http://localhost:${config.port}
   Device Secret Key:       ${config.deviceKey}
-  CORS Allowed Origin:     *
+  CORS Allowed Origin:     ${config.corsOrigin}
   Rate Limit:              ${config.rateLimitReqPerSec} req/sec per device
   ESP32 Status Endpoint:   http://localhost:${config.port}/api/esp32/status
   Live Stream (SSE):       http://localhost:${config.port}/api/stream
-  Keep-Alive Self-Ping:    Active (10m loop -> Render anti-sleep)
 ============================================================
 `);
-
-  // Start 10-minute automated self-ping engine (keeps Render free tier awake)
-  keepAliveEngine.start(config.port);
 });
 
 

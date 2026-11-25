@@ -13,7 +13,6 @@ import {
   CrowdState,
   TelemetryPoint,
   HardwareActuatorState,
-  KeepAliveStats,
   GateState
 } from './types';
 import {
@@ -21,8 +20,6 @@ import {
   fetchAlerts,
   controlSimulator,
   fetchHardwareStatus,
-  fetchKeepAliveStats,
-  triggerKeepAlivePing,
   fetchGates
 } from './lib/api';
 import { GlobalHeader } from './components/GlobalHeader';
@@ -88,7 +85,6 @@ const AppRoutes: React.FC = () => {
   const [lastTelemetryTimestamp, setLastTelemetryTimestamp] = useState<number>(Date.now());
   const [simulatorRunning, setSimulatorRunning] = useState<boolean>(false);
   const [isStale, setIsStale] = useState<boolean>(false);
-  const [keepAliveStats, setKeepAliveStats] = useState<KeepAliveStats | null>(null);
 
   // Redirect ?tab=landing -> /
   useEffect(() => {
@@ -97,32 +93,6 @@ const AppRoutes: React.FC = () => {
       navigate('/', { replace: true });
     }
   }, [location.search, navigate]);
-
-  // Manual keep-alive ping trigger
-  const handleTriggerPing = useCallback(async () => {
-    try {
-      const stats = await triggerKeepAlivePing();
-      setKeepAliveStats(stats);
-    } catch (err) {
-      console.warn('[Render-AntiSleep] Manual ping failed:', err);
-    }
-  }, []);
-
-  // Automated 10-minute Render Anti-Sleep Keep-Alive loop
-  useEffect(() => {
-    const runPing = async () => {
-      try {
-        const stats = await triggerKeepAlivePing();
-        setKeepAliveStats(stats);
-      } catch {
-        fetchKeepAliveStats().then(setKeepAliveStats).catch(() => null);
-      }
-    };
-
-    runPing();
-    const timer = setInterval(runPing, 570000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Compute worst state across gates and zones
   const computeWorstState = (): { state: CrowdState; zoneName: string } => {
@@ -315,8 +285,6 @@ const AppRoutes: React.FC = () => {
         isStale={isStale}
         simulatorRunning={simulatorRunning}
         onToggleSimulator={handleToggleSimulator}
-        keepAliveStats={keepAliveStats}
-        onTriggerPing={handleTriggerPing}
       />
       <div className="flex-1 flex flex-col md:flex-row">
         <Navigation

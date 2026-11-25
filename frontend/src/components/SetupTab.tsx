@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Copy, Check, Eye, EyeOff, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { ZoneInfo } from '../types';
 import { updateZoneConfig } from '../lib/api';
+import { AboutTab } from './AboutTab';
 
 interface SetupTabProps {
   zones: ZoneInfo[];
@@ -16,11 +17,6 @@ export const SetupTab: React.FC<SetupTabProps> = ({ zones, onZoneUpdated }) => {
   const [formArea, setFormArea] = useState(currentZone?.areaSqM?.toString() || '24.0');
   const [formWidth, setFormWidth] = useState(currentZone?.corridorWidthM?.toString() || '4.0');
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [showKey, setShowKey] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [copiedSnippet, setCopiedSnippet] = useState(false);
-
-  const deviceKey = 'cpr-secret-key-2026';
 
   const handleZoneChange = (zoneId: string) => {
     setSelectedZoneId(zoneId);
@@ -57,42 +53,6 @@ export const SetupTab: React.FC<SetupTabProps> = ({ zones, onZoneUpdated }) => {
       setStatusMsg(`Failed to save: ${err.message}`);
     }
   };
-
-  const copyToClipboard = (text: string, isSnippet = false) => {
-    navigator.clipboard.writeText(text);
-    if (isSnippet) {
-      setCopiedSnippet(true);
-      setTimeout(() => setCopiedSnippet(false), 2000);
-    } else {
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2000);
-    }
-  };
-
-  const cppConfigSnippet = `// ============================================================================
-// Crowd Pressure Radar - ESP32 Firmware Configuration
-// Zone: ${currentZone?.name || 'Selected Zone'} (${currentZone?.zoneId || 'zone-entry-a'})
-// ============================================================================
-
-#define WIFI_SSID             "Wokwi-GUEST"
-#define WIFI_PASSWORD         ""
-#define SERVER_URL            "https://your-public-tunnel.ngrok-free.app"
-
-#define DEVICE_ID             "${currentZone?.deviceId || 'esp32-radar-01'}"
-#define ZONE_ID               "${currentZone?.zoneId || 'zone-entry-a'}"
-#define DEVICE_KEY            "${deviceKey}"
-#define FIRMWARE_VERSION      "1.0.0"
-
-// Corridor Geometry
-constexpr float DEFAULT_ZONE_AREA_SQM = ${parseFloat(formArea || '24.0').toFixed(1)}f;
-constexpr float CORRIDOR_WIDTH_M      = ${parseFloat(formWidth || '4.0').toFixed(1)}f;
-
-// Validated Multi-Factor Risk Weights (Sum = 1.0)
-constexpr float WEIGHT_DENSITY        = 0.40f; // Crowd density (40%)
-constexpr float WEIGHT_LOW_SPEED      = 0.30f; // Low speed / stall (30%)
-constexpr float WEIGHT_STOP_AND_GO    = 0.20f; // Stop-and-go unevenness (20%)
-constexpr float WEIGHT_CLUSTERING     = 0.10f; // Clustering pairs <0.5m (10%)
-`;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -196,66 +156,9 @@ constexpr float WEIGHT_CLUSTERING     = 0.10f; // Clustering pairs <0.5m (10%)
         </form>
       </div>
 
-      {/* 2. Device Key (Masked with copy button) */}
-      <div className="flat-panel p-5">
-        <h2 className="text-base font-semibold text-text-primary mb-1">
-          Sensor Authentication Key
-        </h2>
-        <p className="text-xs text-text-secondary mb-3">
-          Transmitted in the HTTP <code>X-Device-Key</code> header to authorize incoming radar telemetry.
-        </p>
-
-        <div className="flex items-center gap-2 max-w-md">
-          <input
-            type={showKey ? 'text' : 'password'}
-            readOnly
-            value={deviceKey}
-            className="flex-1 px-3 py-1.5 text-xs font-mono bg-surface-sunken border border-border-strong rounded text-text-primary select-all focus-visible:outline"
-            aria-label="Device secret authentication key"
-          />
-          <button
-            type="button"
-            onClick={() => setShowKey(!showKey)}
-            className="p-1.5 border border-border-strong rounded bg-surface-sunken hover:bg-surface-raised text-text-secondary focus-visible:outline"
-            aria-label={showKey ? 'Hide key' : 'Show key'}
-          >
-            {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => copyToClipboard(deviceKey)}
-            className="flex items-center gap-1 px-2.5 py-1.5 border border-border-strong rounded bg-surface-sunken hover:bg-surface-raised text-xs font-medium text-text-primary focus-visible:outline"
-          >
-            {copiedKey ? <Check className="w-3.5 h-3.5 text-status-clear-text" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedKey ? 'Copied' : 'Copy'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. ESP32 Config Snippet Code Block with Copy Button */}
-      <div className="flat-panel p-5">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-base font-semibold text-text-primary">
-              ESP32 Firmware Configuration
-            </h2>
-            <p className="text-xs text-text-secondary">
-              Paste this block into <code>firmware/include/config.h</code> to calibrate your physical sensor node.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => copyToClipboard(cppConfigSnippet, true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border-strong rounded bg-surface-sunken hover:bg-surface-raised text-xs font-medium text-text-primary focus-visible:outline"
-          >
-            {copiedSnippet ? <Check className="w-3.5 h-3.5 text-status-clear-text" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedSnippet ? 'Copied' : 'Copy snippet'}</span>
-          </button>
-        </div>
-
-        <pre className="p-3 bg-surface-sunken border border-border-strong rounded font-mono text-[11px] text-text-primary overflow-x-auto leading-relaxed">
-          {cppConfigSnippet}
-        </pre>
+      {/* 2. About and Safety Sections */}
+      <div className="pt-4 border-t border-border-subtle">
+        <AboutTab />
       </div>
     </div>
   );

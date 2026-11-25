@@ -37,6 +37,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
   const [history, setHistory] = useState<TelemetryPoint[]>([]);
   const [activeModalCommand, setActiveModalCommand] = useState<OperatorCommand | null>(null);
   const [commandFeedback, setCommandFeedback] = useState<string | null>(null);
+  const [showTechnical, setShowTechnical] = useState<boolean>(false);
 
   const currentZone = zones.find(z => z.zoneId === selectedZoneId) || zones[0];
 
@@ -103,7 +104,47 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
     }
   };
 
-  const plainSentence = formatZoneStateSentence(currentZone.name, status, currentZone.score);
+  const getPlainStatus = () => {
+    if (status === 'RED') {
+      return {
+        word: 'Danger',
+        badgeClass: 'bg-rose-950 text-rose-300 border-rose-700',
+        explanation:
+          'People are packed tightly and movement has slowed or stopped. Entry should be paused until space clears.'
+      };
+    }
+    if (status === 'AMBER') {
+      if (currentZone.score >= 60) {
+        return {
+          word: 'Crowded',
+          badgeClass: 'bg-amber-950 text-amber-300 border-amber-700',
+          explanation:
+            'Crowd levels are building up and walking speed is restricted. Entry is being metered to prevent congestion.'
+        };
+      }
+      return {
+        word: 'Busy',
+        badgeClass: 'bg-amber-950/70 text-amber-200 border-amber-800',
+        explanation:
+          'Foot traffic is steady and moderately dense, but people are still moving smoothly through the zone.'
+      };
+    }
+    if (status === 'GREEN') {
+      return {
+        word: 'Clear',
+        badgeClass: 'bg-emerald-950 text-emerald-300 border-emerald-700',
+        explanation:
+          'Space is open and people are moving freely with no signs of buildup.'
+      };
+    }
+    return {
+      word: 'Offline',
+      badgeClass: 'bg-slate-900 text-slate-400 border-slate-700',
+      explanation: 'Sensor feed is currently unavailable or waiting for connection.'
+    };
+  };
+
+  const plainStatus = getPlainStatus();
 
   const formatAge = (ms: number | null | undefined): string => {
     if (ms === null || ms === undefined || isNaN(ms)) return 'Waiting for sensor';
@@ -126,18 +167,23 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
               <span className="text-xs font-mono text-text-secondary">Node: {currentZone.deviceId}</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
                 {currentZone.name}
               </h2>
-              <StateBadge state={status} size="md" />
+              <span
+                className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wide ${plainStatus.badgeClass}`}
+              >
+                {plainStatus.word}
+              </span>
+              <StateBadge state={status} size="sm" />
             </div>
 
-            <p className="text-xs text-text-secondary mt-1.5 leading-relaxed">
-              {plainSentence}
+            <p className="text-sm text-text-primary mt-2 leading-relaxed font-medium">
+              {plainStatus.explanation}
             </p>
 
-            <span className="text-[11px] font-mono text-text-muted block mt-1">
+            <span className="text-[11px] font-mono text-text-muted block mt-1.5">
               Last sensor update: {formatAge(currentZone.lastSeenMsAgo)}
             </span>
           </div>
@@ -240,29 +286,45 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Corridor Geometry Information */}
-          <div className="flat-panel p-4 text-xs text-text-secondary space-y-1 font-mono">
-            <div className="flex justify-between">
-              <span>Monitored area:</span>
-              <span className="font-semibold text-text-primary">{currentZone.areaSqM} m²</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Corridor width:</span>
-              <span className="font-semibold text-text-primary">{currentZone.corridorWidthM} m</span>
-            </div>
-            <div className="flex justify-between">
-              <span>People counted inside:</span>
-              <span className="font-semibold text-text-primary">
-                {Math.max(0, (currentZone.lastTelemetry?.entryCount || 0) - (currentZone.lastTelemetry?.exitCount || 0))} people
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* 3. Below: Three Metric Blocks with One-Sentence Explanations */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Collapsible Technical Numbers & Charts */}
+      <div className="flat-panel p-4">
+        <button
+          type="button"
+          onClick={() => setShowTechnical((prev) => !prev)}
+          aria-expanded={showTechnical}
+          className="w-full flex items-center justify-between text-xs font-semibold text-text-primary hover:text-emerald-400 transition-colors"
+        >
+          <span>{showTechnical ? 'Hide technical details' : 'Show technical details'}</span>
+          <span className="font-mono text-[11px] text-text-muted">
+            {showTechnical ? '▲ Collapse' : '▼ Expand numbers & charts'}
+          </span>
+        </button>
+
+        {showTechnical && (
+          <div className="mt-4 pt-4 border-t border-border-subtle space-y-6">
+            {/* Corridor Geometry Information */}
+            <div className="flat-panel-sunken p-4 text-xs text-text-secondary space-y-1 font-mono">
+              <div className="flex justify-between">
+                <span>Monitored area:</span>
+                <span className="font-semibold text-text-primary">{currentZone.areaSqM} m²</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Corridor width:</span>
+                <span className="font-semibold text-text-primary">{currentZone.corridorWidthM} m</span>
+              </div>
+              <div className="flex justify-between">
+                <span>People counted inside:</span>
+                <span className="font-semibold text-text-primary">
+                  {Math.max(0, (currentZone.lastTelemetry?.entryCount || 0) - (currentZone.lastTelemetry?.exitCount || 0))} people
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Below: Three Metric Blocks with One-Sentence Explanations */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="flat-panel p-4">
           <span className="text-xs text-text-secondary block font-medium">
             {METRIC_EXPLANATIONS.density.label}
@@ -412,6 +474,9 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
             )}
           </div>
         </div>
+      </div>
+          </div>
+        )}
       </div>
 
       {/* Confirmation Modal */}

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 import {
-  Download,
+  FileDown,
   Search,
   TrendingUp,
   ShieldAlert,
   Clock,
   Layers,
-  Activity,
   CheckCircle2,
   AlertTriangle,
   ArrowUpRight,
@@ -35,20 +35,19 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
   const [filterState, setFilterState] = useState<'ALL' | 'RED' | 'AMBER'>('ALL');
   const [filterZone, setFilterZone] = useState<string>('ALL');
   const [analytics, setAnalytics] = useState<TrafficAnalytics | null>(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
-  // Load analytics summary from backend
+  // Pagination: default 5 items per page
+  const [pageSize, setPageSize] = useState<5 | 10 | 20>(5);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       try {
-        setLoadingAnalytics(true);
         const data = await fetchAnalytics();
         if (isMounted) setAnalytics(data);
       } catch (err) {
         console.warn('Could not fetch analytics, using fallback:', err);
-      } finally {
-        if (isMounted) setLoadingAnalytics(false);
       }
     }
     loadData();
@@ -57,10 +56,9 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
     };
   }, []);
 
-  // Unique list of zones in alerts
-  const uniqueZones = Array.from(new Set(alerts.map(a => a.zoneName)));
+  const uniqueZones = Array.from(new Set(alerts.map((a) => a.zoneName)));
 
-  const filteredAlerts = alerts.filter(alert => {
+  const filteredAlerts = alerts.filter((alert) => {
     const matchesSearch =
       alert.zoneName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       alert.zoneId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,57 +70,115 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
     return matchesSearch && matchesSeverity && matchesZone;
   });
 
-  const exportCsv = () => {
-    if (alerts.length === 0) return;
+  // Reset to page 1 when filters or pageSize change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterState, filterZone, pageSize]);
 
-    const headers = ['ID', 'Timestamp_ISO', 'Zone_ID', 'Zone_Name', 'From_State', 'To_State', 'Risk_Score', 'Message'];
-    const rows = filteredAlerts.map(a => [
-      `"${a.id}"`,
-      `"${new Date(a.timestamp).toISOString()}"`,
-      `"${a.zoneId}"`,
-      `"${a.zoneName}"`,
-      `"${a.fromState}"`,
-      `"${a.toState}"`,
-      a.score,
-      `"${a.message.replace(/"/g, '""')}"`
-    ]);
+  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedAlerts = filteredAlerts.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
 
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `crowd_radar_alerts_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const dangerCount = alerts.filter((a) => a.toState === 'RED').length;
+  const amberCount = alerts.filter((a) => a.toState === 'AMBER').length;
+  const aiPrimaryPct = analytics?.modeSummary
+    ? `${((analytics.modeSummary.aiVisionHours / (analytics.modeSummary.totalUptimeHours || 1)) * 100).toFixed(0)}%`
+    : '98%';
+  const autoRecoveryPct = `${analytics?.modeSummary?.autoRecoveryRatePercent ?? 100}%`;
+  const peakEntry = (analytics?.peakHours || []).reduce(
+    (best, cur) => (cur.count > best.count ? cur : best),
+    { hour: '18:00', count: 520, risk: 85 }
+  );
+
+  const downloadPdfSummary = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Crowd Pressure Radar — Safety Summary Report', 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+
+    doc.setFontSize(12);
+    doc.text('Key Operational Numbers', 14, 38);
+    doc.setFontSize(10);
+    const summaryLines = [
+      `Total Alerts Logged: ${alerts.length}`,
+      `Critical Locks (Danger / RED): ${dangerCount}`,
+      `Elevated Warnings (AMBER): ${amberCount}`,
+      `AI Vision Primary Uptime: ${aiPrimaryPct}`,
+      `Auto-Recovery Rate: ${autoRecoveryPct}`,
+      `Peak Traffic Hour: ${peakEntry.hour} (${peakEntry.count} people, Risk ${peakEntry.risk})`,
+      `Failover Events Caught: ${analytics?.modeSummary?.failoverEventsCount ?? 3}`
+    ];
+    summaryLines.forEach((line, idx) => {
+      doc.text(`• ${line}`, 16, 46 + idx * 7);
+    });
+
+    doc.setFontSize(12);
+    doc.text('Recent Incident History (Top 10)', 14, 102);
+    doc.setFontSize(9);
+    filteredAlerts.slice(0, 10).forEach((alert, idx) => {
+      const timeStr = new Date(alert.timestamp).toLocaleTimeString();
+      const line = `${timeStr} | ${alert.zoneName} | ${alert.fromState} -> ${alert.toState} | Risk ${alert.score}`;
+      doc.text(line.slice(0, 95), 14, 110 + idx * 7);
+    });
+
+    doc.save(`cpr-safety-summary-${Date.now()}.pdf`);
   };
-
-  const dangerCount = alerts.filter(a => a.toState === 'RED').length;
-  const amberCount = alerts.filter(a => a.toState === 'AMBER').length;
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Banner */}
-      <div className="flat-panel p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-bold text-text-primary tracking-tight">
-            Crowd Safety Intelligence & Alert Reports
-          </h1>
-          <p className="text-xs text-text-secondary mt-1">
-            Historical incident analysis, peak traffic time patterns, sensor failover telemetry, and compliance logging.
-          </p>
+      {/* 1. Summary Section + Download PDF */}
+      <div className="flat-panel p-5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-bold text-text-primary tracking-tight">
+              Alerts & Safety Summary
+            </h1>
+            <p className="text-xs text-text-secondary mt-1">
+              Key crowd safety numbers, peak traffic hours, mode breakdown, and paginated incident history.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={downloadPdfSummary}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
+          >
+            <FileDown className="w-4 h-4" aria-hidden="true" />
+            <span>Download PDF</span>
+          </button>
         </div>
 
-        {/* Quick CSV Export */}
-        <button
-          onClick={exportCsv}
-          disabled={filteredAlerts.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-surface-sunken hover:bg-surface-raised border border-border-strong text-text-primary transition-colors disabled:opacity-50"
-        >
-          <Download className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Export Incident CSV</span>
-        </button>
+        {/* Summary Important Numbers */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-border-subtle">
+          <div className="p-3 rounded bg-surface-sunken border border-border-subtle">
+            <span className="text-[10px] font-mono text-text-muted block">TOTAL ALERTS</span>
+            <span className="text-lg font-bold font-mono text-text-primary">{alerts.length}</span>
+          </div>
+          <div className="p-3 rounded bg-surface-sunken border border-border-subtle">
+            <span className="text-[10px] font-mono text-text-muted block">CRITICAL LOCKS</span>
+            <span className="text-lg font-bold font-mono text-rose-400">{dangerCount}</span>
+          </div>
+          <div className="p-3 rounded bg-surface-sunken border border-border-subtle">
+            <span className="text-[10px] font-mono text-text-muted block">WARNINGS</span>
+            <span className="text-lg font-bold font-mono text-amber-400">{amberCount}</span>
+          </div>
+          <div className="p-3 rounded bg-surface-sunken border border-border-subtle">
+            <span className="text-[10px] font-mono text-text-muted block">AI UPTIME</span>
+            <span className="text-lg font-bold font-mono text-emerald-400">{aiPrimaryPct}</span>
+          </div>
+          <div className="p-3 rounded bg-surface-sunken border border-border-subtle">
+            <span className="text-[10px] font-mono text-text-muted block">AUTO RECOVERY</span>
+            <span className="text-lg font-bold font-mono text-emerald-400">{autoRecoveryPct}</span>
+          </div>
+          <div className="p-3 rounded bg-surface-sunken border border-border-subtle">
+            <span className="text-[10px] font-mono text-text-muted block">PEAK HOUR</span>
+            <span className="text-lg font-bold font-mono text-cyan-400">{peakEntry.hour}</span>
+          </div>
+        </div>
       </div>
 
       {/* 2. Executive Metric Cards */}
@@ -142,7 +198,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             <ShieldAlert className="w-4 h-4 text-red-400" />
           </div>
           <span className="text-2xl font-bold font-mono text-red-400">{dangerCount}</span>
-          <span className="text-[11px] text-text-muted block mt-1">Zero-injuries recorded</span>
+          <span className="text-[11px] text-text-muted block mt-1">Zero injuries recorded</span>
         </div>
 
         <div className="flat-panel p-4">
@@ -150,9 +206,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             <span>AI VISION PRIMARY</span>
             <Cpu className="w-4 h-4 text-cyan-400" />
           </div>
-          <span className="text-2xl font-bold font-mono text-cyan-400">
-            {analytics?.modeSummary ? `${((analytics.modeSummary.aiVisionHours / (analytics.modeSummary.totalUptimeHours || 1)) * 100).toFixed(0)}%` : '98%'}
-          </span>
+          <span className="text-2xl font-bold font-mono text-cyan-400">{aiPrimaryPct}</span>
           <span className="text-[11px] text-text-muted block mt-1">YOLO11n Edge GPU</span>
         </div>
 
@@ -161,16 +215,13 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             <span>AUTO RECOVERY</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
-          <span className="text-2xl font-bold font-mono text-emerald-400">
-            {analytics?.modeSummary?.autoRecoveryRatePercent ?? 100}%
-          </span>
+          <span className="text-2xl font-bold font-mono text-emerald-400">{autoRecoveryPct}</span>
           <span className="text-[11px] text-text-muted block mt-1">Without operator lag</span>
         </div>
       </div>
 
-      {/* 3. Wireframe Requirement: Peak Time of Traffic Chart & Mode Summary */}
+      {/* 3. Peak Time of Traffic Chart & Mode Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Peak Time of Traffic Chart (2 cols) */}
         <div className="lg:col-span-2 flat-panel p-5 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
             <div>
@@ -222,7 +273,6 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
           </div>
         </div>
 
-        {/* Report of Mode Summary (1 col) */}
         <div className="flat-panel p-5 space-y-4 flex flex-col justify-between">
           <div>
             <div className="pb-2 border-b border-border-subtle">
@@ -273,23 +323,14 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                     {analytics?.modeSummary?.failoverEventsCount ?? 3}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Camera Watchdog Latency:</span>
-                  <span className="font-mono text-emerald-400">4.5 seconds</span>
-                </div>
               </div>
             </div>
-          </div>
-
-          <div className="p-3 bg-cyan-950/40 rounded border border-cyan-900/60 text-[11px] text-text-secondary">
-            Automatic failover triggers when camera frames drop below 10 FPS for 4.5s.
           </div>
         </div>
       </div>
 
-      {/* 4. Wireframe Requirement: Risk Timeline & Gate Breakdown */}
+      {/* 4. Risk Timeline & Gate Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Risk Timeline */}
         <div className="flat-panel p-5 space-y-3">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 pb-2 border-b border-border-subtle">
             <Clock className="w-4 h-4 text-cyan-400" />
@@ -320,7 +361,6 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
           </div>
         </div>
 
-        {/* Gate Breakdown */}
         <div className="flat-panel p-5 space-y-3">
           <h2 className="text-sm font-bold text-text-primary flex items-center gap-2 pb-2 border-b border-border-subtle">
             <ShieldAlert className="w-4 h-4 text-cyan-400" />
@@ -330,7 +370,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             {(analytics?.gateBreakdown || [
               { gateId: 'gate-a', name: 'Main Temple Gate A', totalPassages: 4820, criticalIncidents: 4 },
               { gateId: 'gate-b', name: 'North Pavilion Gate B', totalPassages: 3290, criticalIncidents: 2 }
-            ]).map(gate => (
+            ]).map((gate) => (
               <div
                 key={gate.gateId}
                 className="p-3 rounded bg-surface-sunken border border-border-subtle space-y-2"
@@ -355,9 +395,8 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
         </div>
       </div>
 
-      {/* 5. Complete Searchable Alert Event Log */}
+      {/* 5. Paginated Alert Event Log */}
       <div className="space-y-3">
-        {/* Search & Filter Toolbar */}
         <div className="flat-panel p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 flex-1">
             <div className="relative min-w-[200px]">
@@ -366,7 +405,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                 type="text"
                 placeholder="Filter by keyword, zone, or gate..."
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-surface-sunken border border-border-strong rounded text-text-primary placeholder:text-text-muted focus-visible:outline"
               />
             </div>
@@ -407,11 +446,11 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             {uniqueZones.length > 1 && (
               <select
                 value={filterZone}
-                onChange={e => setFilterZone(e.target.value)}
+                onChange={(e) => setFilterZone(e.target.value)}
                 className="bg-surface-raised border border-border-strong text-text-primary text-xs rounded px-2.5 py-1.5 focus-visible:outline"
               >
                 <option value="ALL">All zones</option>
-                {uniqueZones.map(z => (
+                {uniqueZones.map((z) => (
                   <option key={z} value={z}>
                     {z}
                   </option>
@@ -419,11 +458,28 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
               </select>
             )}
           </div>
+
+          {/* Items per page dropdown */}
+          <div className="flex items-center gap-2 text-xs">
+            <label htmlFor="alerts-page-size" className="text-text-muted font-mono">
+              Show:
+            </label>
+            <select
+              id="alerts-page-size"
+              value={pageSize}
+              onChange={(e) => setPageSize(parseInt(e.target.value, 10) as 5 | 10 | 20)}
+              className="bg-surface-sunken border border-border-strong text-text-primary text-xs rounded px-2.5 py-1.5 font-mono focus-visible:outline"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+          </div>
         </div>
 
         {/* Alerts Table */}
         <div className="flat-panel overflow-hidden">
-          {filteredAlerts.length === 0 ? (
+          {paginatedAlerts.length === 0 ? (
             <div className="p-8 text-center text-text-muted text-xs">
               No matching alerts found. System operating normally.
             </div>
@@ -440,7 +496,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
-                  {filteredAlerts.map(alert => (
+                  {paginatedAlerts.map((alert) => (
                     <tr key={alert.id} className="hover:bg-surface-sunken/50 transition-colors">
                       <td className="py-2.5 px-4 font-mono text-text-muted text-[11px] whitespace-nowrap">
                         {new Date(alert.timestamp).toLocaleTimeString()}
@@ -458,15 +514,55 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                       <td className="py-2.5 px-4 font-mono font-bold text-text-primary">
                         {alert.score}
                       </td>
-                      <td className="py-2.5 px-4 text-text-secondary">
-                        {alert.message}
-                      </td>
+                      <td className="py-2.5 px-4 text-text-secondary">{alert.message}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+
+          {/* Pagination Controls */}
+          <div className="p-3 border-t border-border-subtle bg-surface-sunken flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-mono text-text-muted">
+              Page {safePage} of {totalPages} ({filteredAlerts.length} total)
+            </span>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="px-2.5 py-1 rounded border border-border-strong bg-surface-raised text-text-primary hover:bg-surface-base disabled:opacity-40"
+              >
+                Previous
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-2.5 py-1 rounded border font-mono ${
+                    pageNum === safePage
+                      ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
+                      : 'border-border-strong bg-surface-raised text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="px-2.5 py-1 rounded border border-border-strong bg-surface-raised text-text-primary hover:bg-surface-base disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

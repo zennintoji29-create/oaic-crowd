@@ -283,7 +283,7 @@ export const Setup: React.FC = () => {
         isConfigured: true
       });
       sessionStorage.setItem('cpr_setup_complete', 'true');
-      navigate('/remote', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       if (err?.message === 'AUTH_EXPIRED') {
         navigate('/login', { replace: true });

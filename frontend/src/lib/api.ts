@@ -84,6 +84,15 @@ export async function adjustGateDensity(gateId: string, delta: number): Promise<
   return data.gate;
 }
 
+export async function resetAllGates(): Promise<GateState[]> {
+  const res = await authFetch(`${API_BASE}/gates/reset-all`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error('Failed to reset gates');
+  const data = await res.json();
+  return data.gates;
+}
+
 export async function fetchSystemConfig(): Promise<SystemConfig> {
   const res = await authFetch(`${API_BASE}/config`);
   if (!res.ok) throw new Error('Failed to fetch system config');

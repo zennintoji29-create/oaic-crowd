@@ -2,19 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Lock,
   Unlock,
-  KeyRound,
   Sliders,
   RotateCcw,
-  Plus,
-  Minus,
   Radio,
-  Flame,
   EyeOff,
-  Eye,
-  ShieldAlert,
-  Power,
-  Check,
-  ChevronRight,
   LogOut
 } from 'lucide-react';
 import { GateState, CrowdState } from '../types';
@@ -32,21 +23,21 @@ interface MasterRemoteProps {
 }
 
 export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] }) => {
-  // Authentication State (sessionStorage only)
   const [token, setToken] = useState<string>(() => getSessionToken() || '');
-
   const [pinInput, setPinInput] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
 
-  // Gates & Remote State
   const [gates, setGates] = useState<GateState[]>(initialGates);
   const [selectedGateId, setSelectedGateId] = useState<string>('gate-a');
   const [executing, setExecuting] = useState<boolean>(false);
   const [cameraOnline, setCameraOnline] = useState<boolean>(true);
   const [localFeedback, setLocalFeedback] = useState<string | null>(null);
 
-  const currentGate = gates.find(g => g.id === selectedGateId) || gates[0] || {
+  // Strict whole-number input box state (digits 0-9 only)
+  const [amountInput, setAmountInput] = useState<string>('1');
+
+  const currentGate = gates.find((g) => g.id === selectedGateId) || gates[0] || {
     id: 'gate-a',
     name: 'Main Temple Gate A',
     zoneId: 'zone-entry-a',
@@ -64,7 +55,6 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     redThreshold: 10
   };
 
-  // Poll gates silently while remote is open
   useEffect(() => {
     if (!token) return;
     let isMounted = true;
@@ -75,7 +65,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
         if (isMounted && fetched && fetched.length > 0) {
           setGates(fetched);
         }
-      } catch (e) {
+      } catch {
         // Silent poll ignore
       }
     }
@@ -88,7 +78,6 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     };
   }, [token]);
 
-  // Haptic feedback & local subtle flash
   const notifyPhoneOnly = (msg: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(25);
@@ -97,7 +86,6 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     setTimeout(() => setLocalFeedback(null), 1800);
   };
 
-  // Submit PIN / Passcode
   const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!pinInput.trim()) return;
@@ -125,7 +113,6 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     clearSessionToken();
   };
 
-  // Dispatch Silent Command to Backend
   const executeSilent = async (action: string, params: Record<string, any> = {}) => {
     if (!token) return;
     setExecuting(true);
@@ -137,10 +124,17 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
       });
 
       if (res.gate) {
-        setGates(prev => prev.map(g => (g.id === res.gate.id ? res.gate : g)));
+        setGates((prev) => prev.map((g) => (g.id === res.gate.id ? res.gate : g)));
       }
 
-      notifyPhoneOnly('Updated');
+      if (action === 'RESET_ALL') {
+        setCameraOnline(true);
+        const freshGates = await fetchGates().catch(() => []);
+        if (freshGates.length > 0) setGates(freshGates);
+        notifyPhoneOnly('Reset to Live');
+      } else {
+        notifyPhoneOnly('Updated');
+      }
     } catch (err: any) {
       if (err.message === 'AUTH_EXPIRED') {
         setToken('');
@@ -151,23 +145,40 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     }
   };
 
-  // =========================================================================
-  // VIEW 1: Stealth Security Keypad Screen (Unauthorized)
-  // =========================================================================
+  // Clamp population delta so count never goes below 0
+  const applyPopulationDelta = (delta: number) => {
+    const nextCount = Math.max(0, currentGate.count + delta);
+    const clampedDelta = nextCount - currentGate.count;
+    executeSilent('DENSITY', { delta: clampedDelta });
+  };
+
+  // Strict whole-number sanitization: digits 0-9 only (no decimals, letters, minus, spaces)
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digitsOnly = e.target.value.replace(/[^0-9]/g, '');
+    setAmountInput(digitsOnly);
+  };
+
+  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const blocked = ['.', '-', '+', 'e', 'E', ' '];
+    if (blocked.includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const parsedAmount = amountInput === '' ? 0 : parseInt(amountInput, 10);
+
   if (!token) {
     return (
       <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col items-center justify-center p-4 font-sans select-none">
         <div className="w-full max-w-xs space-y-6">
           <div className="text-center space-y-1">
-            <div className="inline-flex p-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-cyan-400 mb-2">
+            <div className="inline-flex p-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-emerald-400 mb-2">
               <Lock className="w-6 h-6" />
             </div>
             <h1 className="text-base font-bold font-mono tracking-tight text-white uppercase">
               CPR Master Remote
             </h1>
-            <p className="text-xs text-neutral-500 font-mono">
-              Restricted Operator Terminal
-            </p>
+            <p className="text-xs text-neutral-500 font-mono">Restricted Operator Terminal</p>
           </div>
 
           <form onSubmit={handleAuthSubmit} className="space-y-4">
@@ -175,11 +186,11 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
               <input
                 type="password"
                 inputMode="numeric"
-                autoComplete="current-password"
+                autoComplete="off"
                 placeholder="Enter PIN or Passcode"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                className="w-full text-center tracking-widest text-lg font-mono py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-cyan-400 placeholder:text-neutral-600 focus:outline-none focus:border-cyan-500 transition shadow-inner"
+                className="w-full text-center tracking-widest text-lg font-mono py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-emerald-400 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition shadow-inner"
                 autoFocus
               />
               {authError && (
@@ -192,48 +203,19 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
             <button
               type="submit"
               disabled={authLoading || !pinInput}
-              className="w-full py-3.5 rounded-xl font-mono text-sm font-bold bg-cyan-500 hover:bg-cyan-400 text-neutral-950 transition active:scale-98 disabled:opacity-50 shadow-lg shadow-cyan-500/20"
+              className="w-full py-3.5 rounded-xl font-mono text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-neutral-950 transition disabled:opacity-50"
             >
               {authLoading ? 'Verifying...' : 'Unlock Remote'}
             </button>
           </form>
-
-          {/* Quick PIN Keypad on Mobile */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'CLR', '0', 'OK'].map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  if (key === 'CLR') {
-                    setPinInput('');
-                  } else if (key === 'OK') {
-                    handleAuthSubmit();
-                  } else {
-                    setPinInput(prev => prev + key);
-                  }
-                }}
-                className="py-3 rounded-lg bg-neutral-900 hover:bg-neutral-850 active:bg-neutral-800 border border-neutral-800 text-neutral-300 font-mono text-sm font-bold transition active:scale-95"
-              >
-                {key}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-[10px] text-neutral-600 text-center font-mono">
-            Silent link • Zero dashboard notifications
-          </p>
         </div>
       </div>
     );
   }
 
-  // =========================================================================
-  // VIEW 2: Minimal Mobile-First Remote Controller
-  // =========================================================================
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col p-3 max-w-md mx-auto font-sans select-none pb-8">
-      {/* 1. Stealth Top Header */}
+      {/* Top Header with Reset & Logout */}
       <div className="flex items-center justify-between py-2 border-b border-neutral-800/80 mb-3">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
@@ -241,17 +223,28 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="text-[11px] font-mono font-bold tracking-wider text-neutral-400 uppercase">
-            CPR Silent Remote
+            CPR Master Remote
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {localFeedback && (
-            <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800 animate-fadeIn">
+            <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
               {localFeedback}
             </span>
           )}
           <button
+            type="button"
+            onClick={() => executeSilent('RESET_ALL')}
+            disabled={executing}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-900 border border-emerald-600/60 text-emerald-400 hover:bg-emerald-950/60 text-[11px] font-mono font-bold transition"
+            title="Reset all controls back to live data"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Reset</span>
+          </button>
+          <button
+            type="button"
             onClick={handleLogout}
             title="Lock Remote"
             className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-rose-400 transition"
@@ -261,7 +254,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
         </div>
       </div>
 
-      {/* 2. Gate Selection Tabs */}
+      {/* Gate Selection Tabs */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         {gates.map((gate) => {
           const isSelected = gate.id === selectedGateId;
@@ -272,9 +265,9 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
                 setSelectedGateId(gate.id);
                 notifyPhoneOnly(`Selected ${gate.name.split(' ')[0]}`);
               }}
-              className={`p-3 rounded-xl border text-left transition-all active:scale-98 ${
+              className={`p-3 rounded-xl border text-left transition-all ${
                 isSelected
-                  ? 'bg-neutral-900 border-cyan-500 ring-1 ring-cyan-500/50 shadow-md'
+                  ? 'bg-neutral-900 border-emerald-500 ring-1 ring-emerald-500/50 shadow-md'
                   : 'bg-neutral-900/60 border-neutral-800/80 text-neutral-400'
               }`}
             >
@@ -294,14 +287,14 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
               </div>
               <div className="flex items-center justify-between text-[11px] font-mono text-neutral-500 mt-1">
                 <span>{gate.count} ppl</span>
-                <span className="text-cyan-400 font-bold">{gate.servoAngle}°</span>
+                <span className="text-emerald-400 font-bold">{gate.servoAngle}°</span>
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* 3. Live Selected Gate Status Banner */}
+      {/* Live Selected Gate Status Banner */}
       <div className="p-3.5 rounded-xl bg-neutral-900 border border-neutral-800 mb-4 flex items-center justify-between">
         <div>
           <span className="text-[10px] font-mono text-neutral-500 uppercase block">Selected Gate</span>
@@ -309,7 +302,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
           <div className="flex items-center gap-2 text-xs font-mono text-neutral-400 mt-0.5">
             <span>Count: <strong className="text-white">{currentGate.count}</strong></span>
             <span>•</span>
-            <span>Density: <strong className="text-cyan-400">{currentGate.density.toFixed(1)}</strong> p/m²</span>
+            <span>Density: <strong className="text-emerald-400">{currentGate.density.toFixed(1)}</strong> p/m²</span>
           </div>
         </div>
 
@@ -331,63 +324,65 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
         </div>
       </div>
 
-      {/* 4. Crowd Population & Density Controls (Big Touch Buttons) */}
-      <div className="space-y-2 mb-4">
+      {/* People Count Number Box (+ Add / - Remove) & Quick Buttons */}
+      <div className="space-y-3 mb-4">
         <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 uppercase">
-          <span>Population / Density Nudge</span>
-          <span className="text-neutral-500">Silent Adjust</span>
+          <span>People Count Control</span>
+          <span className="text-neutral-500">Whole numbers only</span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <button
-            onClick={() => executeSilent('DENSITY', { delta: -5 })}
-            disabled={executing}
-            className="py-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 active:bg-neutral-800 border border-neutral-800 text-xs font-mono font-bold text-neutral-300 active:scale-95 transition"
-          >
-            -5
-          </button>
-          <button
-            onClick={() => executeSilent('DENSITY', { delta: -1 })}
-            disabled={executing}
-            className="py-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 active:bg-neutral-800 border border-neutral-800 text-xs font-mono font-bold text-neutral-300 active:scale-95 transition"
-          >
-            -1
-          </button>
-          <button
-            onClick={() => executeSilent('DENSITY', { delta: 1 })}
-            disabled={executing}
-            className="py-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 active:bg-neutral-800 border border-cyan-800 text-xs font-mono font-bold text-cyan-400 active:scale-95 transition"
-          >
-            +1
-          </button>
-          <button
-            onClick={() => executeSilent('DENSITY', { delta: 5 })}
-            disabled={executing}
-            className="py-3.5 rounded-xl bg-amber-950/70 hover:bg-amber-900/80 active:bg-amber-850 border border-amber-700/80 text-xs font-mono font-bold text-amber-300 active:scale-95 transition"
-          >
-            +5 Surge
-          </button>
-        </div>
-
-        {/* Continuous Smooth Population Slider */}
-        <div className="pt-2 px-1 flex items-center gap-3">
-          <span className="text-[10px] font-mono text-neutral-500">0</span>
+        {/* Number Box + Add / Remove */}
+        <div className="flex items-center gap-2">
           <input
-            type="range"
-            min="0"
-            max="25"
-            value={currentGate.count}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              executeSilent('SET_POPULATION', { count: val });
-            }}
-            className="w-full h-3 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={amountInput}
+            onChange={handleAmountChange}
+            onKeyDown={handleAmountKeyDown}
+            placeholder="0"
+            aria-label="Whole number of people to add or remove"
+            className="w-24 text-center py-2.5 px-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white font-mono text-sm font-bold focus:outline-none focus:border-emerald-500"
           />
-          <span className="text-[10px] font-mono text-neutral-500">25+</span>
+          <button
+            type="button"
+            disabled={executing || parsedAmount === 0}
+            onClick={() => applyPopulationDelta(parsedAmount)}
+            className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-neutral-950 text-xs font-mono font-bold transition disabled:opacity-40"
+          >
+            + Add
+          </button>
+          <button
+            type="button"
+            disabled={executing || parsedAmount === 0 || currentGate.count === 0}
+            onClick={() => applyPopulationDelta(-parsedAmount)}
+            className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 text-xs font-mono font-bold transition disabled:opacity-40"
+          >
+            - Remove
+          </button>
+        </div>
+
+        {/* Quick Buttons: -5, -1, +1, +5, +10, +30 */}
+        <div className="grid grid-cols-6 gap-1.5">
+          {[-5, -1, 1, 5, 10, 30].map((val) => (
+            <button
+              key={val}
+              type="button"
+              disabled={executing || (val < 0 && currentGate.count === 0)}
+              onClick={() => applyPopulationDelta(val)}
+              className={`py-2.5 rounded-xl border text-xs font-mono font-bold transition active:scale-95 disabled:opacity-40 ${
+                val > 0
+                  ? 'bg-emerald-950/60 border-emerald-700/70 text-emerald-300 hover:bg-emerald-900/60'
+                  : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
+              }`}
+            >
+              {val > 0 ? `+${val}` : val}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 5. Physical SG90 Servo Barrier Controls */}
+      {/* Physical SG90 Servo Barrier Controls (90° = OPEN, 0° = LOCKED) */}
       <div className="space-y-2 mb-4">
         <span className="text-[11px] font-mono text-neutral-400 uppercase block">
           Gate Physical Barrier (Servo)
@@ -397,7 +392,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
           <button
             onClick={() => executeSilent('OVERRIDE', { manualState: 'FORCE_OPEN' })}
             disabled={executing}
-            className={`p-3.5 rounded-xl border text-left transition active:scale-98 flex items-center justify-between ${
+            className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between ${
               currentGate.manualState === 'FORCE_OPEN'
                 ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
                 : 'bg-neutral-900 border-neutral-800 text-neutral-200 hover:border-neutral-700'
@@ -416,7 +411,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
           <button
             onClick={() => executeSilent('OVERRIDE', { manualState: 'FORCE_METER' })}
             disabled={executing}
-            className={`p-3.5 rounded-xl border text-left transition active:scale-98 flex items-center justify-between ${
+            className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between ${
               currentGate.manualState === 'FORCE_METER'
                 ? 'bg-amber-950/80 border-amber-500 text-amber-300'
                 : 'bg-neutral-900 border-neutral-800 text-neutral-200 hover:border-neutral-700'
@@ -435,7 +430,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
           <button
             onClick={() => executeSilent('OVERRIDE', { manualState: 'FORCE_LOCK' })}
             disabled={executing}
-            className={`p-3.5 rounded-xl border text-left transition active:scale-98 flex items-center justify-between ${
+            className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between ${
               currentGate.manualState === 'FORCE_LOCK'
                 ? 'bg-rose-950/90 border-rose-500 text-rose-300'
                 : 'bg-neutral-900 border-neutral-800 text-neutral-200 hover:border-neutral-700'
@@ -454,25 +449,25 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
           <button
             onClick={() => executeSilent('OVERRIDE', { manualState: 'AUTO' })}
             disabled={executing}
-            className={`p-3.5 rounded-xl border text-left transition active:scale-98 flex items-center justify-between ${
+            className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between ${
               currentGate.manualState === 'AUTO'
-                ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300'
+                ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
                 : 'bg-neutral-900 border-neutral-800 text-neutral-200 hover:border-neutral-700'
             }`}
           >
             <div className="flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-cyan-400 shrink-0" />
+              <RotateCcw className="w-4 h-4 text-emerald-400 shrink-0" />
               <div>
                 <span className="text-xs font-bold block">Auto Mode</span>
                 <span className="text-[10px] text-neutral-500">YOLO + Radar</span>
               </div>
             </div>
-            <span className="text-xs font-mono font-bold text-cyan-400">AUTO</span>
+            <span className="text-xs font-mono font-bold text-emerald-400">AUTO</span>
           </button>
         </div>
       </div>
 
-      {/* 6. Instant Gate State Swapper */}
+      {/* Instant Gate State Swapper */}
       <div className="space-y-2 mb-4">
         <span className="text-[11px] font-mono text-neutral-400 uppercase block">
           Preset Risk Conditions
@@ -481,28 +476,28 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
           <button
             onClick={() => executeSilent('SET_STATE', { state: 'GREEN' })}
             disabled={executing}
-            className="py-2.5 px-2 rounded-xl bg-emerald-950/50 border border-emerald-700/60 text-emerald-300 text-xs font-mono font-bold active:scale-95 transition"
+            className="py-2.5 px-2 rounded-xl bg-emerald-950/50 border border-emerald-700/60 text-emerald-300 text-xs font-mono font-bold"
           >
             Normal (Green)
           </button>
           <button
             onClick={() => executeSilent('SET_STATE', { state: 'AMBER' })}
             disabled={executing}
-            className="py-2.5 px-2 rounded-xl bg-amber-950/50 border border-amber-700/60 text-amber-300 text-xs font-mono font-bold active:scale-95 transition"
+            className="py-2.5 px-2 rounded-xl bg-amber-950/50 border border-amber-700/60 text-amber-300 text-xs font-mono font-bold"
           >
             Caution (Yellow)
           </button>
           <button
             onClick={() => executeSilent('SET_STATE', { state: 'RED' })}
             disabled={executing}
-            className="py-2.5 px-2 rounded-xl bg-rose-950/50 border border-rose-700/60 text-rose-300 text-xs font-mono font-bold active:scale-95 transition"
+            className="py-2.5 px-2 rounded-xl bg-rose-950/50 border border-rose-700/60 text-rose-300 text-xs font-mono font-bold"
           >
             Danger (Red)
           </button>
         </div>
       </div>
 
-      {/* 7. Failover Simulation Toggle (Camera drop trick for evaluators) */}
+      {/* Failover Simulation Toggle & Full Reset */}
       <div className="pt-2 border-t border-neutral-800/80 space-y-2">
         <button
           onClick={() => {
@@ -511,7 +506,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
             executeSilent('SIMULATE_FAILOVER', { cameraOnline: next });
           }}
           disabled={executing}
-          className={`w-full py-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition active:scale-98 ${
+          className={`w-full py-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition ${
             !cameraOnline
               ? 'bg-amber-950 text-amber-300 border-amber-600'
               : 'bg-neutral-900 hover:bg-neutral-850 border-neutral-800 text-neutral-300'
@@ -524,15 +519,21 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
             </>
           ) : (
             <>
-              <Radio className="w-4 h-4 text-cyan-400" />
+              <Radio className="w-4 h-4 text-emerald-400" />
               <span>Simulate Camera Drop (Test Radar Failover)</span>
             </>
           )}
         </button>
 
-        <p className="text-[10px] text-neutral-600 text-center font-mono pt-1">
-          Operations execute silently in background • 0 toasts/modals on dashboard
-        </p>
+        <button
+          type="button"
+          onClick={() => executeSilent('RESET_ALL')}
+          disabled={executing}
+          className="w-full py-2.5 rounded-xl border border-emerald-700/60 bg-emerald-950/30 hover:bg-emerald-950/60 text-emerald-300 text-xs font-mono font-bold flex items-center justify-center gap-2 transition"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Reset Everything to Live Data</span>
+        </button>
       </div>
     </div>
   );

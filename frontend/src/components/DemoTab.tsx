@@ -154,64 +154,45 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
   }
 };
 
-export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
+export const DemoTab: React.FC<DemoTabProps> = () => {
   const [selectedInspector, setSelectedInspector] = useState<string>('webcam');
   const [selectedGateId, setSelectedGateId] = useState<string>('gate-a');
   const [gatePower, setGatePower] = useState<boolean>(true);
   const [amberThreshold, setAmberThreshold] = useState<number>(5);
   const [redThreshold, setRedThreshold] = useState<number>(10);
   const [sensitivityMode, setSensitivityMode] = useState<'LOW' | 'BALANCED' | 'HIGH'>('BALANCED');
-  const [simulatedCount, setSimulatedCount] = useState<number>(hardware?.currentCount ?? 2);
-  const [isSimulatingCameraFail, setIsSimulatingCameraFail] = useState<boolean>(
-    hardware ? hardware.systemMode === 'HARDWARE_FAILOVER' : false
-  );
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [simulatedCount, setSimulatedCount] = useState<number>(0);
+  const [isSimulatingCameraFail, setIsSimulatingCameraFail] = useState<boolean>(false);
 
   const activeDossier = COMPONENT_DETAILS[selectedInspector] || COMPONENT_DETAILS['webcam'];
 
-  const handleSliderChange = async (val: number) => {
+  const handleSliderChange = (val: number) => {
     setSimulatedCount(val);
-    try {
-      setIsSyncing(true);
-      await simulateSandbox(val, !isSimulatingCameraFail, selectedGateId);
-    } catch (e) {
-      console.warn('Simulation sync error:', e);
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
-  const handleScenarioClick = async (val: number) => {
+  const handleScenarioClick = (val: number) => {
     setSimulatedCount(val);
-    try {
-      setIsSyncing(true);
-      await simulateSandbox(val, !isSimulatingCameraFail, selectedGateId);
-    } catch (e) {
-      console.warn('Simulation scenario error:', e);
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
-  const handleToggleFailover = async () => {
-    const nextFail = !isSimulatingCameraFail;
-    setIsSimulatingCameraFail(nextFail);
-    try {
-      setIsSyncing(true);
-      await simulateSandbox(simulatedCount, !nextFail, selectedGateId);
-    } catch (e) {
-      console.warn('Simulation failover error:', e);
-    } finally {
-      setIsSyncing(false);
-    }
+  const handleToggleFailover = () => {
+    setIsSimulatingCameraFail((prev) => !prev);
   };
 
-  // Compute dynamic visual representations with user-adjustable thresholds
+  const handleClearDemo = () => {
+    setSimulatedCount(0);
+    setIsSimulatingCameraFail(false);
+    setGatePower(true);
+    setAmberThreshold(5);
+    setRedThreshold(10);
+    setSensitivityMode('BALANCED');
+  };
+
+  // Compute dynamic visual representations purely from local sandbox state (never live data)
   const effectiveAmber = sensitivityMode === 'LOW' ? amberThreshold + 2 : (sensitivityMode === 'HIGH' ? amberThreshold - 1 : amberThreshold);
   const effectiveRed = sensitivityMode === 'LOW' ? redThreshold + 3 : (sensitivityMode === 'HIGH' ? redThreshold - 2 : redThreshold);
 
-  const count = hardware?.currentCount ?? simulatedCount;
-  const isFailover = hardware ? hardware.systemMode === 'HARDWARE_FAILOVER' : isSimulatingCameraFail;
+  const count = simulatedCount;
+  const isFailover = isSimulatingCameraFail;
   const isRed = count >= effectiveRed;
   const isAmber = count >= effectiveAmber && count < effectiveRed;
   const isGreen = count < effectiveAmber;
@@ -353,24 +334,24 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
                   ? 'bg-rose-950/80 text-rose-300 border-rose-700' 
                   : (isAmber ? 'bg-amber-950/80 text-amber-300 border-amber-700' : 'bg-emerald-950/80 text-emerald-300 border-emerald-700')
               }`}>
-                {count} Persons {isSyncing ? '...' : ''}
+                {count} Persons
               </span>
             </div>
             <div className="flex-1 w-full flex items-center gap-3">
               <span className="text-xs font-mono text-text-muted">0</span>
               <input
                 type="range"
-                min="0"
-                max="25"
+                min={0}
+                max={25}
                 value={count}
                 onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
                 className="w-full h-2.5 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
               />
-              <span className="text-xs font-mono text-text-muted">25+</span>
+              <span className="text-xs font-mono text-text-muted">25</span>
             </div>
           </div>
 
-          {/* Quick Presets & Failover Toggle */}
+          {/* Quick Presets, Failover Toggle & Clear */}
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
             <span className="text-[11px] font-mono text-text-muted font-semibold mr-1">SCENARIOS:</span>
             <button
@@ -401,6 +382,12 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
             >
               <span>⚡</span>
               <span>{isFailover ? 'Restore AI Camera' : 'Simulate Camera Failure'}</span>
+            </button>
+            <button
+              onClick={handleClearDemo}
+              className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-base border border-border-strong text-slate-200 text-xs font-mono font-bold transition"
+            >
+              Clear
             </button>
           </div>
         </div>
@@ -724,16 +711,16 @@ export const DemoTab: React.FC<DemoTabProps> = ({ hardware }) => {
             </div>
             <div className="bg-black border-2 border-slate-700 rounded-xl p-3 font-mono text-cyan-400 text-xs shadow-inner flex flex-col justify-around h-28 tracking-wider">
               <div className="font-bold text-amber-400">
-                {hardware?.oled?.line1 || (isFailover ? 'FAILOVER: RADAR' : 'CPR RADAR: LIVE')}
+                {isFailover ? 'FAILOVER: RADAR' : 'CPR SANDBOX DEMO'}
               </div>
               <div className="font-extrabold text-white text-base">
-                {hardware?.oled?.line2 || `COUNT: ${count} PPL`}
+                {`COUNT: ${count} PPL`}
               </div>
               <div className={isRed ? 'text-rose-400' : (isAmber ? 'text-amber-400' : 'text-emerald-400')}>
-                {hardware?.oled?.line3 || (isRed ? 'STATUS: CRITICAL' : (isAmber ? 'STATUS: ELEVATED' : 'STATUS: NORMAL'))}
+                {isRed ? 'STATUS: CRITICAL' : (isAmber ? 'STATUS: ELEVATED' : 'STATUS: NORMAL')}
               </div>
               <div className="text-slate-400 text-[11px]">
-                {hardware?.oled?.line4 || `GATE: ${servoText}`}
+                {`GATE: ${servoText}`}
               </div>
             </div>
           </div>

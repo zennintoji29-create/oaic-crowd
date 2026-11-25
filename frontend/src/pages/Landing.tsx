@@ -11,6 +11,11 @@ import {
 } from 'lucide-react';
 
 export const Landing: React.FC = () => {
+  const isFirstVisitComplete =
+    typeof window !== 'undefined' &&
+    sessionStorage.getItem('cpr_setup_complete') === 'true';
+  const dashboardTarget = isFirstVisitComplete ? '/dashboard' : '/login';
+
   const fitCards = [
     {
       title: 'Temple Trusts & Pilgrimage',
@@ -119,7 +124,7 @@ export const Landing: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
-                  to="/dashboard"
+                  to={dashboardTarget}
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   <span>Open dashboard</span>
