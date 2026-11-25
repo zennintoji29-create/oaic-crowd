@@ -400,6 +400,7 @@ class StorageManager {
       }
     }
     gate.lastUpdated = Date.now();
+    dbUpsertGate(gate);
     return gate;
   }
 
@@ -408,6 +409,7 @@ class StorageManager {
     if (!gate) return null;
     gate.power = !!power;
     gate.lastUpdated = Date.now();
+    dbUpsertGate(gate);
     return gate;
   }
 

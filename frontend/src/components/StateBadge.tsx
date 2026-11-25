@@ -11,8 +11,7 @@ interface StateBadgeProps {
 
 export const StateBadge: React.FC<StateBadgeProps> = ({
   state,
-  size = 'md',
-  showShapeOutline = true
+  size = 'md'
 }) => {
   const design = STATE_DESIGN[state] || STATE_DESIGN.OFFLINE;
 

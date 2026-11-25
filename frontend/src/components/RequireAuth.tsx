@@ -12,7 +12,7 @@ function isTokenStructurallyValid(token: string): boolean {
     if (parts.length !== 3) return false;
     const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
     const payload = JSON.parse(payloadJson);
-    if (!payload || payload.role !== 'master') return false;
+    if (!payload || (payload.role !== 'master' && payload.role !== 'operator')) return false;
     if (typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now()) {
       return false;
     }

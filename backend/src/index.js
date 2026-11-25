@@ -440,7 +440,7 @@ function requireMasterAuth(req, res, next) {
   }
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    if (!decoded || decoded.role !== 'master') {
+    if (!decoded || (decoded.role !== 'master' && decoded.role !== 'operator')) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     req.masterUser = decoded;

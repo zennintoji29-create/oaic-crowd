@@ -26,7 +26,7 @@ interface OverviewTabProps {
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
-  zones,
+  zones: _zones,
   gates = [],
   worstState,
   hardware,

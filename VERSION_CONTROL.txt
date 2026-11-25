@@ -60,3 +60,10 @@ Version 9 (2026-11-26)
 - Integrated Supabase PostgreSQL client (@supabase/supabase-js) in backend/src/supabase.js and wired non-blocking persistence for operators, gate states, telemetry logs, alerts, and system config in storage.js with automatic local fallback when SUPABASE_URL is unset.
 - Added backend/supabase_schema.sql and updated backend/.env.example with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
 - Upgraded OverviewTab 10-minute risk chart to an AreaChart with subtle emerald gradient fill and refined obsidian-slate surface tokens in tokens.css.
+
+Version 10 (2026-11-26)
+- Deep audit & bug fixes:
+  * Fixed critical JWT role mismatch: allowed both 'operator' and 'master' roles in backend requireMasterAuth and frontend RequireAuth.tsx so signed-up/logged-in operators can access protected routes and API endpoints.
+  * Resolved all strict TypeScript noUnusedLocals/noUnusedParameters warnings in OverviewTab.tsx, StateBadge.tsx, and formatter.ts.
+  * Added dbUpsertGate sync to updateGateOverride and updateGatePower in storage.js.
+  * Verified end-to-end API flow (401 guard, signup, 409 duplicate check, token verify, gate override/density, full reset-all, and persistent one-time setupComplete).

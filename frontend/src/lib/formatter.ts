@@ -58,7 +58,7 @@ export function formatAlertSentence(zoneName: string, fromState: string, toState
 /**
  * Generates the "What the system is doing now" plain English list
  */
-export function formatSystemActions(state: CrowdState, score: number, barrierClosed: boolean, buzzerActive: boolean): string[] {
+export function formatSystemActions(state: CrowdState, _score: number, barrierClosed: boolean, _buzzerActive: boolean): string[] {
   const actions: string[] = [];
 
   if (state === 'RED' || barrierClosed) {
