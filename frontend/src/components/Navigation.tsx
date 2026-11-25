@@ -92,16 +92,16 @@ export const Navigation: React.FC<NavigationProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`min-h-[44px] flex items-center justify-between px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-left ${
+                  className={`min-h-[44px] flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
                     isActive
-                      ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
+                      ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <span className="flex items-center gap-2.5 truncate">
                     <Icon
-                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`}
+                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#7592ff]' : 'text-text-muted'}`}
                       aria-hidden="true"
                     />
                     <span className="truncate">{item.label}</span>
@@ -129,13 +129,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <Link
                       key={item.id}
                       to={item.to}
-                      className={`min-h-[44px] flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
+                          ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#7592ff]' : 'text-text-muted'}`} aria-hidden="true" />
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -145,14 +145,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => setActiveTab(item.id)}
-                    className={`min-h-[44px] flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-left ${
+                    className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
                       isActive
-                        ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
+                        ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#7592ff]' : 'text-text-muted'}`} aria-hidden="true" />
                     <span>{item.label}</span>
                   </button>
                 );
@@ -164,15 +164,15 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('about')}
-                className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-left ${
+                className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
                   activeTab === 'about'
-                    ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
+                    ? 'bg-[#465fff]/[0.14] text-[#7592ff] font-semibold'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                 }`}
                 aria-current={activeTab === 'about' ? 'page' : undefined}
               >
                 <ShieldCheck
-                  className={`w-4 h-4 shrink-0 ${activeTab === 'about' ? 'text-accent' : 'text-text-muted'}`}
+                  className={`w-4 h-4 shrink-0 ${activeTab === 'about' ? 'text-[#7592ff]' : 'text-text-muted'}`}
                   aria-hidden="true"
                 />
                 <span>About & Safety</span>

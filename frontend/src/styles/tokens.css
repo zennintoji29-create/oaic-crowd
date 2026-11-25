@@ -5,38 +5,38 @@
    ============================================================================ */
 
 :root {
-  /* Typography */
-  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  /* TailAdmin Typography */
+  --font-family-sans: 'Outfit', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Spacing & Radii */
   --space-unit: 0.25rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.35);
+  /* TailAdmin Shadows */
+  --shadow-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.2), 0px 1px 2px 0px rgba(16, 24, 40, 0.12);
+  --shadow-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.25), 0px 2px 4px -2px rgba(16, 24, 40, 0.15);
 
-  /* Neutral Obsidian-Slate Surfaces (Dark Default) */
-  --surface-base: #060913;
-  --surface-raised: #0d1424;
-  --surface-sunken: #080c17;
-  --surface-overlay: #162036;
+  /* TailAdmin Dark Surfaces */
+  --surface-base: #101828;
+  --surface-raised: #171f2f;
+  --surface-sunken: #0c111d;
+  --surface-overlay: #1d2939;
 
   /* Borders */
-  --border-subtle: rgba(148, 163, 184, 0.14);
-  --border-strong: rgba(148, 163, 184, 0.26);
+  --border-subtle: #1d2939;
+  --border-strong: #344054;
 
   /* Text */
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: #d0d5dd;
+  --text-muted: #98a2b3;
 
-  /* Single Primary Accent (Emerald) */
-  --accent-default: #10b981;
-  --accent-hover: #059669;
-  --accent-focus-ring: #34d399;
+  /* TailAdmin Brand Accent (#465fff / #7592ff) */
+  --accent-default: #465fff;
+  --accent-hover: #3641f5;
+  --accent-focus-ring: #7592ff;
 
   /* Status Colors: Clear (Green), Busy (Amber), Crowded (Orange), Danger (Red) */
   --status-clear-text: #4ade80;

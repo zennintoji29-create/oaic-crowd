@@ -151,70 +151,92 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </button>
       </div>
 
-      {/* 1. Overall System Summary Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 1. TailAdmin KPI Metric Cards */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         
         {/* Threat Level */}
-        <div className={`flat-panel p-4 flex flex-col justify-between border-t-2 ${
-          isRed
-            ? 'border-t-status-danger-chart'
-            : (isAmber ? 'border-t-status-building-chart' : 'border-t-status-clear-chart')
-        }`}>
-          <div className="flex items-center justify-between text-xs">
-            <span className="uppercase font-semibold tracking-wider text-text-muted">Global Threat</span>
-            {isRed ? <ShieldAlert className="w-4 h-4 text-status-danger-text" /> : (isAmber ? <AlertTriangle className="w-4 h-4 text-status-building-text" /> : <ShieldCheck className="w-4 h-4 text-status-clear-text" />)}
+        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
+            {isRed ? (
+              <ShieldAlert className="w-5 h-5 text-status-danger-text" aria-hidden="true" />
+            ) : isAmber ? (
+              <AlertTriangle className="w-5 h-5 text-status-building-text" aria-hidden="true" />
+            ) : (
+              <ShieldCheck className="w-5 h-5 text-status-clear-text" aria-hidden="true" />
+            )}
           </div>
-          <div className="mt-3">
-            <span className={`text-xl font-bold block ${
-              isRed ? 'text-status-danger-text' : (isAmber ? 'text-status-building-text' : 'text-status-clear-text')
-            }`}>
-              {worstState === 'RED' ? 'Critical (Locked)' : (worstState === 'AMBER' ? 'Elevated (Meter)' : 'Normal Flow')}
+          <div className="mt-5 flex items-end justify-between gap-2">
+            <div>
+              <span className="text-sm text-text-muted block">Global Threat</span>
+              <span className="text-xl font-bold text-text-primary mt-1 block">
+                {worstState === 'RED' ? 'Critical' : worstState === 'AMBER' ? 'Elevated' : 'Normal'}
+              </span>
+            </div>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                isRed
+                  ? 'bg-status-danger-bg text-status-danger-text'
+                  : isAmber
+                  ? 'bg-status-building-bg text-status-building-text'
+                  : 'bg-status-clear-bg text-status-clear-text'
+              }`}
+            >
+              {worstState === 'RED' ? 'Locked' : worstState === 'AMBER' ? 'Metering' : 'Clear'}
             </span>
-            <span className="text-xs text-text-muted mt-0.5 block">Autonomous Gate Shield Active</span>
           </div>
         </div>
 
         {/* System Mode */}
-        <div className="flat-panel p-4 flex flex-col justify-between border-t-2 border-t-accent">
-          <div className="flex items-center justify-between text-xs">
-            <span className="uppercase font-semibold tracking-wider text-text-muted">Active Sensor Node</span>
-            <Radio className="w-4 h-4 text-accent" />
+        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
+            <Radio className="w-5 h-5 text-[#7592ff]" aria-hidden="true" />
           </div>
-          <div className="mt-3">
-            <span className="text-xl font-bold text-text-primary block">
-              {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'Radar Failover' : 'AI Vision (CUDA)'}
-            </span>
-            <span className="text-xs text-text-muted mt-0.5 block">
-              {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'HLK-LD2410 24GHz FMCW' : 'RTX 3050 @ 17.6 FPS'}
+          <div className="mt-5 flex items-end justify-between gap-2">
+            <div>
+              <span className="text-sm text-text-muted block">Active Sensor</span>
+              <span className="text-xl font-bold text-text-primary mt-1 block">
+                {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'Radar' : 'AI Vision'}
+              </span>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#465fff]/15 text-[#7592ff]">
+              {hardware?.systemMode === 'HARDWARE_FAILOVER' ? '24 GHz' : 'CUDA'}
             </span>
           </div>
         </div>
 
         {/* Monitored Gates */}
-        <div className="flat-panel p-4 flex flex-col justify-between border-t-2 border-t-accent">
-          <div className="flex items-center justify-between text-xs">
-            <span className="uppercase font-semibold tracking-wider text-text-muted">Connected Portals</span>
-            <Lock className="w-4 h-4 text-accent" />
+        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
+            <Lock className="w-5 h-5 text-[#7592ff]" aria-hidden="true" />
           </div>
-          <div className="mt-3">
-            <span className="text-xl font-bold text-text-primary tabular-nums block">
-              {displayGates.length} Smart Gates
+          <div className="mt-5 flex items-end justify-between gap-2">
+            <div>
+              <span className="text-sm text-text-muted block">Smart Gates</span>
+              <span className="text-2xl font-bold text-text-primary tabular-nums mt-1 block">
+                {displayGates.length}
+              </span>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-status-clear-bg text-status-clear-text">
+              Online
             </span>
-            <span className="text-xs text-text-muted mt-0.5 block">Gate A & Gate B Online</span>
           </div>
         </div>
 
         {/* Total Crowd Count */}
-        <div className="flat-panel p-4 flex flex-col justify-between border-t-2 border-t-accent">
-          <div className="flex items-center justify-between text-xs">
-            <span className="uppercase font-semibold tracking-wider text-text-muted">Total Monitored</span>
-            <Activity className="w-4 h-4 text-accent" />
+        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+          <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
+            <Activity className="w-5 h-5 text-[#7592ff]" aria-hidden="true" />
           </div>
-          <div className="mt-3">
-            <span className="text-xl font-bold text-text-primary tabular-nums block">
-              {displayGates.reduce((acc, g) => acc + g.count, 0)} Persons
+          <div className="mt-5 flex items-end justify-between gap-2">
+            <div>
+              <span className="text-sm text-text-muted block">People Monitored</span>
+              <span className="text-2xl font-bold text-text-primary tabular-nums mt-1 block">
+                {displayGates.reduce((acc, g) => acc + g.count, 0)}
+              </span>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#465fff]/15 text-[#7592ff]">
+              Live
             </span>
-            <span className="text-xs text-text-muted mt-0.5 block">Across Active Entry Chutes</span>
           </div>
         </div>
 
@@ -274,33 +296,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <AreaChart data={chartData} margin={{ top: 12, right: 100, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="overviewPressureFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#465fff" stopOpacity={0.32} />
+                    <stop offset="95%" stopColor="#465fff" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1d2939" vertical={false} />
                 <XAxis
                   dataKey="time"
-                  stroke="#64748b"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  stroke="#98a2b3"
+                  tick={{ fontSize: 11, fill: '#98a2b3' }}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0, 100]}
-                  stroke="#64748b"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  stroke="#98a2b3"
+                  tick={{ fontSize: 11, fill: '#98a2b3' }}
                   tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0d1424',
-                    borderColor: 'rgba(148,163,184,0.26)',
-                    borderRadius: '8px',
+                    backgroundColor: '#171f2f',
+                    borderColor: '#344054',
+                    borderRadius: '10px',
                     color: '#f8fafc',
                     fontSize: '12px'
                   }}
                   formatter={(val: number) => [`${val.toFixed(1)} / 100`, 'Risk Pressure Score']}
-                  labelStyle={{ color: '#94a3b8', fontSize: '11px' }}
+                  labelStyle={{ color: '#98a2b3', fontSize: '11px' }}
                 />
                 <ReferenceLine
                   y={50}
@@ -318,7 +340,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   type="monotone"
                   dataKey="score"
                   name="Risk Pressure"
-                  stroke="#10b981"
+                  stroke="#465fff"
                   fill="url(#overviewPressureFill)"
                   strokeWidth={2.25}
                   dot={false}

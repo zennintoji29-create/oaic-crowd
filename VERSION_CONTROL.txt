@@ -71,3 +71,8 @@ Version 10 (2026-11-26)
 Version 11 (2026-11-26)
 - Added support for Supabase's SUPABASE_SECRET_KEY and SUPABASE_PUBLISHABLE_KEY environment variable names in backend/src/config.js alongside SUPABASE_SERVICE_ROLE_KEY.
 - Updated backend/.env.example and local backend/.env with the Supabase project URL (https://rwsovtceaxzgsnyjyeke.supabase.co).
+
+Version 12 (2026-11-26)
+- Applied TailAdmin Free Tailwind Dashboard Template design system across the CPR dashboard:
+  * Loaded Outfit font in index.html and updated tokens.css with TailAdmin dark surfaces (#101828, #171f2f, #0c111d, #1d2939) and brand accent (#465fff / #7592ff).
+  * Updated GlobalHeader, Navigation active/inactive menu pills, OverviewTab TailAdmin KPI cards (48px icon badges + status pills), and AreaChart styling.

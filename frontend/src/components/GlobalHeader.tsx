@@ -35,18 +35,18 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           className="flex flex-col rounded-md px-1 py-0.5 hover:opacity-90 transition-opacity"
           title="Go directly to Dashboard Overview"
         >
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-              <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#465fff] text-white shadow-sm">
+              <ShieldCheck className="w-4 h-4" aria-hidden="true" />
             </span>
             <span className="text-base font-bold text-text-primary tracking-tight">
               Crowd Pressure Radar
             </span>
-            <span className="text-[11px] font-mono px-1.5 py-0.2 border border-border-strong rounded text-text-secondary bg-surface-sunken">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#465fff]/15 text-[#7592ff] border border-[#465fff]/30">
               HLK-LD2410
             </span>
           </div>
-          <p className="text-xs text-text-secondary pl-8">
+          <p className="text-xs text-text-muted pl-10.5">
             Early warning for crowd crush. Anonymous radar & edge vision.
           </p>
         </Link>
