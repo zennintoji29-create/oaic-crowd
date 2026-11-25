@@ -248,7 +248,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
                 <DoorClosed className="w-4 h-4 text-text-secondary shrink-0" aria-hidden="true" />
                 <div>
                   <div>Close barrier</div>
-                  <span className="text-[10px] text-text-muted font-normal block">Set servo to 90°</span>
+                  <span className="text-[10px] text-text-muted font-normal block">Set servo to 0°</span>
                 </div>
               </button>
 
@@ -259,7 +259,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
                 <DoorOpen className="w-4 h-4 text-text-secondary shrink-0" aria-hidden="true" />
                 <div>
                   <div>Open barrier</div>
-                  <span className="text-[10px] text-text-muted font-normal block">Release servo to 0°</span>
+                  <span className="text-[10px] text-text-muted font-normal block">Release servo to 90°</span>
                 </div>
               </button>
 

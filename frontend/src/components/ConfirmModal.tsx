@@ -26,13 +26,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       case 'MANUAL_GATE_CLOSE':
         return {
           title: 'Confirm: Close Barrier',
-          warning: 'This will rotate the barrier to 90° and physically block incoming people from entering this corridor.',
+          warning: 'This will rotate the barrier to 0° and physically block incoming people from entering this corridor.',
           actionLabel: 'Close barrier now'
         };
       case 'MANUAL_GATE_OPEN':
         return {
           title: 'Confirm: Open Barrier',
-          warning: 'This will rotate the barrier to 0° and allow people to enter the corridor.',
+          warning: 'This will rotate the barrier to 90° and allow people to enter the corridor.',
           actionLabel: 'Open barrier now'
         };
       case 'RESET_ZONE':

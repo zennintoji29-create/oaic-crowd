@@ -25,7 +25,7 @@ export const AboutTab: React.FC = () => {
           What the sensor measures
         </h2>
         <p className="text-xs text-text-secondary mb-3 leading-relaxed">
-          The system uses a 24 GHz mmWave radar sensor (HLK-LD2450) and two infrared break-beams at the corridor boundaries.
+          The system uses a 24 GHz mmWave radar sensor (HLK-LD2410) and two infrared break-beams at the corridor boundaries.
         </p>
 
         <ul className="space-y-1.5 text-xs text-text-primary list-disc list-inside">
@@ -96,7 +96,7 @@ export const AboutTab: React.FC = () => {
         </div>
 
         <p className="text-xs text-text-secondary">
-          <strong>State thresholds:</strong> Moves to <strong>Building up (Amber)</strong> when score &ge; 50 for 5 seconds. Moves to <strong>Danger, barrier closed (Red)</strong> when score &ge; 75 for 3 seconds. The servo barrier automatically closes to 90° in Red, and only re-opens after remaining continuously Clear for 30 seconds.
+          <strong>State thresholds:</strong> Moves to <strong>Building up (Amber)</strong> when score &ge; 50 for 5 seconds. Moves to <strong>Danger, barrier closed (Red)</strong> when score &ge; 75 for 3 seconds. The servo barrier automatically closes to 0° in Red, and only re-opens (90°) after remaining continuously Clear for 30 seconds.
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export const AboutTab: React.FC = () => {
           Known limits
         </h2>
         <ul className="space-y-1.5 text-xs text-text-primary list-disc list-inside leading-relaxed">
-          <li><strong>Sensor target limit:</strong> The HLK-LD2450 hardware tracks up to 3 individual moving targets per frame. Higher density is estimated using reflection spatial spread and break-beam counts.</li>
+          <li><strong>Sensor target limit:</strong> The HLK-LD2410 hardware tracks up to 3 individual moving targets per frame. Higher density is estimated using reflection spatial spread and break-beam counts.</li>
           <li><strong>Corner shadowing:</strong> Solid pillars, barricades, or walls within the corridor can cast radar shadows where movement cannot be tracked.</li>
           <li><strong>Slow walking vs stall:</strong> Very slow deliberate walking (e.g. ceremonial processions) can read as low speed, requiring calibrated threshold tuning.</li>
         </ul>

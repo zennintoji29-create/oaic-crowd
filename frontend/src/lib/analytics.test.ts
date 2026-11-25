@@ -76,11 +76,11 @@ describe('Plain-Language Formatters', () => {
 
   it('generates system actions list reflecting state and barrier', () => {
     const dangerActions = formatSystemActions('RED', 80, true, true);
-    expect(dangerActions.some(a => a.includes('Physical gate barrier is closed at 90°'))).toBe(true);
+    expect(dangerActions.some(a => a.includes('Physical gate barrier is closed at 0°'))).toBe(true);
     expect(dangerActions.some(a => a.includes('buzzer is sounding a continuous alert'))).toBe(true);
 
     const clearActions = formatSystemActions('GREEN', 20, false, false);
-    expect(clearActions.some(a => a.includes('Gate barrier is fully open at 0°'))).toBe(true);
+    expect(clearActions.some(a => a.includes('Gate barrier is fully open at 90°'))).toBe(true);
     expect(clearActions.some(a => a.includes('buzzer is silent'))).toBe(true);
   });
 

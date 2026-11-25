@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, Phone, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
 import { loginOperator, signupOperator, setSessionToken } from '../lib/api';
 
@@ -8,6 +8,8 @@ const LOCKOUT_SECONDS = 30;
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -72,7 +74,7 @@ export const Login: React.FC = () => {
         setFailedAttempts(0);
         if (res.setupComplete) {
           sessionStorage.setItem('cpr_setup_complete', 'true');
-          navigate('/dashboard', { replace: true });
+          navigate(fromPath && fromPath !== '/login' ? fromPath : '/dashboard', { replace: true });
         } else {
           sessionStorage.removeItem('cpr_setup_complete');
           navigate('/setup', { replace: true });

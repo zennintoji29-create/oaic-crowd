@@ -114,7 +114,6 @@ class StorageManager {
     this.systemConfig = {
       gateName: 'Main Smart Gate Alpha',
       gateId: 'gate-a',
-      passcode: 'admin123',
       autoFailover: true,
       buzzerAlerts: true,
       amberThreshold: 5,

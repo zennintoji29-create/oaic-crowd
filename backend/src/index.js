@@ -187,7 +187,10 @@ function requireDeviceAuth(req, res, next) {
   const bearerKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const provided = deviceKey || bearerKey;
 
-  const validKeys = [config.deviceKey, 'cpr-secret-key-2026', 'cpr-exhibition-secret-2026'];
+  const validKeys = [config.deviceKey];
+  if (process.env.NODE_ENV !== 'production') {
+    validKeys.push('cpr-secret-key-2026');
+  }
   if (provided && validKeys.includes(provided)) {
     return next();
   }
@@ -298,12 +301,17 @@ app.get('/api/esp32/status', (req, res) => {
 
 // GET /api/stream - Server-Sent Events (SSE) stream for browsers
 app.get('/api/stream', (req, res) => {
-  res.writeHead(200, {
+  const origin = req.headers.origin;
+  const headers = {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*'
-  });
+    'Connection': 'keep-alive'
+  };
+  if (origin && allowedOrigins.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Vary'] = 'Origin';
+  }
+  res.writeHead(200, headers);
   res.write(`data: ${JSON.stringify({ type: 'INITIAL_STATE', hardware: hardwareState })}\n\n`);
   sseClients.add(res);
 
@@ -312,8 +320,8 @@ app.get('/api/stream', (req, res) => {
   });
 });
 
-// POST /api/gates/reset-all - Reset all gates to AUTO live mode (protected)
-app.post('/api/gates/reset-all', requireMasterAuth, (req, res) => {
+// POST /api/gates/reset-all & /api/master/reset - Reset all gates to AUTO live mode (protected)
+function handleResetAll(req, res) {
   const updatedGates = storage.resetAllGates();
   hardwareState.currentCount = 0;
   hardwareState.cameraOnline = true;
@@ -341,7 +349,9 @@ app.post('/api/gates/reset-all', requireMasterAuth, (req, res) => {
   });
   broadcast('HARDWARE_UPDATE', hardwareState);
   res.json({ status: 'ok', gates: updatedGates, hardware: hardwareState });
-});
+}
+app.post('/api/gates/reset-all', requireMasterAuth, handleResetAll);
+app.post('/api/master/reset', requireMasterAuth, handleResetAll);
 
 // GET /api/zones - Zone list with latest status
 app.get('/api/zones', (req, res) => {
@@ -357,7 +367,11 @@ app.get('/api/gates', (req, res) => {
 app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
   const { id } = req.params;
   const { manualState } = req.body || {};
-  const updated = storage.updateGateOverride(id, manualState || 'AUTO');
+  const allowedStates = ['AUTO', 'RESUME_AUTO', 'FORCE_OPEN', 'FORCE_METER', 'FORCE_LOCK', 'EMERGENCY_LOCK'];
+  if (!manualState || !allowedStates.includes(manualState)) {
+    return res.status(400).json({ error: 'Invalid manualState' });
+  }
+  const updated = storage.updateGateOverride(id, manualState);
   if (!updated) {
     return res.status(404).json({ error: 'Gate not found' });
   }
@@ -378,6 +392,9 @@ app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
 app.post('/api/gates/:id/power', requireMasterAuth, (req, res) => {
   const { id } = req.params;
   const { power } = req.body || {};
+  if (typeof power !== 'boolean') {
+    return res.status(400).json({ error: 'power must be a boolean' });
+  }
   const updated = storage.updateGatePower(id, power);
   if (!updated) return res.status(404).json({ error: 'Gate not found' });
 
@@ -390,7 +407,10 @@ app.post('/api/gates/:id/power', requireMasterAuth, (req, res) => {
 app.post('/api/gates/:id/density', requireMasterAuth, (req, res) => {
   const { id } = req.params;
   const { delta } = req.body || {};
-  const updated = storage.updateGateDensity(id, typeof delta === 'number' ? delta : 1);
+  if (typeof delta !== 'number' || !Number.isInteger(delta) || delta < -100 || delta > 100) {
+    return res.status(400).json({ error: 'delta must be an integer between -100 and 100' });
+  }
+  const updated = storage.updateGateDensity(id, delta);
   if (!updated) return res.status(404).json({ error: 'Gate not found' });
 
   if (id === 'gate-a') {
@@ -512,9 +532,9 @@ app.post('/api/auth/signup', masterAuthLimiter, async (req, res) => {
   }
 
   try {
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const user = storage.createUser({ email, phone, passwordHash });
-    const token = jwt.sign({ role: 'operator', email: user.email }, config.jwtSecret, { expiresIn: '8h' });
+    const token = jwt.sign({ role: 'operator', email: user.email }, config.jwtSecret, { expiresIn: '2h' });
     return res.status(201).json({
       success: true,
       token,
@@ -544,7 +564,7 @@ app.post('/api/auth/login', masterAuthLimiter, async (req, res) => {
     if (!ok) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
-    const token = jwt.sign({ role: 'operator', email: user.email }, config.jwtSecret, { expiresIn: '8h' });
+    const token = jwt.sign({ role: 'operator', email: user.email }, config.jwtSecret, { expiresIn: '2h' });
     return res.json({
       success: true,
       token,
@@ -693,8 +713,18 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/config', requireMasterAuth, (req, res) => {
-  const updated = storage.updateConfig(req.body || {});
-  if (req.body?.setupComplete && req.masterUser?.email) {
+  const body = req.body || {};
+  if (body.servoOpenAngle !== undefined && (!Number.isFinite(Number(body.servoOpenAngle)) || Number(body.servoOpenAngle) < 0 || Number(body.servoOpenAngle) > 180)) {
+    return res.status(400).json({ error: 'servoOpenAngle must be between 0 and 180' });
+  }
+  if (body.servoLockedAngle !== undefined && (!Number.isFinite(Number(body.servoLockedAngle)) || Number(body.servoLockedAngle) < 0 || Number(body.servoLockedAngle) > 180)) {
+    return res.status(400).json({ error: 'servoLockedAngle must be between 0 and 180' });
+  }
+  if (body.gateCount !== undefined && (!Number.isInteger(Number(body.gateCount)) || Number(body.gateCount) < 1 || Number(body.gateCount) > 4)) {
+    return res.status(400).json({ error: 'gateCount must be an integer between 1 and 4' });
+  }
+  const updated = storage.updateConfig(body);
+  if (body.setupComplete && req.masterUser?.email) {
     storage.markUserSetupComplete(req.masterUser.email);
   }
   broadcast('CONFIG_UPDATED', updated);
@@ -714,8 +744,8 @@ app.get('/api/zones/:id/history', (req, res) => {
   res.json({ zoneId, minutes, count: history.length, history });
 });
 
-// PUT /api/zones/:id - Update zone area, width, or name
-app.put('/api/zones/:id', (req, res) => {
+// PUT /api/zones/:id - Update zone area, width, or name (protected)
+app.put('/api/zones/:id', requireMasterAuth, (req, res) => {
   const zoneId = req.params.id;
   const parsed = ZoneConfigSchema.partial().safeParse(req.body);
   if (!parsed.success) {
@@ -737,8 +767,8 @@ app.get('/api/alerts', (req, res) => {
   res.json({ alerts: storage.getAlerts(limit) });
 });
 
-// POST /api/commands - Operator commands from dashboard
-app.post('/api/commands', (req, res) => {
+// POST /api/commands - Operator commands from dashboard (protected)
+app.post('/api/commands', requireMasterAuth, (req, res) => {
   const parsed = CommandSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid command payload', details: parsed.error.format() });
@@ -776,8 +806,8 @@ app.get('/api/commands/:deviceId', requireDeviceAuth, (req, res) => {
   }
 });
 
-// POST /api/simulate - Toggle generator OR drive Interactive Demo Sandbox
-app.post('/api/simulate', (req, res) => {
+// POST /api/simulate - Toggle generator OR drive Interactive Demo Sandbox (protected)
+app.post('/api/simulate', requireMasterAuth, (req, res) => {
   const { action, count, cameraOnline } = req.body || {};
 
   // Interactive Demo Sandbox Slider support
@@ -884,6 +914,12 @@ app.post('/api/keepalive/ping', async (req, res) => {
     triggered: true,
     keepAlive: result
   });
+});
+
+// Global Error Handler (never leak stack traces to clients)
+app.use((err, req, res, _next) => {
+  console.error('[EXPRESS ERROR]', err?.message || err);
+  res.status(err?.status || 500).json({ error: 'Internal server error' });
 });
 
 // Start Server

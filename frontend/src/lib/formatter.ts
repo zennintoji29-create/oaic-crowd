@@ -62,16 +62,16 @@ export function formatSystemActions(state: CrowdState, _score: number, barrierCl
   const actions: string[] = [];
 
   if (state === 'RED' || barrierClosed) {
-    actions.push(`Physical gate barrier is closed at 90° to prevent more people entering.`);
+    actions.push(`Physical gate barrier is closed at 0° to prevent more people entering.`);
     actions.push(`Warning buzzer is sounding a continuous alert at the gate entrance.`);
     actions.push(`Red warning indicator is flashing at 2 Hz beside the barrier.`);
   } else if (state === 'AMBER') {
     actions.push(`Yellow caution indicator is lit to advise gate marshals to slow incoming flow.`);
-    actions.push(`Gate barrier remains open at 0° while queue conditions are observed.`);
+    actions.push(`Gate barrier remains open at 90° while queue conditions are observed.`);
     actions.push(`Buzzer sounded a single warning tone when entering Building up state.`);
   } else if (state === 'GREEN') {
     actions.push(`Green indicator is lit showing normal laminar queue progression.`);
-    actions.push(`Gate barrier is fully open at 0° allowing unhindered passage.`);
+    actions.push(`Gate barrier is fully open at 90° allowing unhindered passage.`);
     actions.push(`Audible buzzer is silent.`);
   } else {
     actions.push(`System is in standby awaiting telemetry connection from ESP32 node.`);
