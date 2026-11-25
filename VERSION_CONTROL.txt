@@ -87,3 +87,7 @@ Version 15 (2026-11-26)
 - Full Security, Functional, Data, and Convention Audit (AUDIT_LOG.md, 12 findings -> 12 Verified, 0 Open):
   * Backend hardening: removed hardcoded fallback keys and default passcode, restricted SSE CORS to allowedOrigins, enforced requireMasterAuth on PUT /api/zones/:id, POST /api/commands, POST /api/simulate, standardized bcrypt cost 12 and 2h JWT expiry, added strict 400 input validation and global error handler, and added POST /api/master/reset.
   * Frontend fixes: standardized 90=OPEN / 0=LOCKED servo copy across ZoneDetailTab, ConfirmModal, AboutTab, formatter.ts, and analytics.test.ts; fixed HLK-LD2410 naming in AboutTab; added return-to-original-route redirect in Login.tsx.
+
+Version 16 (2026-11-26)
+- Scoped gates per signed-up operator in storage.js (user_gates.json) and index.js: Setup's inputted gateCount & gateNames create that user's own gates, and GET /api/gates + gate controls + /master operate exclusively on the logged-in user's gates.
+- Updated /master (MasterRemote.tsx) to require active login (via RequireAuth) and unlock using the logged-in operator's account password via POST /api/auth/verify-password.

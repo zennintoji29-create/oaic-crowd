@@ -321,8 +321,21 @@ app.get('/api/stream', (req, res) => {
 });
 
 // POST /api/gates/reset-all & /api/master/reset - Reset all gates to AUTO live mode (protected)
+function getOptionalEmail(req) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token || !config.jwtSecret) return null;
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret);
+    return decoded?.email || null;
+  } catch {
+    return null;
+  }
+}
+
 function handleResetAll(req, res) {
-  const updatedGates = storage.resetAllGates();
+  const userEmail = req.masterUser?.email || null;
+  const updatedGates = storage.resetAllGates(userEmail);
   hardwareState.currentCount = 0;
   hardwareState.cameraOnline = true;
   hardwareState.lastCameraPing = Date.now();
@@ -355,12 +368,14 @@ app.post('/api/master/reset', requireMasterAuth, handleResetAll);
 
 // GET /api/zones - Zone list with latest status
 app.get('/api/zones', (req, res) => {
-  res.json({ zones: storage.getZones(), gates: storage.getGates(), hardware: hardwareState });
+  const email = getOptionalEmail(req);
+  res.json({ zones: storage.getZones(), gates: storage.getGates(email), hardware: hardwareState });
 });
 
-// GET /api/gates - Multi-gate list
+// GET /api/gates - Multi-gate list (scoped to logged-in user's inputted gates when authenticated)
 app.get('/api/gates', (req, res) => {
-  res.json({ gates: storage.getGates(), hardware: hardwareState });
+  const email = getOptionalEmail(req);
+  res.json({ gates: storage.getGates(email), hardware: hardwareState });
 });
 
 // POST /api/gates/:id/override - Manual override for specific gate (protected)
@@ -371,7 +386,8 @@ app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
   if (!manualState || !allowedStates.includes(manualState)) {
     return res.status(400).json({ error: 'Invalid manualState' });
   }
-  const updated = storage.updateGateOverride(id, manualState);
+  const email = req.masterUser?.email || null;
+  const updated = storage.updateGateOverride(id, manualState, email);
   if (!updated) {
     return res.status(404).json({ error: 'Gate not found' });
   }
@@ -384,7 +400,7 @@ app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
   }
 
   broadcast('GATE_UPDATED', updated);
-  broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates() });
+  broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates(email) });
   res.json({ status: 'ok', gate: updated });
 });
 
@@ -395,11 +411,12 @@ app.post('/api/gates/:id/power', requireMasterAuth, (req, res) => {
   if (typeof power !== 'boolean') {
     return res.status(400).json({ error: 'power must be a boolean' });
   }
-  const updated = storage.updateGatePower(id, power);
+  const email = req.masterUser?.email || null;
+  const updated = storage.updateGatePower(id, power, email);
   if (!updated) return res.status(404).json({ error: 'Gate not found' });
 
   broadcast('GATE_UPDATED', updated);
-  broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates() });
+  broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates(email) });
   res.json({ status: 'ok', gate: updated });
 });
 
@@ -410,7 +427,8 @@ app.post('/api/gates/:id/density', requireMasterAuth, (req, res) => {
   if (typeof delta !== 'number' || !Number.isInteger(delta) || delta < -100 || delta > 100) {
     return res.status(400).json({ error: 'delta must be an integer between -100 and 100' });
   }
-  const updated = storage.updateGateDensity(id, delta);
+  const email = req.masterUser?.email || null;
+  const updated = storage.updateGateDensity(id, delta, email);
   if (!updated) return res.status(404).json({ error: 'Gate not found' });
 
   if (id === 'gate-a') {
@@ -576,19 +594,38 @@ app.post('/api/auth/login', masterAuthLimiter, async (req, res) => {
   }
 });
 
+// POST /api/auth/verify-password - Verify logged-in operator's password for /master access
+app.post('/api/auth/verify-password', requireMasterAuth, masterAuthLimiter, async (req, res) => {
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  const email = req.masterUser?.email;
+  if (!email || !password) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+  try {
+    const user = storage.getUserByEmail(email);
+    if (!user) return res.status(401).json({ error: 'Invalid password' });
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Invalid password' });
+    return res.json({ success: true, email: user.email });
+  } catch {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+});
+
 // POST /api/master/command - Silent remote command execution (JWT protected)
 app.post('/api/master/command', requireMasterAuth, (req, res) => {
   const { action, gateId = 'gate-a', manualState, delta, count, state, cameraOnline, power } = req.body || {};
-
-  let targetGate = storage.getGate(gateId) || storage.getGate('gate-a');
+  const email = req.masterUser?.email || null;
+  const userGates = storage.getGates(email);
+  let targetGate = storage.getGate(gateId, email) || userGates[0];
   if (!targetGate) {
     return res.status(404).json({ error: 'Gate not found' });
   }
 
   // 1. Gate Override (0°, 45°, 90°, AUTO)
   if (action === 'OVERRIDE' && manualState) {
-    targetGate = storage.updateGateOverride(gateId, manualState);
-    if (gateId === 'gate-a') {
+    targetGate = storage.updateGateOverride(targetGate.id, manualState, email);
+    if (targetGate.id === 'gate-a') {
       hardwareState.servoAngle = targetGate.servoAngle;
       hardwareState.servoStatus = targetGate.servoStatus;
     }
@@ -596,8 +633,8 @@ app.post('/api/master/command', requireMasterAuth, (req, res) => {
 
   // 2. Relative Population/Density Adjustment (+1, -1, +5, -5)
   else if (action === 'DENSITY' && typeof delta === 'number') {
-    targetGate = storage.updateGateDensity(gateId, delta);
-    if (gateId === 'gate-a') {
+    targetGate = storage.updateGateDensity(targetGate.id, delta, email);
+    if (targetGate.id === 'gate-a') {
       updateControlLogic(targetGate.count);
     }
   }
@@ -606,8 +643,8 @@ app.post('/api/master/command', requireMasterAuth, (req, res) => {
   else if (action === 'SET_POPULATION' && typeof count === 'number') {
     const safeCount = Math.max(0, Math.min(50, count));
     const deltaCount = safeCount - targetGate.count;
-    targetGate = storage.updateGateDensity(gateId, deltaCount);
-    if (gateId === 'gate-a') {
+    targetGate = storage.updateGateDensity(targetGate.id, deltaCount, email);
+    if (targetGate.id === 'gate-a') {
       updateControlLogic(safeCount);
     }
   }
@@ -656,18 +693,18 @@ app.post('/api/master/command', requireMasterAuth, (req, res) => {
 
   // 6. Gate Power Toggle
   else if (action === 'POWER' && typeof power === 'boolean') {
-    targetGate = storage.updateGatePower(gateId, power);
+    targetGate = storage.updateGatePower(targetGate.id, power, email);
   }
 
   // 7. Reset everything back to live data
   else if (action === 'RESET_ALL') {
-    const resetGates = storage.resetAllGates();
+    const resetGates = storage.resetAllGates(email);
     hardwareState.currentCount = 0;
     hardwareState.cameraOnline = true;
     hardwareState.lastCameraPing = Date.now();
     hardwareState.systemMode = 'AI_VISION_PRIMARY';
     updateControlLogic(0);
-    targetGate = storage.getGate(gateId) || storage.getGate('gate-a');
+    targetGate = storage.getGate(targetGate.id, email) || resetGates[0];
     resetGates.forEach((fresh) => {
       if (fresh) broadcast('GATE_UPDATED', { ...fresh, silent: true });
     });
@@ -724,8 +761,13 @@ app.post('/api/config', requireMasterAuth, (req, res) => {
     return res.status(400).json({ error: 'gateCount must be an integer between 1 and 4' });
   }
   const updated = storage.updateConfig(body);
-  if (body.setupComplete && req.masterUser?.email) {
-    storage.markUserSetupComplete(req.masterUser.email);
+  if (req.masterUser?.email) {
+    if (Array.isArray(body.gateNames) && body.gateNames.length > 0) {
+      storage.setGatesForUser(req.masterUser.email, body.gateNames);
+    }
+    if (body.setupComplete) {
+      storage.markUserSetupComplete(req.masterUser.email);
+    }
   }
   broadcast('CONFIG_UPDATED', updated);
   res.json({ status: 'ok', config: updated });

@@ -10,11 +10,10 @@ import {
 } from 'lucide-react';
 import { GateState, CrowdState } from '../types';
 import {
-  authenticateMaster,
+  verifyOperatorPassword,
   sendMasterCommand,
   fetchGates,
   getSessionToken,
-  setSessionToken,
   clearSessionToken
 } from '../lib/api';
 
@@ -24,6 +23,7 @@ interface MasterRemoteProps {
 
 export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] }) => {
   const [token, setToken] = useState<string>(() => getSessionToken() || '');
+  const [unlocked, setUnlocked] = useState<boolean>(false);
   const [pinInput, setPinInput] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
@@ -56,7 +56,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !unlocked) return;
     let isMounted = true;
 
     async function sync() {
@@ -64,6 +64,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
         const fetched = await fetchGates();
         if (isMounted && fetched && fetched.length > 0) {
           setGates(fetched);
+          setSelectedGateId((prev) => (fetched.some((g) => g.id === prev) ? prev : fetched[0].id));
         }
       } catch {
         // Silent poll ignore
@@ -76,7 +77,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
       isMounted = false;
       clearInterval(interval);
     };
-  }, [token]);
+  }, [token, unlocked]);
 
   const notifyPhoneOnly = (msg: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -93,22 +94,23 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const res = await authenticateMaster(pinInput.trim());
-      if (res.success && res.token) {
-        setToken(res.token);
-        setSessionToken(res.token);
-        notifyPhoneOnly('Link Verified');
+      const res = await verifyOperatorPassword(pinInput);
+      if (res.success) {
+        setUnlocked(true);
+        setPinInput('');
+        notifyPhoneOnly('Unlocked');
       } else {
-        setAuthError('Invalid credentials');
+        setAuthError('Invalid password');
       }
     } catch {
-      setAuthError('Invalid credentials');
+      setAuthError('Invalid password');
     } finally {
       setAuthLoading(false);
     }
   };
 
   const handleLogout = () => {
+    setUnlocked(false);
     setToken('');
     clearSessionToken();
   };
@@ -167,7 +169,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
 
   const parsedAmount = amountInput === '' ? 0 : parseInt(amountInput, 10);
 
-  if (!token) {
+  if (!token || !unlocked) {
     return (
       <div className="min-h-dvh bg-neutral-950 text-neutral-100 flex flex-col items-center justify-center p-4 font-sans select-none safe-area-shell">
         <div className="w-full max-w-xs space-y-6">
@@ -178,19 +180,18 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
             <h1 className="text-base font-bold font-mono tracking-tight text-white uppercase">
               CPR Master Remote
             </h1>
-            <p className="text-xs text-neutral-500 font-mono">Restricted Operator Terminal</p>
+            <p className="text-xs text-neutral-500 font-mono">Enter your account password</p>
           </div>
 
           <form onSubmit={handleAuthSubmit} className="space-y-4">
             <div>
               <input
                 type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="Enter PIN or Passcode"
+                autoComplete="current-password"
+                placeholder="Enter Password"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                className="w-full min-h-[44px] text-center tracking-widest text-lg font-mono py-3 px-4 rounded-lg bg-neutral-900 border border-neutral-700 text-emerald-400 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                className="w-full min-h-[44px] text-center text-sm font-mono py-3 px-4 rounded-lg bg-neutral-900 border border-neutral-700 text-emerald-400 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 autoFocus
               />
               {authError && (

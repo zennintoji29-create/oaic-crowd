@@ -41,14 +41,14 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
 }
 
 export async function fetchZones(): Promise<ZoneInfo[]> {
-  const res = await fetch(`${API_BASE}/zones`);
+  const res = await authFetch(`${API_BASE}/zones`);
   if (!res.ok) throw new Error('Failed to fetch zones');
   const data = await res.json();
   return data.zones;
 }
 
 export async function fetchGates(): Promise<GateState[]> {
-  const res = await fetch(`${API_BASE}/gates`);
+  const res = await authFetch(`${API_BASE}/gates`);
   if (!res.ok) throw new Error('Failed to fetch gates');
   const data = await res.json();
   return data.gates;
@@ -235,6 +235,17 @@ export async function loginOperator(
     throw new Error(data.error || 'Invalid email or password');
   }
   return data;
+}
+
+export async function verifyOperatorPassword(password: string): Promise<{ success: boolean; email: string }> {
+  const res = await authFetch(`${API_BASE}/auth/verify-password`, {
+    method: 'POST',
+    body: JSON.stringify({ password })
+  });
+  if (!res.ok) {
+    throw new Error('Invalid password');
+  }
+  return res.json();
 }
 
 // ============================================================================

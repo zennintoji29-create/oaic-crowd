@@ -20,13 +20,92 @@ class StorageManager {
     this.commandQueues = new Map();        // deviceId -> Array of queued commands
     this.rateLimiter = new Map();          // deviceId -> { count, windowStart }
     this.users = new Map();                // email -> { email, phone, passwordHash, setupComplete, createdAt }
+    this.userGates = new Map();            // email -> Map<gateId, GateState>
 
     this.initDefaultZones();
     this.initDefaultGates();
     this.initDefaultConfig();
     this.ensureDataDir();
     this.loadUsers();
+    this.loadUserGates();
     this.hydrateFromSupabase();
+  }
+
+  getUserGatesFilePath() {
+    return path.join(config.dataDir, 'user_gates.json');
+  }
+
+  loadUserGates() {
+    try {
+      const file = this.getUserGatesFilePath();
+      if (fs.existsSync(file)) {
+        const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
+        Object.entries(raw || {}).forEach(([email, list]) => {
+          if (Array.isArray(list)) {
+            const m = new Map();
+            list.forEach((g) => { if (g && g.id) m.set(g.id, g); });
+            this.userGates.set(email.toLowerCase(), m);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('[STORAGE] Could not load user gates:', err.message);
+    }
+  }
+
+  saveUserGates() {
+    try {
+      this.ensureDataDir();
+      const obj = {};
+      for (const [email, map] of this.userGates.entries()) {
+        obj[email] = Array.from(map.values());
+      }
+      fs.writeFileSync(this.getUserGatesFilePath(), JSON.stringify(obj, null, 2));
+    } catch (err) {
+      console.warn('[STORAGE] Could not save user gates:', err.message);
+    }
+  }
+
+  setGatesForUser(email, gateNames = []) {
+    if (!email) return [];
+    const norm = email.toLowerCase();
+    const ids = ['gate-a', 'gate-b', 'gate-c', 'gate-d'];
+    const zones = ['zone-entry-a', 'zone-corridor-b', 'zone-entry-c', 'zone-corridor-d'];
+    const now = Date.now();
+    const map = new Map();
+    gateNames.slice(0, 4).forEach((name, idx) => {
+      const id = ids[idx];
+      map.set(id, {
+        id,
+        name: String(name || `Gate ${idx + 1}`).trim(),
+        zoneId: zones[idx],
+        status: 'GREEN',
+        count: 0,
+        density: 0,
+        riskScore: 0,
+        servoAngle: 90,
+        servoStatus: 'OPEN',
+        isManualOverride: false,
+        manualState: 'AUTO',
+        power: true,
+        lastUpdated: now,
+        amberThreshold: 5,
+        redThreshold: 10
+      });
+    });
+    this.userGates.set(norm, map);
+    this.saveUserGates();
+    return Array.from(map.values());
+  }
+
+  getGateMap(email) {
+    if (email) {
+      const norm = email.toLowerCase();
+      if (this.userGates.has(norm)) {
+        return this.userGates.get(norm);
+      }
+    }
+    return this.gates;
   }
 
   async hydrateFromSupabase() {
@@ -345,10 +424,11 @@ class StorageManager {
     return zone;
   }
 
-  getGates() {
+  getGates(email) {
     // Synchronize gates with corresponding zone's latest telemetry if not overridden
+    const map = this.getGateMap(email);
     const gatesList = [];
-    for (const [id, gate] of this.gates.entries()) {
+    for (const [id, gate] of map.entries()) {
       const zone = this.zones.get(gate.zoneId);
       if (zone && zone.lastTelemetry && !gate.isManualOverride) {
         gate.status = zone.lastTelemetry.state;
@@ -373,12 +453,13 @@ class StorageManager {
     return gatesList;
   }
 
-  getGate(id) {
-    return this.gates.get(id) || null;
+  getGate(id, email) {
+    return this.getGateMap(email).get(id) || null;
   }
 
-  updateGateOverride(id, manualState) {
-    const gate = this.gates.get(id);
+  updateGateOverride(id, manualState, email) {
+    const map = this.getGateMap(email);
+    const gate = map.get(id);
     if (!gate) return null;
 
     if (manualState === 'AUTO' || manualState === 'RESUME_AUTO') {
@@ -399,23 +480,27 @@ class StorageManager {
       }
     }
     gate.lastUpdated = Date.now();
+    if (email) this.saveUserGates();
     dbUpsertGate(gate);
     return gate;
   }
 
-  updateGatePower(id, power) {
-    const gate = this.gates.get(id);
+  updateGatePower(id, power, email) {
+    const map = this.getGateMap(email);
+    const gate = map.get(id);
     if (!gate) return null;
     gate.power = !!power;
     gate.lastUpdated = Date.now();
+    if (email) this.saveUserGates();
     dbUpsertGate(gate);
     return gate;
   }
 
-  resetAllGates() {
+  resetAllGates(email) {
     const now = Date.now();
+    const map = this.getGateMap(email);
     const updated = [];
-    for (const [id, gate] of this.gates.entries()) {
+    for (const [id, gate] of map.entries()) {
       const next = {
         ...gate,
         status: 'GREEN',
@@ -429,15 +514,17 @@ class StorageManager {
         power: true,
         lastUpdated: now
       };
-      this.gates.set(id, next);
+      map.set(id, next);
       dbUpsertGate(next);
       updated.push(next);
     }
+    if (email) this.saveUserGates();
     return updated;
   }
 
-  updateGateDensity(id, delta) {
-    const gate = this.gates.get(id);
+  updateGateDensity(id, delta, email) {
+    const map = this.getGateMap(email);
+    const gate = map.get(id);
     if (!gate) return null;
 
     gate.count = Math.max(0, gate.count + delta);
@@ -459,6 +546,7 @@ class StorageManager {
     }
 
     gate.lastUpdated = Date.now();
+    if (email) this.saveUserGates();
     return gate;
   }
 
