@@ -9,8 +9,7 @@ import {
   ShieldCheck,
   ExternalLink,
   LogOut,
-  PanelLeftClose,
-  PanelLeftOpen,
+  MoreVertical,
   Menu,
   X
 } from 'lucide-react';
@@ -39,56 +38,54 @@ export const Navigation: React.FC<NavigationProps> = ({
   const [navHidden, setNavHidden] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const mainNavItems: NavTabItem[] = [
+  const primaryItems: NavTabItem[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'detail', label: 'Zone Details', icon: Radar },
-    { id: 'alerts', label: 'Alerts & History', icon: Bell, count: alertCount },
-    { id: 'about', label: 'About & Safety', icon: ShieldCheck }
+    { id: 'alerts', label: 'Alerts & History', icon: Bell, count: alertCount }
   ];
 
-  const toolItems: NavTabItem[] = [
-    { id: 'setup', label: 'System Setup', icon: Sliders, to: '/setup' },
-    // Hardware Demo placed last
+  const configItems: NavTabItem[] = [
+    { id: 'setup', label: 'System Setup', icon: Sliders },
+    // Hardware Demo placed last in configuration/tools
     { id: 'sandbox', label: 'Hardware Demo', icon: Cpu, to: '/sandbox' }
   ];
 
   return (
     <>
-      {/* Desktop / Laptop Left Sidebar Navigation (lg+) */}
+      {/* Desktop / Laptop Fixed Non-Scrollable Left Sidebar (lg+) */}
       {navHidden ? (
-        <div className="hidden lg:flex flex-col border-r border-border-subtle bg-surface-raised p-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setNavHidden(false)}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md border border-border-strong bg-surface-sunken hover:bg-surface-overlay text-text-secondary hover:text-text-primary transition-colors"
-            title="Show navigation bar"
-            aria-label="Show navigation bar"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
-        </div>
+        /* Transparent 3-dots toggle taking zero layout space */
+        <button
+          type="button"
+          onClick={() => setNavHidden(false)}
+          className="hidden lg:inline-flex fixed top-[74px] left-2 z-40 min-h-[44px] min-w-[44px] items-center justify-center rounded-md bg-transparent hover:bg-white/10 text-text-secondary hover:text-text-primary transition-colors"
+          title="Open navigation bar"
+          aria-label="Open navigation bar"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
       ) : (
         <nav
           aria-label="Primary navigation"
-          className="hidden lg:flex flex-col w-60 shrink-0 border-r border-border-subtle bg-surface-raised p-3 gap-1 min-h-[calc(100dvh-72px)] justify-between"
+          className="hidden lg:flex flex-col w-56 shrink-0 border-r border-border-subtle bg-surface-raised p-2.5 sticky top-[61px] h-[calc(100dvh-61px)] overflow-hidden justify-between"
         >
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between px-2 py-1 mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between px-2 py-1 mb-0.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
                 Navigation
               </span>
               <button
                 type="button"
                 onClick={() => setNavHidden(true)}
-                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md hover:bg-surface-sunken text-text-muted hover:text-text-primary transition-colors"
+                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-md bg-transparent hover:bg-white/10 text-text-muted hover:text-text-primary transition-colors"
                 title="Hide navigation bar"
                 aria-label="Hide navigation bar"
               >
-                <PanelLeftClose className="w-4 h-4" />
+                <MoreVertical className="w-4 h-4" />
               </button>
             </div>
 
-            {mainNavItems.map((item) => {
+            {primaryItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -96,22 +93,20 @@ export const Navigation: React.FC<NavigationProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`min-h-[44px] flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors text-left ${
+                  className={`min-h-[44px] flex items-center justify-between px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-left ${
                     isActive
                       ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
                       : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
+                  <span className="flex items-center gap-2.5 truncate">
                     <Icon
-                      className={`w-4 h-4 shrink-0 ${
-                        isActive ? 'text-accent' : 'text-text-muted'
-                      }`}
+                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`}
                       aria-hidden="true"
                     />
                     <span className="truncate">{item.label}</span>
-                  </div>
+                  </span>
 
                   {typeof item.count === 'number' && item.count > 0 && (
                     <span className="text-xs px-1.5 py-0.5 border border-border-subtle rounded bg-surface-base text-status-danger-text tabular-nums">
@@ -122,35 +117,75 @@ export const Navigation: React.FC<NavigationProps> = ({
               );
             })}
 
-            <div className="pt-3 mt-2 border-t border-border-subtle flex flex-col gap-1">
+            {/* Configuration & Demo Section */}
+            <div className="pt-2 mt-1.5 border-t border-border-subtle flex flex-col gap-0.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted px-2 py-1">
                 Configuration & Demo
               </span>
-              {toolItems.map((item) => {
+              {configItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                if (item.to) {
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.to}
+                      className={`min-h-[44px] flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        isActive
+                          ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                }
                 return (
-                  <Link
+                  <button
                     key={item.id}
-                    to={item.to || '/dashboard'}
-                    className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    className={`min-h-[44px] flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-left ${
                       isActive
                         ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
                         : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
                     }`}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
                     <span>{item.label}</span>
-                  </Link>
+                  </button>
                 );
               })}
             </div>
+
+            {/* About & Safety placed below Configuration & Demo */}
+            <div className="pt-2 mt-1.5 border-t border-border-subtle">
+              <button
+                type="button"
+                onClick={() => setActiveTab('about')}
+                className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-left ${
+                  activeTab === 'about'
+                    ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken'
+                }`}
+                aria-current={activeTab === 'about' ? 'page' : undefined}
+              >
+                <ShieldCheck
+                  className={`w-4 h-4 shrink-0 ${activeTab === 'about' ? 'text-accent' : 'text-text-muted'}`}
+                  aria-hidden="true"
+                />
+                <span>About & Safety</span>
+              </button>
+            </div>
           </div>
 
-          <div className="pt-3 mt-3 border-t border-border-subtle flex flex-col gap-1.5">
+          {/* Bottom Utility Links (Always fits without scroll) */}
+          <div className="pt-2 border-t border-border-subtle flex flex-col gap-1">
             <Link
               to="/"
-              className="min-h-[44px] flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-text-muted hover:text-text-primary hover:bg-surface-sunken transition-colors"
+              className="min-h-[44px] flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md text-text-muted hover:text-text-primary hover:bg-surface-sunken transition-colors"
             >
               <ExternalLink className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
               <span>Landing Page</span>
@@ -160,7 +195,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 type="button"
                 onClick={onLogout}
-                className="min-h-[44px] flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md text-status-danger-text bg-status-danger-bg border border-status-danger-border hover:opacity-90 transition-opacity text-left"
+                className="min-h-[44px] flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-md text-status-danger-text bg-status-danger-bg border border-status-danger-border hover:opacity-90 transition-opacity text-left"
               >
                 <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>Logout</span>
@@ -189,7 +224,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {mobileMenuOpen && (
           <nav aria-label="Mobile navigation" className="pt-2 pb-1 flex flex-col gap-1">
-            {mainNavItems.map((item) => {
+            {primaryItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -214,14 +249,37 @@ export const Navigation: React.FC<NavigationProps> = ({
               );
             })}
 
-            <Link
-              to="/setup"
-              onClick={() => setMobileMenuOpen(false)}
-              className="min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-text-secondary hover:bg-surface-sunken"
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('setup');
+                setMobileMenuOpen(false);
+              }}
+              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left ${
+                activeTab === 'setup'
+                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                  : 'text-text-secondary hover:bg-surface-sunken'
+              }`}
             >
-              <Sliders className="w-4 h-4 text-text-muted" aria-hidden="true" />
+              <Sliders className="w-4 h-4 text-accent" aria-hidden="true" />
               <span>System Setup</span>
-            </Link>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('about');
+                setMobileMenuOpen(false);
+              }}
+              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left ${
+                activeTab === 'about'
+                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                  : 'text-text-secondary hover:bg-surface-sunken'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-accent" aria-hidden="true" />
+              <span>About & Safety</span>
+            </button>
 
             <Link
               to="/"

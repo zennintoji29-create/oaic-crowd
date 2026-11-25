@@ -28,9 +28,9 @@ import { Navigation } from './components/Navigation';
 import { OverviewTab } from './components/OverviewTab';
 import { ZoneDetailTab } from './components/ZoneDetailTab';
 import { AlertsTab } from './components/AlertsTab';
+import { SetupTab } from './components/SetupTab';
 import { AboutTab } from './components/AboutTab';
 import { DemoTab } from './components/DemoTab';
-import { ManualControlTab } from './components/ManualControlTab';
 import { MasterRemote } from './components/MasterRemote';
 import { RequireAuth } from './components/RequireAuth';
 import { Landing } from './pages/Landing';
@@ -276,6 +276,10 @@ const AppRoutes: React.FC = () => {
     setGates((prev) => prev.map((g) => (g.id === updatedGate.id ? updatedGate : g)));
   };
 
+  const handleZoneUpdated = (updated: ZoneInfo) => {
+    setZones((prev) => prev.map((z) => (z.zoneId === updated.zoneId ? { ...z, ...updated } : z)));
+  };
+
   const handleLogout = useCallback(() => {
     try {
       clearSessionToken();
@@ -286,7 +290,7 @@ const AppRoutes: React.FC = () => {
 
   // Shared Dashboard Shell for /dashboard and /sandbox
   const renderShell = (activeKey: string, content: React.ReactNode) => (
-    <div className="min-h-screen flex flex-col bg-surface-base text-text-primary antialiased">
+    <div className="min-h-dvh flex flex-col bg-surface-base text-text-primary antialiased safe-area-shell">
       <GlobalHeader
         worstState={worst.state}
         worstZoneName={worst.zoneName}
@@ -295,8 +299,9 @@ const AppRoutes: React.FC = () => {
         simulatorRunning={simulatorRunning}
         onToggleSimulator={handleToggleSimulator}
         onLogout={handleLogout}
+        onGoDashboard={() => setDashboardTab('overview')}
       />
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex-1 flex flex-col lg:flex-row">
         <Navigation
           activeTab={activeKey}
           setActiveTab={(tab) => {
@@ -344,6 +349,9 @@ const AppRoutes: React.FC = () => {
                   />
                 )}
                 {dashboardTab === 'alerts' && <AlertsTab alerts={alerts} />}
+                {dashboardTab === 'setup' && (
+                  <SetupTab zones={zones} onZoneUpdated={handleZoneUpdated} />
+                )}
                 {dashboardTab === 'about' && <AboutTab />}
               </>
             )}
@@ -351,10 +359,10 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Public Operator Login */}
+      {/* Public Login */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected Initial Setup Wizard */}
+      {/* Protected Initial Setup Wizard (used during first-visit login flow) */}
       <Route
         path="/setup"
         element={
@@ -374,27 +382,15 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Protected Manual Controls / Master Remote */}
+      {/* Hidden Private Master Controller (only /master, zero public links) */}
       <Route
-        path="/remote"
+        path="/master"
         element={
           <RequireAuth>
-            <div className="min-h-screen bg-slate-950">
-              <MasterRemote initialGates={gates} />
-              <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-12">
-                <ManualControlTab
-                  gates={gates}
-                  hardware={hardware}
-                  onRefreshGates={refreshData}
-                />
-              </div>
-            </div>
+            <MasterRemote initialGates={gates} />
           </RequireAuth>
         }
       />
-
-      {/* Redirect /master -> /remote */}
-      <Route path="/master" element={<Navigate to="/remote" replace />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

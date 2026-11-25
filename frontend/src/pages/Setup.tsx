@@ -310,12 +310,6 @@ export const Setup: React.FC = () => {
               Step {step} of {TOTAL_STEPS}: {STEP_LABELS[step - 1]}
             </p>
           </div>
-          <Link
-            to="/remote"
-            className="text-xs font-mono text-emerald-400 hover:text-emerald-300 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded px-1"
-          >
-            Skip to Remote
-          </Link>
         </div>
 
         {/* Progress Bar */}
