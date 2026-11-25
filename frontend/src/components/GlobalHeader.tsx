@@ -55,24 +55,24 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleSimulator}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium border border-border-strong rounded bg-surface-sunken hover:bg-surface-base text-text-primary transition-colors focus-visible:outline"
+            className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-border-strong rounded-md bg-surface-sunken hover:bg-surface-base text-text-primary transition-colors"
             title="Toggle simulation feed"
           >
             {simulatorRunning ? (
               <>
-                <Pause className="w-3.5 h-3.5 text-text-secondary" aria-hidden="true" />
+                <Pause className="w-4 h-4 text-text-secondary" aria-hidden="true" />
                 <span>Pause simulation</span>
               </>
             ) : (
               <>
-                <Play className="w-3.5 h-3.5 text-text-secondary" aria-hidden="true" />
+                <Play className="w-4 h-4 text-text-secondary" aria-hidden="true" />
                 <span>Resume simulation</span>
               </>
             )}
           </button>
 
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono border ${
+            className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 rounded-md text-xs border ${
               !isWsConnected || isStale
                 ? 'bg-status-danger-bg border-status-danger-border text-status-danger-text'
                 : 'bg-surface-sunken border-border-subtle text-text-secondary'
@@ -81,17 +81,17 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           >
             {!isWsConnected ? (
               <>
-                <WifiOff className="w-3.5 h-3.5" aria-hidden="true" />
+                <WifiOff className="w-4 h-4" aria-hidden="true" />
                 <span>Disconnected</span>
               </>
             ) : isStale ? (
               <>
-                <WifiOff className="w-3.5 h-3.5 text-status-building-text" aria-hidden="true" />
+                <WifiOff className="w-4 h-4 text-status-building-text" aria-hidden="true" />
                 <span>Stale (&gt;5s)</span>
               </>
             ) : (
               <>
-                <Wifi className="w-3.5 h-3.5 text-status-clear-text" aria-hidden="true" />
+                <Wifi className="w-4 h-4 text-status-clear-text" aria-hidden="true" />
                 <span className="text-status-clear-text font-medium">LIVE</span>
               </>
             )}
@@ -101,10 +101,10 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <button
               type="button"
               onClick={onLogout}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border border-rose-800/60 rounded bg-rose-950/40 hover:bg-rose-950/80 text-rose-300 transition-colors focus-visible:outline"
+              className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-status-danger-border rounded-md bg-status-danger-bg hover:opacity-90 text-status-danger-text transition-opacity"
               title="Sign out and lock dashboard"
             >
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
               <span>Logout</span>
             </button>
           )}

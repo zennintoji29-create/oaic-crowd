@@ -477,63 +477,85 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
           </div>
         </div>
 
-        {/* Alerts Table */}
+        {/* Alerts List: Stacked Cards on Mobile, Sticky-Header Table on Desktop */}
         <div className="flat-panel overflow-hidden">
           {paginatedAlerts.length === 0 ? (
-            <div className="p-8 text-center text-text-muted text-xs">
+            <div className="p-8 text-center text-text-muted text-sm">
               No matching alerts found. System operating normally.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-border-subtle bg-surface-sunken text-text-muted font-mono uppercase text-[10px]">
-                    <th className="py-2.5 px-4">Time</th>
-                    <th className="py-2.5 px-4">Zone / Gate</th>
-                    <th className="py-2.5 px-4">State Transition</th>
-                    <th className="py-2.5 px-4">Risk Index</th>
-                    <th className="py-2.5 px-4">Operator Message</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-subtle">
-                  {paginatedAlerts.map((alert) => (
-                    <tr key={alert.id} className="hover:bg-surface-sunken/50 transition-colors">
-                      <td className="py-2.5 px-4 font-mono text-text-muted text-[11px] whitespace-nowrap">
-                        {new Date(alert.timestamp).toLocaleTimeString()}
-                      </td>
-                      <td className="py-2.5 px-4 font-medium text-text-primary">
-                        {alert.zoneName}
-                      </td>
-                      <td className="py-2.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] text-text-muted">{alert.fromState}</span>
-                          <span className="text-text-muted">➔</span>
-                          <StateBadge state={alert.toState as any} size="sm" />
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-text-primary">
-                        {alert.score}
-                      </td>
-                      <td className="py-2.5 px-4 text-text-secondary">{alert.message}</td>
+            <>
+              {/* Mobile / Small Screen Stacked Cards */}
+              <div className="md:hidden divide-y divide-border-subtle">
+                {paginatedAlerts.map((alert) => (
+                  <div key={alert.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-text-primary">{alert.zoneName}</span>
+                      <StateBadge state={alert.toState as any} size="sm" />
+                    </div>
+                    <p className="text-xs text-text-secondary">{alert.message}</p>
+                    <div className="flex items-center justify-between text-xs text-text-muted">
+                      <span>{new Date(alert.timestamp).toLocaleTimeString()}</span>
+                      <span className="tabular-nums font-medium">
+                        {alert.fromState} → {alert.toState} (Risk {alert.score})
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop / Tablet Sticky-Header Table */}
+              <div className="hidden md:block overflow-x-auto max-h-[420px]">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 z-10 bg-surface-sunken border-b border-border-subtle text-text-muted uppercase text-[11px]">
+                    <tr>
+                      <th className="py-3 px-4">Time</th>
+                      <th className="py-3 px-4">Zone / Gate</th>
+                      <th className="py-3 px-4">State Transition</th>
+                      <th className="py-3 px-4">Risk Index</th>
+                      <th className="py-3 px-4">Operator Message</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {paginatedAlerts.map((alert) => (
+                      <tr key={alert.id} className="hover:bg-surface-sunken/50 transition-colors">
+                        <td className="py-3 px-4 text-text-muted whitespace-nowrap tabular-nums">
+                          {new Date(alert.timestamp).toLocaleTimeString()}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-text-primary">
+                          {alert.zoneName}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-text-muted">{alert.fromState}</span>
+                            <span className="text-text-muted">→</span>
+                            <StateBadge state={alert.toState as any} size="sm" />
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-text-primary tabular-nums">
+                          {alert.score}
+                        </td>
+                        <td className="py-3 px-4 text-text-secondary">{alert.message}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
-          {/* Pagination Controls */}
+          {/* Pagination Controls (>= 44px touch targets) */}
           <div className="p-3 border-t border-border-subtle bg-surface-sunken flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-mono text-text-muted">
+            <span className="text-text-muted tabular-nums">
               Page {safePage} of {totalPages} ({filteredAlerts.length} total)
             </span>
 
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="px-2.5 py-1 rounded border border-border-strong bg-surface-raised text-text-primary hover:bg-surface-base disabled:opacity-40"
+                className="min-h-[44px] px-3 py-2 rounded border border-border-strong bg-surface-raised text-text-primary hover:bg-surface-base disabled:opacity-40"
               >
                 Previous
               </button>
@@ -543,9 +565,9 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                   key={pageNum}
                   type="button"
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-2.5 py-1 rounded border font-mono ${
+                  className={`min-h-[44px] min-w-[44px] px-3 py-2 rounded border tabular-nums ${
                     pageNum === safePage
-                      ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
+                      ? 'bg-accent border-accent text-slate-950 font-bold'
                       : 'border-border-strong bg-surface-raised text-text-secondary hover:text-text-primary'
                   }`}
                 >
@@ -557,7 +579,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="px-2.5 py-1 rounded border border-border-strong bg-surface-raised text-text-primary hover:bg-surface-base disabled:opacity-40"
+                className="min-h-[44px] px-3 py-2 rounded border border-border-strong bg-surface-raised text-text-primary hover:bg-surface-base disabled:opacity-40"
               >
                 Next
               </button>

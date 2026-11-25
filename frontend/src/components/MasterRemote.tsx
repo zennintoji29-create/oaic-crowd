@@ -214,22 +214,19 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col p-3 max-w-md mx-auto font-sans select-none pb-8">
+    <div className="min-h-dvh bg-surface-base text-text-primary flex flex-col p-4 max-w-md mx-auto font-sans select-none pb-8 safe-area-shell">
       {/* Top Header with Reset & Logout */}
-      <div className="flex items-center justify-between py-2 border-b border-neutral-800/80 mb-3">
+      <div className="flex items-center justify-between py-2 border-b border-border-subtle mb-3">
         <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span className="text-[11px] font-mono font-bold tracking-wider text-neutral-400 uppercase">
+          <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden="true" />
+          <span className="text-xs font-semibold tracking-wider text-text-secondary uppercase">
             CPR Master Remote
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {localFeedback && (
-            <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+            <span className="text-[11px] font-semibold text-status-clear-text bg-status-clear-bg px-2 py-1 rounded border border-status-clear-border">
               {localFeedback}
             </span>
           )}
@@ -237,19 +234,20 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
             type="button"
             onClick={() => executeSilent('RESET_ALL')}
             disabled={executing}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-900 border border-emerald-600/60 text-emerald-400 hover:bg-emerald-950/60 text-[11px] font-mono font-bold transition"
+            className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-status-danger-bg border border-status-danger-border text-status-danger-text hover:opacity-90 text-xs font-semibold transition-opacity"
             title="Reset all controls back to live data"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Reset</span>
           </button>
           <button
             type="button"
             onClick={handleLogout}
+            aria-label="Lock remote and sign out"
             title="Lock Remote"
-            className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-rose-400 transition"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md bg-surface-raised border border-border-strong text-text-muted hover:text-status-danger-text transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>

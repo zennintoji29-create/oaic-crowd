@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Camera, Zap } from 'lucide-react';
 import { HardwareActuatorState } from '../types';
 import { simulateSandbox } from '../lib/api';
 
@@ -23,7 +24,7 @@ interface ComponentDossier {
 
 const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
   webcam: {
-    icon: '📷',
+    icon: 'CAM',
     title: 'USB WEBCAM (AI VISION)',
     subtitle: 'Primary Optical Sensor Node',
     badge: 'PRIMARY',
@@ -36,7 +37,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'Direct Host USB Port'
   },
   traffic_leds: {
-    icon: '🚦',
+    icon: 'LED',
     title: '3-LIGHT TRAFFIC SIGNAL (RGB)',
     subtitle: 'Visual Crowd Warning Actuator',
     badge: 'ACTUATOR',
@@ -49,7 +50,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'Red: GPIO 25 | Green: GPIO 26 | Blue: GPIO 27'
   },
   ld2410_radar: {
-    icon: '📡',
+    icon: 'RADAR',
     title: 'HLK-LD2410 24GHz RADAR',
     subtitle: 'Millimeter-Wave Presence & Energy Sensor',
     badge: 'MVP SENSOR',
@@ -62,7 +63,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'TX: GPIO 16 (RX2) | RX: GPIO 17 (TX2)'
   },
   tof_sensor: {
-    icon: '📏',
+    icon: 'TOF',
     title: 'TOF200C / VL53L0X ToF SENSOR',
     subtitle: 'Laser Time-of-Flight Distance Meter',
     badge: 'PRECISION',
@@ -75,11 +76,11 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'SDA: GPIO 21 | SCL: GPIO 22'
   },
   servo_gate: {
-    icon: '⚙️',
+    icon: 'SERVO',
     title: 'SG90 MICRO SERVO GATE',
     subtitle: 'Physical Inflow Metering Actuator',
     badge: 'CRUSH SHIELD',
-    badgeClass: 'bg-fuchsia-950 text-fuchsia-400 border-fuchsia-700',
+    badgeClass: 'bg-amber-950 text-amber-400 border-amber-700',
     desc: 'Rotates physical barrier arm across corridor. 90° = Unrestricted Passage, 45° = Metered Inflow (crowd regulation), 0° = Closed & Locked to eliminate crowd crush danger.',
     model: 'TowerPro SG90 9g Micro Servo',
     interface: '50Hz PWM Signal (LEDC Peripheral)',
@@ -88,7 +89,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'Signal PWM: GPIO 13'
   },
   ir_beam: {
-    icon: '⚡',
+    icon: 'IR',
     title: 'INFRARED BEAM TRIPWIRE',
     subtitle: 'Unidirectional Boundary Line Sensor',
     badge: 'HARDWARE LINE',
@@ -101,11 +102,11 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'IR Receiver: GPIO 14 (Internal Pull-Up)'
   },
   breadboard_1: {
-    icon: '🎛️',
+    icon: 'MCU',
     title: 'BREADBOARD 1 (MASTER CONTROLLER)',
     subtitle: 'Primary Physical Node (Right Side)',
     badge: 'ESP32 MASTER',
-    badgeClass: 'bg-pink-950 text-pink-400 border-pink-700',
+    badgeClass: 'bg-emerald-950 text-emerald-400 border-emerald-700',
     desc: 'Central controller housing ESP32 Master, Traffic Light LEDs, SG90 Servo Gate, LD2410 Radar, ToF sensor, and OLED display. Bridges to dashboard server via WiFi/Serial.',
     model: 'ESP32-WROOM-32D 38-Pin Module',
     interface: 'WiFi 802.11 b/g/n + USB Serial 115200',
@@ -114,7 +115,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'Pins: GPIO 12, 13, 14, 16, 17, 21, 22, 25, 26, 27'
   },
   breadboard_2: {
-    icon: '📡',
+    icon: 'NODE',
     title: 'BREADBOARD 2 (PERIMETER SLAVE)',
     subtitle: 'Remote Boundary Node (Left Side)',
     badge: 'ESP32 SLAVE',
@@ -127,7 +128,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'Pins: GPIO 5 (NSS), 18 (SCK), 19 (MISO), 23 (MOSI)'
   },
   lora_master: {
-    icon: '📻',
+    icon: 'RF',
     title: 'Ra-02 LoRa MODULE (MASTER)',
     subtitle: 'Long-Range Wireless Transceiver',
     badge: 'LORA LINK',
@@ -140,7 +141,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
     pin: 'SPI: MOSI 23, MISO 19, SCK 18, CS 5, RST 4'
   },
   lora_slave: {
-    icon: '📻',
+    icon: 'RF',
     title: 'Ra-02 LoRa MODULE (SLAVE)',
     subtitle: 'Remote Transmitter Node',
     badge: 'LORA LINK',
@@ -380,7 +381,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                   : 'bg-amber-950/80 hover:bg-amber-900 border-amber-600/70 text-amber-200'
               }`}
             >
-              <span>⚡</span>
+              <Zap className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{isFailover ? 'Restore AI Camera' : 'Simulate Camera Failure'}</span>
             </button>
             <button
@@ -412,7 +413,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                 <div className={`relative w-12 h-10 rounded-xl bg-surface-sunken border-2 flex items-center justify-center transition-all ${
                   selectedInspector === 'webcam' ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-border-strong'
                 }`}>
-                  <span className="text-xl">📷</span>
+                  <Camera className="w-5 h-5 text-slate-200" aria-hidden="true" />
                   <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-surface-base ${
                     isFailover ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'
                   }`} />

@@ -87,28 +87,28 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12">
+    <div className="min-h-dvh bg-surface-base text-text-primary flex flex-col justify-center items-center px-4 py-12 safe-area-shell">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-surface-raised border border-border-strong text-accent">
             <ShieldCheck className="w-6 h-6" aria-hidden="true" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Authorized Access</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-xl font-bold tracking-tight text-text-primary">Authorized Access</h1>
+          <p className="text-xs text-text-muted">
             Sign in with your security credential to continue.
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-4 shadow-xl"
+          className="flat-panel p-6 space-y-4"
         >
           <div>
-            <label htmlFor="access-credential" className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label htmlFor="access-credential" className="block text-xs font-medium text-text-secondary mb-1.5">
               Access Credential
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" aria-hidden="true" />
+              <Lock className="w-4 h-4 text-text-muted absolute left-3 top-3.5" aria-hidden="true" />
               <input
                 id="access-credential"
                 type="password"
@@ -116,27 +116,22 @@ export const Login: React.FC = () => {
                 value={credential}
                 onChange={(e) => setCredential(e.target.value)}
                 disabled={isLockedOut || loading}
-                placeholder="Enter credential"
-                className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg bg-slate-950 border border-slate-700 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                className="w-full min-h-[44px] pl-9 pr-3 py-2 text-sm rounded-md bg-surface-sunken border border-border-strong text-text-primary focus:outline-none focus:border-accent disabled:opacity-50"
                 autoFocus
               />
             </div>
+            {error && (
+              <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-xs text-status-danger-text">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span>{error}</span>
+              </p>
+            )}
           </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>{error}</span>
-            </div>
-          )}
 
           {isLockedOut && (
             <div
               role="status"
-              className="p-2.5 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-300 text-xs font-mono text-center"
+              className="p-2.5 rounded-md bg-status-building-bg border border-status-building-border text-status-building-text text-xs text-center"
             >
               Too many attempts. Try again in {lockoutRemaining}s.
             </div>
@@ -145,7 +140,7 @@ export const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLockedOut || loading || !credential.trim()}
-            className="w-full py-2.5 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            className="w-full min-h-[44px] py-2.5 px-4 rounded-md bg-accent hover:bg-accent-hover text-slate-950 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Verifying...' : isLockedOut ? `Locked (${lockoutRemaining}s)` : 'Continue'}
           </button>
@@ -154,7 +149,7 @@ export const Login: React.FC = () => {
         <div className="text-center">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 px-2 py-1"
+            className="min-h-[44px] inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors rounded px-3 py-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Back to home</span>

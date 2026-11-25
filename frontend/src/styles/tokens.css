@@ -1,0 +1,110 @@
+/* ============================================================================
+   CPR DESIGN SYSTEM TOKENS
+   Neutral slate palette, single accent, four status colors, Inter typography,
+   consistent spacing/radii/shadows, safe areas, and TV-scale readability.
+   ============================================================================ */
+
+:root {
+  /* Typography */
+  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Spacing & Radii */
+  --space-unit: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.35);
+
+  /* Neutral Slate Surfaces (Dark Default) */
+  --surface-base: #020617;
+  --surface-raised: #0f172a;
+  --surface-sunken: #090e1a;
+  --surface-overlay: #1e293b;
+
+  /* Borders */
+  --border-subtle: #1e293b;
+  --border-strong: #334155;
+
+  /* Text */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  /* Single Primary Accent (Emerald) */
+  --accent-default: #10b981;
+  --accent-hover: #059669;
+  --accent-focus-ring: #34d399;
+
+  /* Status Colors: Clear (Green), Busy (Amber), Crowded (Orange), Danger (Red) */
+  --status-clear-text: #4ade80;
+  --status-clear-bg: #052e16;
+  --status-clear-border: #166534;
+  --status-clear-chart: #22c55e;
+
+  --status-building-text: #fbbf24;
+  --status-building-bg: #451a03;
+  --status-building-border: #92400e;
+  --status-building-chart: #f59e0b;
+
+  --status-crowded-text: #fb923c;
+  --status-crowded-bg: #431407;
+  --status-crowded-border: #9a3412;
+  --status-crowded-chart: #ea580c;
+
+  --status-danger-text: #f87171;
+  --status-danger-bg: #450a0a;
+  --status-danger-border: #991b1b;
+  --status-danger-chart: #ef4444;
+
+  --status-offline-text: #94a3b8;
+  --status-offline-bg: #0f172a;
+  --status-offline-border: #334155;
+  --status-offline-chart: #64748b;
+}
+
+/* Optional Light Scheme Support via prefers-color-scheme */
+@media (prefers-color-scheme: light) {
+  html:not(.dark) {
+    --surface-base: #f8fafc;
+    --surface-raised: #ffffff;
+    --surface-sunken: #f1f5f9;
+    --surface-overlay: #e2e8f0;
+
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+
+    --accent-default: #059669;
+    --accent-hover: #047857;
+    --accent-focus-ring: #10b981;
+
+    --status-clear-text: #15803d;
+    --status-clear-bg: #f0fdf4;
+    --status-clear-border: #86efac;
+
+    --status-building-text: #b45309;
+    --status-building-bg: #fffbeb;
+    --status-building-border: #fde68a;
+
+    --status-crowded-text: #c2410c;
+    --status-crowded-bg: #fff7ed;
+    --status-crowded-border: #fed7aa;
+
+    --status-danger-text: #b91c1c;
+    --status-danger-bg: #fef2f2;
+    --status-danger-border: #fecaca;
+  }
+}
+
+/* TV / Large Monitor Scale (1920px+ viewed from ~3 meters): >= 18px base */
+@media (min-width: 1920px) {
+  html {
+    font-size: 18px;
+  }
+}

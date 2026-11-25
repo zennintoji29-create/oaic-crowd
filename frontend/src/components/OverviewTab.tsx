@@ -114,12 +114,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Reset to Live Data Bar */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Consistent Page Header */}
+      <div className="flat-panel p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-bold text-text-primary">Live Gate Overview</h2>
-          <p className="text-xs text-text-secondary">
-            Manual values stay pinned until you press Reset to return to live telemetry.
+          <h2 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+            Gate Overview
+          </h2>
+          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
+            Live gate status, people count, and pressure trends. Pinned values stay until Reset.
           </p>
         </div>
         <button
@@ -134,9 +136,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               console.warn('Reset failed:', e);
             }
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-strong bg-surface-raised hover:bg-surface-sunken text-xs font-semibold text-text-primary transition-colors"
+          className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-status-danger-border bg-status-danger-bg text-status-danger-text hover:opacity-90 text-xs sm:text-sm font-semibold transition-opacity self-start sm:self-auto"
         >
-          <RotateCcw className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+          <RotateCcw className="w-4 h-4" aria-hidden="true" />
           <span>Reset</span>
         </button>
       </div>

@@ -8,8 +8,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Fira Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        mono: ['"Fira Code"', 'ui-monospace', 'monospace']
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['Inter', 'ui-monospace', 'SFMono-Regular', 'monospace']
+      },
+      minHeight: {
+        dvh: '100dvh'
       },
       colors: {
         surface: {
@@ -45,6 +48,12 @@ export default {
             border: 'var(--status-building-border)',
             chart: 'var(--status-building-chart)'
           },
+          crowded: {
+            text: 'var(--status-crowded-text)',
+            bg: 'var(--status-crowded-bg)',
+            border: 'var(--status-crowded-border)',
+            chart: 'var(--status-crowded-chart)'
+          },
           danger: {
             text: 'var(--status-danger-text)',
             bg: 'var(--status-danger-bg)',
@@ -59,7 +68,7 @@ export default {
           }
         }
       }
-    },
+    }
   },
   plugins: [],
 }
