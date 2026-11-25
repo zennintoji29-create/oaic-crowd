@@ -348,7 +348,7 @@ export const Setup: React.FC = () => {
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <div className="grid grid-cols-7 gap-1 text-[10px] font-mono text-center">
+          <div className="hidden sm:grid grid-cols-7 gap-1 text-[10px] font-mono text-center">
             {STEP_LABELS.map((label, idx) => (
               <span
                 key={label}

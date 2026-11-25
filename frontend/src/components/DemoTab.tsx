@@ -325,7 +325,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
         {/* Row 2: Live Crowd Slider & Scenario Presets */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 pt-1">
           <div className="flex-1 w-full flex flex-col md:flex-row items-center gap-4">
-            <div className="flex items-center gap-2 min-w-[220px]">
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[220px]">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-text-muted">
                 Live Crowd Slider:
               </span>
@@ -487,12 +487,12 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
           </div>
 
           {/* Center Multi-Corridor Flow Area */}
-          <div className="relative z-0 flex-1 my-3 grid grid-cols-12 gap-2 md:gap-4 items-stretch">
+          <div className="relative z-0 flex-1 my-3 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-stretch">
             
             {/* Breadboard 2 (Left) */}
             <div
               onClick={() => setSelectedInspector('breadboard_2')}
-              className={`col-span-3 lg:col-span-2 rounded-xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-colors ${
+              className={`md:col-span-3 lg:col-span-2 rounded-xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-colors ${
                 selectedInspector === 'breadboard_2' ? 'ring-2 ring-rose-400' : ''
               }`}
             >
@@ -531,7 +531,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
             </div>
 
             {/* Corridors: Left (OPEN) vs Right (CLOSE) */}
-            <div className="col-span-6 lg:col-span-8 rounded-xl border border-border-strong bg-black/60 relative overflow-hidden flex flex-col justify-between p-3">
+            <div className="md:col-span-6 lg:col-span-8 rounded-xl border border-border-strong bg-black/60 relative overflow-hidden flex flex-col justify-between p-3">
               
               {/* Corridor Labels */}
               <div className="grid grid-cols-2 text-center border-b border-border-subtle pb-2">
@@ -655,7 +655,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
             {/* Breadboard 1 (Right) */}
             <div
               onClick={() => setSelectedInspector('breadboard_1')}
-              className={`col-span-3 lg:col-span-2 rounded-xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-colors ${
+              className={`md:col-span-3 lg:col-span-2 rounded-xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-colors ${
                 selectedInspector === 'breadboard_1' ? 'ring-2 ring-rose-400' : ''
               }`}
             >

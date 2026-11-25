@@ -91,3 +91,8 @@ Version 15 (2026-11-26)
 Version 16 (2026-11-26)
 - Scoped gates per signed-up operator in storage.js (user_gates.json) and index.js: Setup's inputted gateCount & gateNames create that user's own gates, and GET /api/gates + gate controls + /master operate exclusively on the logged-in user's gates.
 - Updated /master (MasterRemote.tsx) to require active login (via RequireAuth) and unlock using the logged-in operator's account password via POST /api/auth/verify-password.
+
+Version 17 (2026-11-26)
+- Android mobile optimization pass:
+  * Added meta theme-color (#08090a) in index.html and overflow-x: hidden, -webkit-tap-highlight-color: transparent, and touch-action: manipulation in index.css.
+  * Stacked DemoTab schematic board cleanly on phones (grid-cols-1 md:grid-cols-12), widened MasterRemote quick buttons (grid-cols-3 sm:grid-cols-6, min-h-[44px]), hid cramped 7-column step bar on <sm in Setup.tsx, adjusted OverviewTab chart right margin for 360px screens, and ensured 44px touch targets on Landing.tsx preview controls.

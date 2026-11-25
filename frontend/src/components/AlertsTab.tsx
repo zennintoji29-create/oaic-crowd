@@ -399,7 +399,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
       <div className="space-y-3">
         <div className="flat-panel p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative min-w-[200px]">
+            <div className="relative w-full sm:w-auto sm:min-w-[200px]">
               <Search className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-2.5" aria-hidden="true" />
               <input
                 type="text"

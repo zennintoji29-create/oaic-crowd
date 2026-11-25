@@ -362,14 +362,14 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
         </div>
 
         {/* Quick Buttons: -5, -1, +1, +5, +10, +30 */}
-        <div className="grid grid-cols-6 gap-1.5">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {[-5, -1, 1, 5, 10, 30].map((val) => (
             <button
               key={val}
               type="button"
               disabled={executing || (val < 0 && currentGate.count === 0)}
               onClick={() => applyPopulationDelta(val)}
-              className={`py-2.5 rounded-xl border text-xs font-mono font-bold transition active:scale-95 disabled:opacity-40 ${
+              className={`min-h-[44px] py-2.5 rounded-xl border text-xs font-mono font-bold transition disabled:opacity-40 ${
                 val > 0
                   ? 'bg-emerald-950/60 border-emerald-700/70 text-emerald-300 hover:bg-emerald-900/60'
                   : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'

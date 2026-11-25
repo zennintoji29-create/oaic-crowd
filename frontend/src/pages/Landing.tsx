@@ -411,7 +411,7 @@ export const Landing: React.FC = () => {
                     type="button"
                     onClick={() => setPreviewPaused((p) => !p)}
                     aria-label={previewPaused ? 'Resume live preview' : 'Pause live preview'}
-                    className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 transition-colors"
+                    className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 transition-colors"
                   >
                     {previewPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                   </button>

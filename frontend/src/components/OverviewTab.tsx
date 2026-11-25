@@ -316,7 +316,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 12, right: 100, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 12, right: 68, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="overviewPressureFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#18e299" stopOpacity={0.28} />
