@@ -169,10 +169,10 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col items-center justify-center p-4 font-sans select-none">
+      <div className="min-h-dvh bg-neutral-950 text-neutral-100 flex flex-col items-center justify-center p-4 font-sans select-none safe-area-shell">
         <div className="w-full max-w-xs space-y-6">
           <div className="text-center space-y-1">
-            <div className="inline-flex p-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-emerald-400 mb-2">
+            <div className="inline-flex p-3 rounded-xl bg-neutral-900 border border-neutral-800 text-emerald-400 mb-2">
               <Lock className="w-6 h-6" />
             </div>
             <h1 className="text-base font-bold font-mono tracking-tight text-white uppercase">
@@ -190,7 +190,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
                 placeholder="Enter PIN or Passcode"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                className="w-full text-center tracking-widest text-lg font-mono py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-emerald-400 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition shadow-inner"
+                className="w-full min-h-[44px] text-center tracking-widest text-lg font-mono py-3 px-4 rounded-lg bg-neutral-900 border border-neutral-700 text-emerald-400 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 autoFocus
               />
               {authError && (

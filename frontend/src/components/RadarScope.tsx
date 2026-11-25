@@ -123,7 +123,7 @@ export const RadarScope: React.FC<RadarScopeProps> = ({
                   y={originY - r + 12}
                   fill="var(--text-muted)"
                   fontSize="10"
-                  fontFamily="Fira Code, monospace"
+                  fontFamily="var(--font-family-sans)"
                 >
                   {distMeters}m
                 </text>
@@ -140,7 +140,7 @@ export const RadarScope: React.FC<RadarScopeProps> = ({
             fill="var(--text-primary)"
             fontSize="10"
             fontWeight="bold"
-            fontFamily="Fira Sans, sans-serif"
+            fontFamily="var(--font-family-sans)"
           >
             Sensor
           </text>
@@ -172,7 +172,7 @@ export const RadarScope: React.FC<RadarScopeProps> = ({
                   y={target.y - 4}
                   fill="var(--text-primary)"
                   fontSize="10"
-                  fontFamily="Fira Code, monospace"
+                  fontFamily="var(--font-family-sans)"
                   fontWeight="bold"
                 >
                   {target.dist.toFixed(1)} m, {target.speed.toFixed(2)} m/s

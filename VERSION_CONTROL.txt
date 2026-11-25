@@ -1,0 +1,45 @@
+================================================================================
+CROWD PRESSURE RADAR (CPR) — VERSION CONTROL & AUDIT LOG
+================================================================================
+
+Version 1 (2026-11-25)
+- Decoupled Hardware Demo (DemoTab) from live telemetry so slider (0-25) and Clear button run purely on local sandbox state.
+- Added pagination (5/10/20 rows) and PDF safety summary export (jsPDF) to AlertsTab.
+- Added Reset button to OverviewTab to restore live data after manual overrides.
+- Updated MasterRemote with strict whole-number input, +Add / -Remove, quick increment buttons, and Reset All.
+- Moved Hardware Demo to last item in configuration navigation and added navigation bar show/hide toggle.
+- Removed ESP32 firmware configuration and central authentication key sections from SetupTab; moved About & Safety to bottom.
+- Removed 10-minute anti-sleep backend ping.
+- Backend: Added POST /api/gates/reset-all and RESET_ALL command in /api/master/command.
+- Added ML_MODEL_NOTE.md.
+
+Version 2 (2026-11-25)
+- Added RequireAuth route guard validating JWT structure and expiry.
+- Protected /dashboard, /setup, /sandbox, and /master with RequireAuth.
+- Added Logout controls in GlobalHeader and Navigation that clear session tokens and redirect to /login.
+- Removed exposed OTP/PIN wording on Login page (standardized to "Authorized Access" / "Access Credential").
+- Backend: Added helmet() security headers, 100kb JSON body limit, GET /api/master/verify, and requireMasterAuth on gate control endpoints.
+
+Version 3 (2026-11-25)
+- Created frontend/src/styles/tokens.css with neutral slate palette, single emerald accent, four status colors (Clear, Busy, Crowded, Danger), Inter font family, TV-scale 18px base (1920px+), and optional prefers-color-scheme light support.
+- Updated index.html, tailwind.config.js, and index.css for 100dvh, iPhone safe-area-inset-* padding, 44px minimum touch targets, visible focus rings, and prefers-reduced-motion compliance.
+- Redesigned Login, GlobalHeader, Navigation, GateCard, AlertsTab, DemoTab, and MasterRemote for phones (320px+), tablets (768px+), laptops/PCs (1280px+), and TVs (1920px+).
+- Replaced emoji component icons in DemoTab with text labels (CAM, LED, RADAR, TOF, SERVO, IR, MCU, NODE, RF) and lucide-react SVG icons.
+
+Version 4 (2026-11-25)
+- Built SaaS analytics landing page (Landing.tsx) with glassmorphism cards, live Recharts AreaChart preview (with pause/resume and prefers-reduced-motion support), trust badges strip, 6 feature cards, 4-step workflow, 3-tier pricing table, and validated pilot contact form.
+
+Version 5 (2026-11-26)
+- Made desktop Navigation sidebar sticky and non-scrollable with a transparent 3-dots toggle taking zero layout space when hidden.
+- Ordered navigation: Overview -> Zone Details -> Alerts & History -> Configuration & Demo (System Setup, Hardware Demo) -> About & Safety -> Landing Page / Logout.
+- Rendered System Setup (SetupTab) inline inside the dashboard when clicked from Navigation; kept /setup wizard for first-visit login flow and removed "Skip to Remote".
+- Turned top-left "Crowd Pressure Radar" header into a direct Link to /dashboard.
+- Removed /remote route entirely; isolated /master as a hidden endpoint with zero links or buttons pointing to it anywhere in the UI.
+
+Version 6 (2026-11-26)
+- Full codebase audit and AI-artifact cleanup:
+  * Removed all remaining decorative pulse/ping/bounce animations, custom glow shadows (shadow-[0_0_...], SVG gaugeGlow filter), gradient text/bars, and oversized shadow-xl/shadow-2xl classes across DemoTab, Gauge, OverviewTab, MasterRemote, Setup, and Landing.
+  * Standardized DemoTab breadboard 1/2 colors, removed fuchsia/purple corridor labels, and unified RadarScope SVG font family to var(--font-family-sans).
+  * Updated Setup.tsx to use min-h-dvh, safe-area-shell, and flat-panel styling.
+  * Removed 5 unused legacy component files (InitialSetup.tsx, LandingPage.tsx, ManualControlTab.tsx, Navbar.tsx, ZoneCard.tsx) and cleaned up unused imports in DemoTab.tsx, ZoneDetailTab.tsx, and Setup.tsx.
+  * Verified frontend unit tests (vitest), TypeScript compilation + Vite production build, and backend syntax check.

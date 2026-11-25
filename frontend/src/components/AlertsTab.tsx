@@ -145,7 +145,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
           <button
             type="button"
             onClick={downloadPdfSummary}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
           >
             <FileDown className="w-4 h-4" aria-hidden="true" />
             <span>Download PDF</span>

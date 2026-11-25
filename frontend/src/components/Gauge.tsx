@@ -9,15 +9,12 @@ interface GaugeProps {
 export const Gauge: React.FC<GaugeProps> = ({ score, size = 150, label = 'RISK SCORE' }) => {
   const clampedScore = Math.min(100, Math.max(0, score));
 
-  // Determine active accent color and gradient
+  // Determine active accent color
   let color = '#10B981'; // Green
-  let glowColor = 'rgba(16, 185, 129, 0.4)';
   if (clampedScore >= 75) {
     color = '#EF4444'; // Red
-    glowColor = 'rgba(239, 68, 68, 0.5)';
   } else if (clampedScore >= 50) {
     color = '#F59E0B'; // Amber
-    glowColor = 'rgba(245, 158, 11, 0.4)';
   }
 
   // Semi-circle SVG parameters
@@ -37,22 +34,6 @@ export const Gauge: React.FC<GaugeProps> = ({ score, size = 150, label = 'RISK S
       aria-label={label}
     >
       <svg width={size} height={size * 0.65} viewBox="0 0 150 95" className="overflow-visible">
-        <defs>
-          <linearGradient id={`gaugeGrad-${clampedScore}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10B981" />
-            <stop offset="50%" stopColor="#F59E0B" />
-            <stop offset="100%" stopColor="#EF4444" />
-          </linearGradient>
-
-          <filter id="gaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
         {/* Outer subtle ring track */}
         <path
           d="M 18 80 A 57 57 0 0 1 132 80"
@@ -77,7 +58,7 @@ export const Gauge: React.FC<GaugeProps> = ({ score, size = 150, label = 'RISK S
         {/* Red Tick at 75% */}
         <line x1="113" y1="36" x2="107" y2="42" stroke="#EF4444" strokeWidth="1.5" opacity="0.7" />
 
-        {/* Dynamic Glowing Value Arc */}
+        {/* Dynamic Value Arc */}
         <path
           d="M 21 80 A 54 54 0 0 1 129 80"
           fill="none"
@@ -87,7 +68,6 @@ export const Gauge: React.FC<GaugeProps> = ({ score, size = 150, label = 'RISK S
           strokeDashoffset={progressOffset}
           strokeLinecap="round"
           className="transition-all duration-500 ease-out"
-          style={{ filter: `drop-shadow(0 0 6px ${glowColor})` }}
         />
 
         {/* Center Readout */}

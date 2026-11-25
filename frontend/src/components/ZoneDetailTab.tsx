@@ -21,7 +21,7 @@ import { fetchZoneHistory, sendOperatorCommand } from '../lib/api';
 import { ConfirmModal } from './ConfirmModal';
 import { RadarScope } from './RadarScope';
 import { StateBadge } from './StateBadge';
-import { formatZoneStateSentence, METRIC_EXPLANATIONS } from '../lib/formatter';
+import { METRIC_EXPLANATIONS } from '../lib/formatter';
 
 interface ZoneDetailTabProps {
   zones: ZoneInfo[];

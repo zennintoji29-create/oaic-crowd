@@ -13,7 +13,7 @@ import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState 
 import { GateCard } from './GateCard';
 import { fetchZoneHistory, resetAllGates } from '../lib/api';
 import { formatSystemActions } from '../lib/formatter';
-import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock, RotateCcw } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock, RotateCcw, ChevronRight } from 'lucide-react';
 
 interface OverviewTabProps {
   zones: ZoneInfo[];
@@ -239,7 +239,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </section>
 
       {/* 3. Real-Time 10-Minute Risk Score Chart */}
-      <section className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 shadow-xl">
+      <section className="p-5 flat-panel">
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 mb-4">
           <div>
             <h3 className="text-base font-bold text-white tracking-tight font-mono">
@@ -312,21 +312,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </section>
 
       {/* 4. Automated Actuator Intervention Log */}
-      <section className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 text-xs font-mono">
+      <section className="p-5 flat-panel text-xs">
         <div className="flex items-center gap-2 mb-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
+          <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">
             Active System Actuator Interventions
           </h3>
         </div>
-        <p className="text-slate-400 text-[11px] mb-3">
+        <p className="text-text-secondary text-xs mb-3">
           Automated physical actuator operations executed by the central hardware state machine logic:
         </p>
 
         <ul className="space-y-2">
           {systemActions.map((action, idx) => (
-            <li key={idx} className="flex items-start gap-2.5 text-slate-200">
-              <span className="text-cyan-400 select-none">▶</span>
+            <li key={idx} className="flex items-start gap-2 text-text-primary">
+              <ChevronRight className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" aria-hidden="true" />
               <span>{action}</span>
             </li>
           ))}

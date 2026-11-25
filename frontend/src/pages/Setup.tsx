@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
   ChevronLeft,
@@ -298,7 +298,7 @@ export const Setup: React.FC = () => {
   const progressPct = Math.round((step / TOTAL_STEPS) * 100);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-dvh bg-surface-base text-text-primary py-8 px-4 sm:px-6 lg:px-8 safe-area-shell">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -333,7 +333,7 @@ export const Setup: React.FC = () => {
         </div>
 
         {/* Wizard Card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-5 shadow-xl">
+        <div className="flat-panel p-6 space-y-5">
           {/* STEP 1: Gate count & names */}
           {step === 1 && (
             <div className="space-y-4">

@@ -322,7 +322,7 @@ export const Landing: React.FC = () => {
 
             {/* Real-Time Data Visualization Glassmorphism Card */}
             <div className="lg:col-span-6">
-              <div className="rounded-xl bg-slate-900/65 backdrop-blur-md border border-white/15 p-5 sm:p-6 shadow-xl space-y-5">
+              <div className="rounded-xl bg-slate-900/65 backdrop-blur-md border border-white/15 p-5 sm:p-6 shadow-md space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
                   <div>
                     <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
@@ -518,7 +518,7 @@ export const Landing: React.FC = () => {
                   key={tier.name}
                   className={`rounded-xl backdrop-blur-md p-6 flex flex-col justify-between space-y-6 ${
                     tier.highlighted
-                      ? 'bg-slate-800/70 border-2 border-emerald-500/70 shadow-xl'
+                      ? 'bg-slate-800/70 border-2 border-emerald-500/70 shadow-md'
                       : 'bg-slate-900/60 border border-white/15'
                   }`}
                 >

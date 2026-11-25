@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Camera, Zap } from 'lucide-react';
 import { HardwareActuatorState } from '../types';
-import { simulateSandbox } from '../lib/api';
 
 interface DemoTabProps {
   hardware: HardwareActuatorState | null;
@@ -209,7 +208,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
     <div className="flex flex-col gap-4 p-3 md:p-5 max-w-7xl mx-auto w-full">
       
       {/* Top Interactive Sandbox Toolbar */}
-      <section className="bg-surface-raised border border-border-strong rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+      <section className="flat-panel p-4 flex flex-col gap-3">
         {/* Row 1: Gate Selection, Power Toggle, Sensitivity Modes & Threshold Fine-Tuning */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-subtle">
           <div className="flex flex-wrap items-center gap-3">
@@ -374,10 +373,11 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
               Surge Alert (15)
             </button>
             <button
+              type="button"
               onClick={handleToggleFailover}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition ${
+              className={`min-h-[44px] px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition ${
                 isFailover
-                  ? 'bg-amber-500 text-slate-950 border-amber-300 animate-pulse'
+                  ? 'bg-amber-500 text-slate-950 border-amber-300'
                   : 'bg-amber-950/80 hover:bg-amber-900 border-amber-600/70 text-amber-200'
               }`}
             >
@@ -398,14 +398,15 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         
         {/* Left 8 Cols: Schematic Board Matching Diagram */}
-        <div className="xl:col-span-8 bg-surface-base border-2 border-border-strong rounded-3xl p-4 md:p-6 relative flex flex-col justify-between overflow-hidden min-h-[580px] shadow-2xl">
+        <div className="xl:col-span-8 bg-surface-base border-2 border-border-strong rounded-xl p-4 md:p-6 relative flex flex-col justify-between overflow-hidden min-h-[580px] shadow-sm">
           
           {/* Top Sensor Cluster */}
           <div className="relative z-10 w-full flex items-center justify-center pt-1">
-            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-7 bg-surface-raised p-3 rounded-2xl border border-border-subtle shadow-xl">
+            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-7 bg-surface-raised p-3 rounded-xl border border-border-subtle shadow-sm">
               
               {/* Webcam */}
               <button
+                type="button"
                 onClick={() => setSelectedInspector('webcam')}
                 className="flex flex-col items-center gap-1 group focus:outline-none"
                 title="Click to inspect USB Webcam"
@@ -415,7 +416,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                 }`}>
                   <Camera className="w-5 h-5 text-slate-200" aria-hidden="true" />
                   <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-surface-base ${
-                    isFailover ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'
+                    isFailover ? 'bg-rose-500' : 'bg-emerald-400'
                   }`} />
                 </div>
                 <span className="text-[10px] font-mono font-bold text-text-secondary group-hover:text-cyan-400">
@@ -425,6 +426,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
 
               {/* Traffic Light */}
               <button
+                type="button"
                 onClick={() => setSelectedInspector('traffic_leds')}
                 className="flex flex-col items-center gap-1 group focus:outline-none"
                 title="Click to inspect 3-Light Traffic Signal"
@@ -433,13 +435,13 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                   selectedInspector === 'traffic_leds' ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-border-strong'
                 }`}>
                   <div className={`w-5 h-5 rounded-full transition-all duration-300 ${
-                    isRed ? 'bg-rose-500 shadow-[0_0_15px_#f43f5e] border border-rose-300' : 'bg-rose-950/70 border border-rose-900'
+                    isRed ? 'bg-rose-500 border border-rose-300' : 'bg-rose-950/70 border border-rose-900'
                   }`} />
                   <div className={`w-5 h-5 rounded-full transition-all duration-300 ${
-                    isAmber ? 'bg-amber-400 shadow-[0_0_15px_#facc15] border border-amber-200' : 'bg-amber-950/70 border border-amber-900'
+                    isAmber ? 'bg-amber-400 border border-amber-200' : 'bg-amber-950/70 border border-amber-900'
                   }`} />
                   <div className={`w-5 h-5 rounded-full transition-all duration-300 ${
-                    isGreen ? 'bg-emerald-500 shadow-[0_0_15px_#10b981] border border-emerald-300' : 'bg-emerald-950/70 border border-emerald-900'
+                    isGreen ? 'bg-emerald-500 border border-emerald-300' : 'bg-emerald-950/70 border border-emerald-900'
                   }`} />
                 </div>
                 <span className="text-[10px] font-mono font-bold text-text-secondary group-hover:text-cyan-400">
@@ -449,6 +451,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
 
               {/* ToF Sensor */}
               <button
+                type="button"
                 onClick={() => setSelectedInspector('tof_sensor')}
                 className="flex flex-col items-center gap-1 group focus:outline-none"
                 title="Click to inspect VL53L0X Time-of-Flight Sensor"
@@ -465,6 +468,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
 
               {/* 24GHz Radar */}
               <button
+                type="button"
                 onClick={() => setSelectedInspector('ld2410_radar')}
                 className="flex flex-col items-center gap-1 group focus:outline-none"
                 title="Click to inspect HLK-LD2410 24GHz Radar"
@@ -473,7 +477,6 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                   selectedInspector === 'ld2410_radar' ? 'border-blue-400 ring-2 ring-blue-400/40' : 'border-blue-700/60'
                 }`}>
                   <span className="text-xs font-black text-cyan-300 font-mono">24GHz</span>
-                  <span className="absolute w-2 h-2 rounded-full bg-blue-400 opacity-60 animate-ping" />
                 </div>
                 <span className="text-[10px] font-mono font-bold text-text-secondary group-hover:text-blue-400">
                   LD2410 RADAR
@@ -489,7 +492,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
             {/* Breadboard 2 (Left) */}
             <div
               onClick={() => setSelectedInspector('breadboard_2')}
-              className={`col-span-3 lg:col-span-2 rounded-2xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02] ${
+              className={`col-span-3 lg:col-span-2 rounded-xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-colors ${
                 selectedInspector === 'breadboard_2' ? 'ring-2 ring-rose-400' : ''
               }`}
             >
@@ -500,22 +503,22 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
 
               <div
                 onClick={(e) => { e.stopPropagation(); setSelectedInspector('lora_slave'); }}
-                className="bg-blue-950/80 border border-blue-500/70 rounded-xl p-2 text-center hover:border-cyan-400 shadow-md transition"
+                className="bg-blue-950/80 border border-blue-500/70 rounded-lg p-2 text-center hover:border-cyan-400 shadow-sm transition"
               >
                 <div className="flex items-center justify-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                   <span className="text-[11px] font-mono font-bold text-cyan-300">Ra-02 LoRa</span>
                 </div>
                 <span className="text-[9px] font-mono text-text-muted block mt-0.5">433MHz Slave</span>
               </div>
 
               <div className="py-1 text-center opacity-40 text-amber-500 text-xs font-bold font-mono">
-                ≀ ≀ ≀ SPI Link
+                SPI Link
               </div>
 
               <div
                 onClick={(e) => { e.stopPropagation(); setSelectedInspector('breadboard_2'); }}
-                className="bg-surface-sunken border border-border-strong rounded-xl p-2 text-center hover:border-emerald-400 shadow-md transition"
+                className="bg-surface-sunken border border-border-strong rounded-lg p-2 text-center hover:border-emerald-400 shadow-sm transition"
               >
                 <div className="flex items-center justify-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -528,16 +531,16 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
             </div>
 
             {/* Corridors: Left (OPEN) vs Right (CLOSE) */}
-            <div className="col-span-6 lg:col-span-8 rounded-2xl border border-border-strong bg-black/60 relative overflow-hidden flex flex-col justify-between p-3">
+            <div className="col-span-6 lg:col-span-8 rounded-xl border border-border-strong bg-black/60 relative overflow-hidden flex flex-col justify-between p-3">
               
               {/* Corridor Labels */}
               <div className="grid grid-cols-2 text-center border-b border-border-subtle pb-2">
                 <div>
-                  <span className="text-2xl md:text-3xl font-extrabold text-fuchsia-400 tracking-wider">OPEN</span>
+                  <span className="text-2xl md:text-3xl font-extrabold text-text-primary tracking-wider">OPEN</span>
                   <span className="block text-[10px] font-mono text-text-muted">Fluid Inflow Corridor</span>
                 </div>
                 <div className="border-l border-emerald-500/70">
-                  <span className="text-2xl md:text-3xl font-extrabold text-purple-400 tracking-wider">CLOSE</span>
+                  <span className="text-2xl md:text-3xl font-extrabold text-text-primary tracking-wider">CLOSE</span>
                   <span className="block text-[10px] font-mono text-text-muted">Safety Restricted Corridor</span>
                 </div>
               </div>
@@ -547,8 +550,8 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                 {/* Left Corridor Silhouettes */}
                 <div className="flex flex-wrap gap-2.5 items-center justify-center px-3">
                   {Array.from({ length: openCount }).map((_, i) => (
-                    <div key={i} className="flex flex-col items-center animate-bounce" style={{ animationDuration: `${1.4 + (i % 3) * 0.3}s` }}>
-                      <svg className="w-6 h-9 text-fuchsia-200 drop-shadow-[0_2px_8px_rgba(255,255,255,0.4)]" viewBox="0 0 24 24" fill="currentColor">
+                    <div key={i} className="flex flex-col items-center">
+                      <svg className="w-6 h-9 text-slate-200" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <circle cx="12" cy="4" r="3"/>
                         <path d="M12 8c-3.3 0-6 2.7-6 6v7h3v-7h1v7h4v-7h1v7h3v-7c0-3.3-2.7-6-6-6z"/>
                       </svg>
@@ -557,14 +560,14 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                 </div>
 
                 {/* Center Green Dividing Line */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-emerald-500 shadow-[0_0_12px_#10b981]" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-emerald-500" />
 
                 {/* Right Corridor Silhouettes */}
                 <div className="flex flex-wrap gap-1.5 items-center justify-center px-3">
                   {closeCount > 0 ? (
                     Array.from({ length: closeCount }).map((_, i) => (
-                      <div key={i} className="flex flex-col items-center animate-bounce" style={{ animationDuration: `${1.2 + (i % 4) * 0.2}s` }}>
-                        <svg className={`w-5 h-8 ${isRed ? 'text-rose-300' : (isAmber ? 'text-amber-200' : 'text-slate-100')} drop-shadow-[0_2px_6px_rgba(255,255,255,0.3)]`} viewBox="0 0 24 24" fill="currentColor">
+                      <div key={i} className="flex flex-col items-center">
+                        <svg className={`w-5 h-8 ${isRed ? 'text-rose-300' : (isAmber ? 'text-amber-200' : 'text-slate-100')}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                           <circle cx="12" cy="4" r="3"/>
                           <path d="M12 8c-3.3 0-6 2.7-6 6v7h3v-7h1v7h4v-7h1v7h3v-7c0-3.3-2.7-6-6-6z"/>
                         </svg>
@@ -581,11 +584,12 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                 
                 {/* IR Transmitter */}
                 <button
+                  type="button"
                   onClick={() => setSelectedInspector('ir_beam')}
                   className="flex items-center gap-1.5 focus:outline-none"
                   title="Click to inspect IR Beam Transmitter"
                 >
-                  <div className="w-6 h-8 rounded-full bg-surface-sunken border-2 border-amber-500/80 flex items-center justify-center shadow-lg">
+                  <div className="w-6 h-8 rounded-full bg-surface-sunken border-2 border-amber-500/80 flex items-center justify-center shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
                   </div>
                   <span className="text-[9px] font-mono text-amber-400 font-bold hidden sm:inline">IR TX</span>
@@ -593,11 +597,12 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
 
                 {/* Center Diamond Pivot & Physical Servo Gate Arm */}
                 <button
+                  type="button"
                   onClick={() => setSelectedInspector('servo_gate')}
                   className="flex flex-col items-center gap-1 group relative -top-3 focus:outline-none"
                   title="Click to inspect SG90 Servo Gate"
                 >
-                  <div className="relative w-10 h-10 bg-surface-sunken border-2 border-emerald-400 rotate-45 flex items-center justify-center shadow-xl group-hover:border-cyan-300 transition">
+                  <div className="relative w-10 h-10 bg-surface-sunken border-2 border-emerald-400 rotate-45 flex items-center justify-center shadow-sm group-hover:border-cyan-300 transition">
                     <div className="w-3 h-3 bg-emerald-400 rounded-full -rotate-45" />
                   </div>
                   
@@ -606,8 +611,8 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                     <div
                       className={`h-2 rounded-full origin-left transition-transform duration-500 ${
                         isRed
-                          ? 'bg-gradient-to-r from-rose-500 to-red-600 shadow-[0_0_15px_#f43f5e]'
-                          : (isAmber ? 'bg-gradient-to-r from-amber-400 to-yellow-500 shadow-[0_0_12px_#eab308]' : 'bg-gradient-to-r from-fuchsia-500 to-purple-600 shadow-[0_0_12px_#d946ef]')
+                          ? 'bg-rose-500'
+                          : (isAmber ? 'bg-amber-400' : 'bg-emerald-500')
                       }`}
                       style={{ width: '130px', transform: `rotate(${servoAngle === 0 ? 0 : (servoAngle === 45 ? 45 : 90)}deg)` }}
                     />
@@ -619,17 +624,18 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
                 </button>
 
                 {/* IR Beam Line */}
-                <div className="absolute left-8 right-8 bottom-5 h-0.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 pointer-events-none opacity-80" />
+                <div className="absolute left-8 right-8 bottom-5 h-0.5 bg-amber-500 pointer-events-none opacity-80" />
 
                 {/* IR Receiver */}
                 <button
+                  type="button"
                   onClick={() => setSelectedInspector('ir_beam')}
                   className="flex items-center gap-1.5 focus:outline-none"
                   title="Click to inspect IR Beam Receiver"
                 >
                   <span className="text-[9px] font-mono text-amber-400 font-bold hidden sm:inline">IR RX</span>
-                  <div className="w-6 h-8 rounded-full bg-surface-sunken border-2 border-amber-500/80 flex items-center justify-center shadow-lg">
-                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                  <div className="w-6 h-8 rounded-full bg-surface-sunken border-2 border-amber-500/80 flex items-center justify-center shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-orange-500" />
                   </div>
                 </button>
 
@@ -649,33 +655,33 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
             {/* Breadboard 1 (Right) */}
             <div
               onClick={() => setSelectedInspector('breadboard_1')}
-              className={`col-span-3 lg:col-span-2 rounded-2xl border-2 border-pink-500/60 bg-pink-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02] ${
-                selectedInspector === 'breadboard_1' ? 'ring-2 ring-pink-400' : ''
+              className={`col-span-3 lg:col-span-2 rounded-xl border-2 border-rose-500/60 bg-rose-950/20 p-2.5 flex flex-col justify-between cursor-pointer transition-colors ${
+                selectedInspector === 'breadboard_1' ? 'ring-2 ring-rose-400' : ''
               }`}
             >
-              <div className="flex items-center justify-between border-b border-pink-900/60 pb-1">
-                <span className="text-pink-300 text-xs md:text-sm font-bold tracking-wide">breadboard 1</span>
-                <span className="text-[9px] px-1 rounded bg-pink-950 text-pink-300 font-mono">MASTER</span>
+              <div className="flex items-center justify-between border-b border-rose-900/60 pb-1">
+                <span className="text-rose-300 text-xs md:text-sm font-bold tracking-wide">breadboard 1</span>
+                <span className="text-[9px] px-1 rounded bg-rose-950 text-rose-300 font-mono">MASTER</span>
               </div>
 
               <div
                 onClick={(e) => { e.stopPropagation(); setSelectedInspector('lora_master'); }}
-                className="bg-blue-950/80 border border-blue-500/70 rounded-xl p-2 text-center hover:border-cyan-400 shadow-md transition"
+                className="bg-blue-950/80 border border-blue-500/70 rounded-lg p-2 text-center hover:border-cyan-400 shadow-sm transition"
               >
                 <div className="flex items-center justify-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                   <span className="text-[11px] font-mono font-bold text-cyan-300">Ra-02 LoRa</span>
                 </div>
                 <span className="text-[9px] font-mono text-text-muted block mt-0.5">433MHz Master</span>
               </div>
 
               <div className="py-1 text-center opacity-40 text-amber-500 text-xs font-bold font-mono">
-                ≀ ≀ ≀ I2C / PWM
+                I2C / PWM
               </div>
 
               <div
                 onClick={(e) => { e.stopPropagation(); setSelectedInspector('breadboard_1'); }}
-                className="bg-surface-sunken border border-border-strong rounded-xl p-2 text-center hover:border-emerald-400 shadow-md transition"
+                className="bg-surface-sunken border border-border-strong rounded-lg p-2 text-center hover:border-emerald-400 shadow-sm transition"
               >
                 <div className="flex items-center justify-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -691,8 +697,8 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
 
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-text-muted bg-surface-raised px-4 py-2 rounded-xl border border-border-subtle gap-2">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span>Click on any component on the board to view specifications, pinouts & failover logic!</span>
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span>Click on any component on the board to view specifications, pinouts & failover logic.</span>
             </span>
             <span className="text-[11px] text-cyan-400 font-bold">DIGITAL TWIN ARCHITECTURE</span>
           </div>
@@ -703,7 +709,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
         <div className="xl:col-span-4 flex flex-col gap-4">
           
           {/* OLED Screen Twin */}
-          <div className="bg-surface-raised border border-border-strong rounded-2xl p-4 shadow-xl">
+          <div className="flat-panel p-4">
             <div className="flex items-center justify-between text-xs font-mono font-bold text-text-secondary mb-2">
               <span>PHYSICAL ESP32 OLED TWIN</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">
@@ -727,7 +733,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
           </div>
 
           {/* Component Inspector Card */}
-          <div className="bg-surface-raised border border-cyan-800/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+          <div className="flat-panel p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
                 <div className="flex items-center gap-2">
@@ -773,7 +779,7 @@ export const DemoTab: React.FC<DemoTabProps> = () => {
           </div>
 
           {/* Quick Actuator Status Pill Box */}
-          <div className="bg-surface-raised border border-border-strong rounded-2xl p-3.5 grid grid-cols-2 gap-2 text-xs font-mono shadow-xl">
+          <div className="flat-panel p-3.5 grid grid-cols-2 gap-2 text-xs font-mono">
             <div className="p-2 rounded-xl bg-surface-sunken border border-border-subtle">
               <span className="text-text-muted text-[10px] block">RADAR ENERGY</span>
               <span className="font-bold text-cyan-400 text-sm">{Math.min(100, count * 7 + 12)}% (Active)</span>
