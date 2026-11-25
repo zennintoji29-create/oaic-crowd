@@ -1,6 +1,9 @@
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
 import { config } from './config.js';
 import { TelemetrySchema, CommandSchema, ZoneConfigSchema } from './schema.js';
@@ -12,8 +15,25 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// CORS Configuration - Permissive for Vercel & Multi-origin Cloud Access
-app.use(cors({ origin: '*' }));
+// CORS Configuration - Restricted to Vercel deployment (and localhost in non-production)
+const allowedOrigins = new Set([
+  'https://oaic-crowd.vercel.app',
+  ...(config.corsOrigin && config.corsOrigin !== '*' ? config.corsOrigin.split(',').map(o => o.trim()) : [])
+]);
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.add('http://localhost:5173');
+  allowedOrigins.add('http://127.0.0.1:5173');
+}
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // ----------------------------------------------------------------------------
@@ -368,34 +388,71 @@ app.post('/api/gates/:id/density', (req, res) => {
 });
 
 // ============================================================================
-// PRIVATE MASTER REMOTE ENDPOINTS (Stealth Mobile Remote - Hackathon Presentations)
-// Protected with Master Key / PIN; completely silent background operation
+// PRIVATE MASTER REMOTE ENDPOINTS (Protected with bcrypt + JWT + Rate Limit)
+// Completely silent background operation for authorized operators
 // ============================================================================
-const VALID_MASTER_KEYS = new Set(['cpr-master-2026', '2908', config.deviceKey]);
-
-function verifyMasterAuth(req, res, next) {
-  const token = req.headers['x-master-token'] || req.headers['authorization']?.replace('Bearer ', '') || req.query.auth;
-  if (token && VALID_MASTER_KEYS.has(token)) {
-    return next();
-  }
-  return res.status(401).json({ error: 'Unauthorized: Invalid Master Remote Token' });
-}
-
-// POST /api/master/auth - Authenticate master remote
-app.post('/api/master/auth', (req, res) => {
-  const { key } = req.body || {};
-  if (key && VALID_MASTER_KEYS.has(key.toString().trim())) {
-    return res.json({
-      success: true,
-      token: key.toString().trim(),
-      message: 'Master Remote authenticated. Silent background link active.'
-    });
-  }
-  return res.status(401).json({ success: false, error: 'Invalid security passcode' });
+const masterAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per 15 minutes per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again later.' }
 });
 
-// POST /api/master/command - Silent remote command execution
-app.post('/api/master/command', verifyMasterAuth, (req, res) => {
+function requireMasterAuth(req, res, next) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token || !config.jwtSecret) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret);
+    if (!decoded || decoded.role !== 'master') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    req.masterUser = decoded;
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+}
+
+// POST /api/master/auth - Authenticate operator PIN or access key via bcrypt + JWT
+app.post('/api/master/auth', masterAuthLimiter, async (req, res) => {
+  const rawCredential = req.body?.credential ?? req.body?.key ?? '';
+  const credential = typeof rawCredential === 'string' ? rawCredential.trim() : '';
+
+  if (!credential || !config.jwtSecret || (!config.masterPinHash && !config.masterKeyHash)) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  try {
+    let valid = false;
+    if (config.masterPinHash) {
+      valid = await bcrypt.compare(credential, config.masterPinHash);
+    }
+    if (!valid && config.masterKeyHash) {
+      valid = await bcrypt.compare(credential, config.masterKeyHash);
+    }
+
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ role: 'master' }, config.jwtSecret, { expiresIn: '2h' });
+    const cfg = storage.getConfig();
+    return res.json({
+      success: true,
+      token,
+      setupComplete: Boolean(cfg?.isConfigured)
+    });
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+// POST /api/master/command - Silent remote command execution (JWT protected)
+app.post('/api/master/command', requireMasterAuth, (req, res) => {
   const { action, gateId = 'gate-a', manualState, delta, count, state, cameraOnline, power } = req.body || {};
 
   let targetGate = storage.getGate(gateId) || storage.getGate('gate-a');
@@ -508,12 +565,15 @@ app.post('/api/master/command', verifyMasterAuth, (req, res) => {
   });
 });
 
+// Protect any additional /api/master/* routes
+app.use('/api/master', requireMasterAuth);
+
 // GET /api/config & POST /api/config - System configuration persistence
 app.get('/api/config', (req, res) => {
   res.json({ config: storage.getConfig() });
 });
 
-app.post('/api/config', (req, res) => {
+app.post('/api/config', requireMasterAuth, (req, res) => {
   const updated = storage.updateConfig(req.body || {});
   broadcast('CONFIG_UPDATED', updated);
   res.json({ status: 'ok', config: updated });

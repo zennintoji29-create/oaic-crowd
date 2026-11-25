@@ -55,7 +55,7 @@ export const RadarScope: React.FC<RadarScopeProps> = ({
             Radar View: {zoneName}
           </h3>
           <p className="text-text-secondary text-[11px]">
-            Anonymous micro-Doppler radar (HLK-LD2450) • 120° field of view
+            Anonymous micro-Doppler radar (HLK-LD2410) • 120° field of view
           </p>
         </div>
         <div className="text-right font-mono text-[11px] text-text-secondary">

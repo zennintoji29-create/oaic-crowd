@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Radar,
@@ -7,16 +8,17 @@ import {
   Sliders,
   ShieldCheck,
   SlidersHorizontal,
-  Smartphone,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from 'lucide-react';
+import { getSessionToken } from '../lib/api';
 
 export interface NavTabItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
-  badge?: string;
+  to?: string;
 }
 
 interface NavigationProps {
@@ -30,15 +32,19 @@ export const Navigation: React.FC<NavigationProps> = ({
   setActiveTab,
   alertCount
 }) => {
-  // Main 7 tabs strictly following wireframe
-  const navItems: NavTabItem[] = [
+  const isAuthenticated = Boolean(getSessionToken());
+
+  const publicNavItems: NavTabItem[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'detail', label: 'Zone Details', icon: Radar },
-    { id: 'demo', label: 'Hardware Demo', icon: Cpu },
     { id: 'alerts', label: 'Alerts & History', icon: Bell, count: alertCount },
-    { id: 'setup', label: 'System Setup', icon: Sliders },
-    { id: 'about', label: 'About & Safety', icon: ShieldCheck },
-    { id: 'manual', label: 'Manual Controls', icon: SlidersHorizontal, badge: 'OVERRIDE' }
+    { id: 'about', label: 'About & Safety', icon: ShieldCheck }
+  ];
+
+  const operatorNavItems: NavTabItem[] = [
+    { id: 'sandbox', label: 'Hardware Sandbox', icon: Cpu, to: '/sandbox' },
+    { id: 'setup', label: 'System Setup', icon: Sliders, to: '/setup' },
+    { id: 'remote', label: 'Manual Controls', icon: SlidersHorizontal, to: '/remote' }
   ];
 
   return (
@@ -51,14 +57,14 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between px-2 py-1.5 mb-1">
             <span className="text-[11px] font-mono uppercase tracking-wider text-text-muted">
-              System Modules
+              Operations View
             </span>
-            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">
-              v2.4
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800">
+              LIVE
             </span>
           </div>
 
-          {navItems.map(item => {
+          {publicNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -67,7 +73,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded transition-all text-left focus-visible:outline ${
                   isActive
-                    ? 'bg-surface-sunken text-text-primary border border-cyan-500/50 shadow-sm font-semibold'
+                    ? 'bg-surface-sunken text-text-primary border border-emerald-500/50 shadow-sm font-semibold'
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken/60'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
@@ -75,54 +81,76 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <div className="flex items-center gap-2.5 truncate">
                   <Icon
                     className={`w-4 h-4 shrink-0 ${
-                      isActive ? 'text-cyan-400' : 'text-text-muted'
+                      isActive ? 'text-emerald-400' : 'text-text-muted'
                     }`}
                   />
                   <span className="truncate">{item.label}</span>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {item.badge && (
-                    <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">
-                      {item.badge}
-                    </span>
-                  )}
-                  {typeof item.count === 'number' && item.count > 0 && (
-                    <span className="font-mono text-[10px] px-1.5 py-0.2 border border-border-subtle rounded bg-surface-base text-status-danger-text">
-                      {item.count}
-                    </span>
-                  )}
-                </div>
+                {typeof item.count === 'number' && item.count > 0 && (
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 border border-border-subtle rounded bg-surface-base text-status-danger-text">
+                    {item.count}
+                  </span>
+                )}
               </button>
             );
           })}
+
+          {isAuthenticated && (
+            <div className="pt-3 mt-2 border-t border-border-subtle flex flex-col gap-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2 py-1">
+                Operator Tools
+              </span>
+              {operatorNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.to || '/dashboard'}
+                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded transition-all focus-visible:outline ${
+                      isActive
+                        ? 'bg-surface-sunken text-text-primary border border-emerald-500/50 font-semibold'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-sunken/60'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-text-muted'}`} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Special Utility Links: Landing Page */}
+        {/* Utility Links: Landing Page & Operator Login */}
         <div className="pt-3 mt-3 border-t border-border-subtle flex flex-col gap-1.5">
-          {/* Landing Page Shortcut */}
-          <button
-            onClick={() => setActiveTab('landing')}
-            className={`flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded transition-all text-left border ${
-              activeTab === 'landing'
-                ? 'bg-surface-sunken text-text-primary border-border-strong font-semibold'
-                : 'text-text-muted hover:text-text-primary border-transparent hover:bg-surface-sunken'
-            }`}
+          {!isAuthenticated && (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+            >
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Operator Login</span>
+            </Link>
+          )}
+
+          <Link
+            to="/"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded text-text-muted hover:text-text-primary hover:bg-surface-sunken transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <ExternalLink className="w-3.5 h-3.5 text-text-muted shrink-0" />
-              <span>Public Landing Page</span>
-            </div>
-          </button>
+            <ExternalLink className="w-3.5 h-3.5 text-text-muted shrink-0" />
+            <span>Landing Page</span>
+          </Link>
         </div>
       </nav>
 
-      {/* Mobile Top Navigation Bar (Horizontal Scrollable) */}
+      {/* Mobile Top Navigation Bar */}
       <nav
         aria-label="Mobile navigation"
         className="md:hidden border-b border-border-subtle bg-surface-raised flex items-center overflow-x-auto p-1.5 gap-1 shrink-0 scrollbar-none"
       >
-        {navItems.map(item => {
+        {publicNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (
@@ -131,12 +159,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               onClick={() => setActiveTab(item.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs whitespace-nowrap transition-colors focus-visible:outline ${
                 isActive
-                  ? 'bg-surface-sunken text-text-primary border border-cyan-500 font-semibold'
+                  ? 'bg-surface-sunken text-text-primary border border-emerald-500 font-semibold'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <Icon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>{item.label}</span>
               {typeof item.count === 'number' && item.count > 0 && (
                 <span className="font-mono text-[10px] px-1 py-0.2 border border-border-subtle rounded bg-surface-base text-status-danger-text">
@@ -147,17 +175,29 @@ export const Navigation: React.FC<NavigationProps> = ({
           );
         })}
 
-        {/* Landing Page Mobile Button */}
-        <button
-          onClick={() => setActiveTab('landing')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs whitespace-nowrap transition-colors ${
-            activeTab === 'landing'
-              ? 'bg-surface-sunken text-text-primary border border-border-strong font-semibold'
-              : 'text-text-muted hover:text-text-primary'
-          }`}
+        {!isAuthenticated ? (
+          <Link
+            to="/login"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 font-semibold"
+          >
+            <Lock className="w-3 h-3" />
+            <span>Login</span>
+          </Link>
+        ) : (
+          <Link
+            to="/remote"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs whitespace-nowrap text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 font-semibold"
+          >
+            <span>Remote</span>
+          </Link>
+        )}
+
+        <Link
+          to="/"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs whitespace-nowrap text-text-muted hover:text-text-primary"
         >
-          <span>Landing</span>
-        </button>
+          <span>Home</span>
+        </Link>
       </nav>
     </>
   );

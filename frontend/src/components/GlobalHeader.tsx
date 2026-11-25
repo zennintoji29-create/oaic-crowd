@@ -32,7 +32,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           <strong>Notice:</strong> Prototype for demonstration and learning. Not certified for crowd-safety decisions.
         </span>
         <span className="font-mono text-[11px] hidden sm:inline text-text-secondary">
-          HLK-LD2450 mmWave • No cameras
+          HLK-LD2410 mmWave • No cameras
         </span>
       </div>
 

@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate
+} from 'react-router-dom';
+import {
   ZoneInfo,
   AlertRecord,
   CrowdState,
   TelemetryPoint,
   HardwareActuatorState,
   KeepAliveStats,
-  GateState,
-  SystemConfig
+  GateState
 } from './types';
 import {
   fetchZones,
@@ -16,37 +23,27 @@ import {
   fetchHardwareStatus,
   fetchKeepAliveStats,
   triggerKeepAlivePing,
-  fetchGates,
-  fetchSystemConfig
+  fetchGates
 } from './lib/api';
 import { GlobalHeader } from './components/GlobalHeader';
 import { Navigation } from './components/Navigation';
 import { OverviewTab } from './components/OverviewTab';
 import { ZoneDetailTab } from './components/ZoneDetailTab';
 import { AlertsTab } from './components/AlertsTab';
-import { SetupTab } from './components/SetupTab';
 import { AboutTab } from './components/AboutTab';
 import { DemoTab } from './components/DemoTab';
 import { ManualControlTab } from './components/ManualControlTab';
 import { MasterRemote } from './components/MasterRemote';
-import { LandingPage } from './components/LandingPage';
-import { InitialSetup } from './components/InitialSetup';
+import { RequireAuth } from './components/RequireAuth';
+import { Landing } from './pages/Landing';
+import { Login } from './pages/Login';
+import { Setup } from './pages/Setup';
 
-export const App: React.FC = () => {
-  // Check if accessing the private stealth remote endpoint via URL path or query
-  const isPrivateRemote =
-    typeof window !== 'undefined' &&
-    (window.location.pathname.startsWith('/remote') ||
-      window.location.pathname.startsWith('/master') ||
-      new URLSearchParams(window.location.search).get('tab') === 'remote' ||
-      new URLSearchParams(window.location.search).get('tab') === 'master');
+const AppRoutes: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const initialTab =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('tab') || 'overview'
-      : 'overview';
-
-  const [activeTab, setActiveTab] = useState<string>(initialTab);
+  const [dashboardTab, setDashboardTab] = useState<string>('overview');
   const [selectedZoneId, setSelectedZoneId] = useState<string>('zone-entry-a');
   const [zones, setZones] = useState<ZoneInfo[]>([]);
   const [gates, setGates] = useState<GateState[]>([
@@ -87,91 +84,77 @@ export const App: React.FC = () => {
   ]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [hardware, setHardware] = useState<HardwareActuatorState | null>(null);
-  const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [lastTelemetryTimestamp, setLastTelemetryTimestamp] = useState<number>(Date.now());
   const [simulatorRunning, setSimulatorRunning] = useState<boolean>(false);
   const [isStale, setIsStale] = useState<boolean>(false);
   const [keepAliveStats, setKeepAliveStats] = useState<KeepAliveStats | null>(null);
 
+  // Redirect ?tab=landing -> /
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'landing') {
+      navigate('/', { replace: true });
+    }
+  }, [location.search, navigate]);
+
   // Manual keep-alive ping trigger
   const handleTriggerPing = useCallback(async () => {
     try {
       const stats = await triggerKeepAlivePing();
       setKeepAliveStats(stats);
-      console.log('[Render-AntiSleep] Manual keep-alive ping triggered:', stats.lastPingStatus);
     } catch (err) {
       console.warn('[Render-AntiSleep] Manual ping failed:', err);
     }
   }, []);
 
   // Automated 10-minute Render Anti-Sleep Keep-Alive loop
-  // Pings backend on startup (waking it up if cold) and every 9.5 minutes
   useEffect(() => {
-    let timer: any = null;
-
     const runPing = async () => {
       try {
         const stats = await triggerKeepAlivePing();
         setKeepAliveStats(stats);
-      } catch (err) {
+      } catch {
         fetchKeepAliveStats().then(setKeepAliveStats).catch(() => null);
       }
     };
 
-    // Immediate initial ping on mount
     runPing();
-
-    // 9.5 minutes (570,000 ms) interval to comfortably beat Render's 15-minute inactivity spin-down
-    timer = setInterval(runPing, 570000);
-
-    return () => {
-      if (timer) clearInterval(timer);
-    };
+    const timer = setInterval(runPing, 570000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Compute worst state across zones and gates
+  // Compute worst state across gates and zones
   const computeWorstState = (): { state: CrowdState; zoneName: string } => {
-    // Check gates first
-    const redGate = gates.find(g => g.status === 'RED');
+    const redGate = gates.find((g) => g.status === 'RED');
     if (redGate) return { state: 'RED', zoneName: redGate.name };
-
-    const redZone = zones.find(z => z.currentStatus === 'RED');
+    const redZone = zones.find((z) => z.currentStatus === 'RED');
     if (redZone) return { state: 'RED', zoneName: redZone.name };
-
-    const amberGate = gates.find(g => g.status === 'AMBER');
+    const amberGate = gates.find((g) => g.status === 'AMBER');
     if (amberGate) return { state: 'AMBER', zoneName: amberGate.name };
-
-    const amberZone = zones.find(z => z.currentStatus === 'AMBER');
+    const amberZone = zones.find((z) => z.currentStatus === 'AMBER');
     if (amberZone) return { state: 'AMBER', zoneName: amberZone.name };
-
-    const greenGate = gates.find(g => g.status === 'GREEN');
+    const greenGate = gates.find((g) => g.status === 'GREEN');
     if (greenGate) return { state: 'GREEN', zoneName: greenGate.name };
-
-    const greenZone = zones.find(z => z.currentStatus === 'GREEN');
+    const greenZone = zones.find((z) => z.currentStatus === 'GREEN');
     if (greenZone) return { state: 'GREEN', zoneName: greenZone.name };
-
     return { state: 'OFFLINE', zoneName: 'Offline' };
   };
 
   const worst = computeWorstState();
 
-  // Load initial data via REST API
   const refreshData = useCallback(async () => {
     try {
-      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw, fetchedCfg] = await Promise.all([
+      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw] = await Promise.all([
         fetchZones().catch(() => []),
         fetchGates().catch(() => []),
         fetchAlerts(50).catch(() => []),
-        fetchHardwareStatus().catch(() => null),
-        fetchSystemConfig().catch(() => null)
+        fetchHardwareStatus().catch(() => null)
       ]);
-
       if (fetchedZones && fetchedZones.length > 0) setZones(fetchedZones);
       if (fetchedGates && fetchedGates.length > 0) setGates(fetchedGates);
       if (fetchedAlerts) setAlerts(fetchedAlerts);
       if (fetchedHw) setHardware(fetchedHw);
-      if (fetchedCfg) setSystemConfig(fetchedCfg);
     } catch (err) {
       console.warn('[APP] Could not fetch initial REST data:', err);
     }
@@ -181,30 +164,30 @@ export const App: React.FC = () => {
     refreshData();
   }, [refreshData]);
 
-  // Handle incoming live telemetry record
   const handleIncomingTelemetry = useCallback((point: TelemetryPoint) => {
     setLastTelemetryTimestamp(Date.now());
     setIsStale(false);
 
-    setZones(prevZones => {
-      const existing = prevZones.find(z => z.zoneId === point.zoneId);
+    setZones((prevZones) => {
+      const existing = prevZones.find((z) => z.zoneId === point.zoneId);
       if (existing) {
-        return prevZones.map(z => {
-          if (z.zoneId === point.zoneId) {
-            return {
-              ...z,
-              currentStatus: point.state,
-              score: point.score,
-              density: point.density,
-              avgSpeed: point.avgSpeed,
-              lastSeenMsAgo: 0,
-              lastTelemetry: point
-            };
-          }
-          return z;
-        });
-      } else {
-        const newZone: ZoneInfo = {
+        return prevZones.map((z) =>
+          z.zoneId === point.zoneId
+            ? {
+                ...z,
+                currentStatus: point.state,
+                score: point.score,
+                density: point.density,
+                avgSpeed: point.avgSpeed,
+                lastSeenMsAgo: 0,
+                lastTelemetry: point
+              }
+            : z
+        );
+      }
+      return [
+        ...prevZones,
+        {
           zoneId: point.zoneId,
           name: `Zone ${point.zoneId}`,
           areaSqM: 24.0,
@@ -216,9 +199,8 @@ export const App: React.FC = () => {
           avgSpeed: point.avgSpeed,
           lastSeenMsAgo: 0,
           lastTelemetry: point
-        };
-        return [...prevZones, newZone];
-      }
+        }
+      ];
     });
   }, []);
 
@@ -236,12 +218,7 @@ export const App: React.FC = () => {
 
       try {
         ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-          setIsWsConnected(true);
-          console.log('[WS] Connected to Crowd Pressure Radar backend at', wsUrl);
-        };
-
+        ws.onopen = () => setIsWsConnected(true);
         ws.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
@@ -250,7 +227,6 @@ export const App: React.FC = () => {
               if (msg.data.gates) setGates(msg.data.gates);
               if (msg.data.alerts) setAlerts(msg.data.alerts);
               if (msg.data.hardware) setHardware(msg.data.hardware);
-              if (msg.data.config) setSystemConfig(msg.data.config);
               if (typeof msg.data.simulatorRunning === 'boolean') {
                 setSimulatorRunning(msg.data.simulatorRunning);
               }
@@ -258,56 +234,49 @@ export const App: React.FC = () => {
             } else if (msg.type === 'TELEMETRY_UPDATE') {
               handleIncomingTelemetry(msg.data);
             } else if (msg.type === 'GATE_UPDATED') {
-              setGates(prev =>
-                prev.map(g => (g.id === msg.data.id ? { ...g, ...msg.data } : g))
+              setGates((prev) =>
+                prev.map((g) => (g.id === msg.data.id ? { ...g, ...msg.data } : g))
               );
             } else if (msg.type === 'HARDWARE_UPDATE' || msg.type === 'FAILOVER_ALERT') {
               setHardware(msg.data);
             } else if (msg.type === 'SIMULATOR_STATE') {
               setSimulatorRunning(msg.data.isRunning);
             } else if (msg.type === 'ZONE_CONFIG_UPDATED') {
-              setZones(prev =>
-                prev.map(z => (z.zoneId === msg.data.zoneId ? { ...z, ...msg.data } : z))
+              setZones((prev) =>
+                prev.map((z) => (z.zoneId === msg.data.zoneId ? { ...z, ...msg.data } : z))
               );
             }
           } catch (e) {
             console.error('[WS] Error parsing message:', e);
           }
         };
-
-        ws.onerror = () => {
-          setIsWsConnected(false);
-        };
-
+        ws.onerror = () => setIsWsConnected(false);
         ws.onclose = () => {
           setIsWsConnected(false);
           reconnectTimer = setTimeout(connect, 2000);
         };
-      } catch (err) {
+      } catch {
         setIsWsConnected(false);
         reconnectTimer = setTimeout(connect, 2000);
       }
     }
 
     connect();
-
     return () => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) ws.close();
     };
   }, [handleIncomingTelemetry]);
 
-  // Stale Telemetry Timer (> 5s threshold requirement)
+  // Stale Telemetry Timer (>5s)
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
-      const age = now - lastTelemetryTimestamp;
-      if (age > 5000) {
+      if (now - lastTelemetryTimestamp > 5000) {
         setIsStale(true);
       }
-
-      setZones(prev =>
-        prev.map(z => ({
+      setZones((prev) =>
+        prev.map((z) => ({
           ...z,
           lastSeenMsAgo: z.lastTelemetry
             ? now - (z.lastTelemetry.serverTimestamp || z.lastTelemetry.timestamp)
@@ -315,7 +284,6 @@ export const App: React.FC = () => {
         }))
       );
     }, 1000);
-
     return () => clearInterval(timer);
   }, [lastTelemetryTimestamp]);
 
@@ -330,47 +298,16 @@ export const App: React.FC = () => {
 
   const handleSelectZone = (zoneId: string) => {
     setSelectedZoneId(zoneId);
-    setActiveTab('detail');
-  };
-
-  const handleZoneUpdated = (updated: ZoneInfo) => {
-    setZones(prev => prev.map(z => (z.zoneId === updated.zoneId ? { ...z, ...updated } : z)));
+    setDashboardTab('detail');
   };
 
   const handleGateUpdated = (updatedGate: GateState) => {
-    setGates(prev => prev.map(g => (g.id === updatedGate.id ? updatedGate : g)));
+    setGates((prev) => prev.map((g) => (g.id === updatedGate.id ? updatedGate : g)));
   };
 
-  // Isolated Private Master Remote View (Never rendered inside dashboard shell)
-  if (isPrivateRemote) {
-    return <MasterRemote initialGates={gates} />;
-  }
-
-  // Full-page views: Landing Page & Initial Setup
-  if (activeTab === 'landing') {
-    return (
-      <LandingPage
-        onEnterDashboard={() => setActiveTab('overview')}
-        onOpenSetup={() => setActiveTab('initial_setup')}
-        gates={gates}
-        hardware={hardware}
-        worstState={worst.state}
-      />
-    );
-  }
-
-  if (activeTab === 'initial_setup') {
-    return (
-      <InitialSetup
-        onSetupComplete={() => setActiveTab('overview')}
-        onBackToLanding={() => setActiveTab('landing')}
-      />
-    );
-  }
-
-  return (
+  // Shared Dashboard Shell for /dashboard and /sandbox
+  const renderShell = (activeKey: string, content: React.ReactNode) => (
     <div className="min-h-screen flex flex-col bg-surface-base text-text-primary antialiased">
-      {/* 1. Global Header: Product name, purpose, connection status, worst state pill */}
       <GlobalHeader
         worstState={worst.state}
         worstZoneName={worst.zoneName}
@@ -381,56 +318,111 @@ export const App: React.FC = () => {
         keepAliveStats={keepAliveStats}
         onTriggerPing={handleTriggerPing}
       />
-
-      {/* 2. Main Content Body with Desktop Left Navigation and Mobile Top Flow */}
       <div className="flex-1 flex flex-col md:flex-row">
         <Navigation
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          activeTab={activeKey}
+          setActiveTab={(tab) => {
+            setDashboardTab(tab);
+            if (location.pathname !== '/dashboard') {
+              navigate('/dashboard');
+            }
+          }}
           alertCount={alerts.length}
         />
-
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          {activeTab === 'overview' && (
-            <OverviewTab
-              zones={zones}
-              gates={gates}
-              worstState={worst.state}
-              hardware={hardware}
-              onSelectZone={handleSelectZone}
-              onGateUpdated={handleGateUpdated}
-            />
-          )}
-
-          {activeTab === 'detail' && (
-            <ZoneDetailTab
-              zones={zones}
-              selectedZoneId={selectedZoneId}
-              onSelectZoneId={setSelectedZoneId}
-            />
-          )}
-
-          {activeTab === 'demo' && (
-            <DemoTab hardware={hardware} />
-          )}
-
-          {activeTab === 'alerts' && <AlertsTab alerts={alerts} />}
-
-          {activeTab === 'setup' && (
-            <SetupTab zones={zones} onZoneUpdated={handleZoneUpdated} />
-          )}
-
-          {activeTab === 'about' && <AboutTab />}
-
-          {activeTab === 'manual' && (
-            <ManualControlTab
-              gates={gates}
-              hardware={hardware}
-              onRefreshGates={refreshData}
-            />
-          )}
-        </main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{content}</main>
       </div>
     </div>
+  );
+
+  return (
+    <Routes>
+      {/* Public Landing Page */}
+      <Route path="/" element={<Landing />} />
+
+      {/* Public Read-Only Dashboard */}
+      <Route
+        path="/dashboard"
+        element={renderShell(
+          dashboardTab,
+          <>
+            {dashboardTab === 'overview' && (
+              <OverviewTab
+                zones={zones}
+                gates={gates}
+                worstState={worst.state}
+                hardware={hardware}
+                onSelectZone={handleSelectZone}
+                onGateUpdated={handleGateUpdated}
+              />
+            )}
+            {dashboardTab === 'detail' && (
+              <ZoneDetailTab
+                zones={zones}
+                selectedZoneId={selectedZoneId}
+                onSelectZoneId={setSelectedZoneId}
+              />
+            )}
+            {dashboardTab === 'alerts' && <AlertsTab alerts={alerts} />}
+            {dashboardTab === 'about' && <AboutTab />}
+          </>
+        )}
+      />
+
+      {/* Public Operator Login */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Protected Initial Setup Wizard */}
+      <Route
+        path="/setup"
+        element={
+          <RequireAuth>
+            <Setup />
+          </RequireAuth>
+        }
+      />
+
+      {/* Protected Hardware Sandbox */}
+      <Route
+        path="/sandbox"
+        element={
+          <RequireAuth>
+            {renderShell('sandbox', <DemoTab hardware={hardware} />)}
+          </RequireAuth>
+        }
+      />
+
+      {/* Protected Manual Controls / Master Remote */}
+      <Route
+        path="/remote"
+        element={
+          <RequireAuth>
+            <div className="min-h-screen bg-slate-950">
+              <MasterRemote initialGates={gates} />
+              <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-12">
+                <ManualControlTab
+                  gates={gates}
+                  hardware={hardware}
+                  onRefreshGates={refreshData}
+                />
+              </div>
+            </div>
+          </RequireAuth>
+        }
+      />
+
+      {/* Redirect /master -> /remote */}
+      <Route path="/master" element={<Navigate to="/remote" replace />} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 };

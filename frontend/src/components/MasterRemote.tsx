@@ -18,25 +18,22 @@ import {
   LogOut
 } from 'lucide-react';
 import { GateState, CrowdState } from '../types';
-import { authenticateMaster, sendMasterCommand, fetchGates } from '../lib/api';
+import {
+  authenticateMaster,
+  sendMasterCommand,
+  fetchGates,
+  getSessionToken,
+  setSessionToken,
+  clearSessionToken
+} from '../lib/api';
 
 interface MasterRemoteProps {
   initialGates?: GateState[];
 }
 
 export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] }) => {
-  // Authentication State
-  const [token, setToken] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const urlAuth = new URLSearchParams(window.location.search).get('auth');
-      if (urlAuth) {
-        localStorage.setItem('cpr_master_token', urlAuth);
-        return urlAuth;
-      }
-      return localStorage.getItem('cpr_master_token') || '';
-    }
-    return '';
-  });
+  // Authentication State (sessionStorage only)
+  const [token, setToken] = useState<string>(() => getSessionToken() || '');
 
   const [pinInput, setPinInput] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -111,13 +108,13 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
       const res = await authenticateMaster(pinInput.trim());
       if (res.success && res.token) {
         setToken(res.token);
-        localStorage.setItem('cpr_master_token', res.token);
+        setSessionToken(res.token);
         notifyPhoneOnly('Link Verified');
       } else {
-        setAuthError('Access Denied');
+        setAuthError('Invalid credentials');
       }
-    } catch (err: any) {
-      setAuthError('Invalid passcode');
+    } catch {
+      setAuthError('Invalid credentials');
     } finally {
       setAuthLoading(false);
     }
@@ -125,7 +122,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
 
   const handleLogout = () => {
     setToken('');
-    localStorage.removeItem('cpr_master_token');
+    clearSessionToken();
   };
 
   // Dispatch Silent Command to Backend
@@ -147,7 +144,7 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
     } catch (err: any) {
       if (err.message === 'AUTH_EXPIRED') {
         setToken('');
-        localStorage.removeItem('cpr_master_token');
+        clearSessionToken();
       }
     } finally {
       setExecuting(false);
