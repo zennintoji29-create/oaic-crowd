@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -14,7 +14,9 @@ import {
   TelemetryPoint,
   HardwareActuatorState,
   HardwareManagerSnapshot,
-  GateState
+  GateState,
+  OperatorProfile,
+  AuditLogEntry
 } from './types';
 import {
   fetchZones,
@@ -24,6 +26,10 @@ import {
   fetchHardwareManagerState,
   fetchGates,
   fetchSystemConfig,
+  fetchOperatorProfile,
+  fetchAuditLogs,
+  acknowledgeAlert,
+  getSessionToken,
   clearSessionToken
 } from './lib/api';
 import { GlobalHeader } from './components/GlobalHeader';
@@ -33,12 +39,36 @@ import { ZoneDetailTab } from './components/ZoneDetailTab';
 import { AlertsTab } from './components/AlertsTab';
 import { SetupTab } from './components/SetupTab';
 import { AboutTab } from './components/AboutTab';
-import { DemoTab } from './components/DemoTab';
-import { MasterRemote } from './components/MasterRemote';
+import { ProfileTab } from './components/ProfileTab';
 import { RequireAuth } from './components/RequireAuth';
-import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
-import { Setup } from './pages/Setup';
+
+const Landing = lazy(() => import('./pages/Landing').then((m) => ({ default: m.Landing })));
+const DemoTab = lazy(() => import('./components/DemoTab').then((m) => ({ default: m.DemoTab })));
+const MasterRemote = lazy(() => import('./components/MasterRemote').then((m) => ({ default: m.MasterRemote })));
+const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })));
+
+function playCriticalChime() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    [880, 660].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime + idx * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.16 + 0.14);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.16);
+      osc.stop(ctx.currentTime + idx * 0.16 + 0.15);
+    });
+  } catch {
+    // Audio playback disabled or blocked
+  }
+}
 
 const AppRoutes: React.FC = () => {
   const location = useLocation();
@@ -91,6 +121,10 @@ const AppRoutes: React.FC = () => {
   const [simulatorRunning, setSimulatorRunning] = useState<boolean>(false);
   const [isStale, setIsStale] = useState<boolean>(false);
   const [cameraStreamUrl, setCameraStreamUrl] = useState<string>('');
+  const [operatorProfile, setOperatorProfile] = useState<OperatorProfile | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
+  const prevWorstStateRef = useRef<CrowdState>('GREEN');
 
   // Redirect ?tab=landing -> /
   useEffect(() => {
@@ -121,13 +155,16 @@ const AppRoutes: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     try {
-      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw, fetchedHwMgr, fetchedCfg] = await Promise.all([
+      const hasToken = Boolean(getSessionToken());
+      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw, fetchedHwMgr, fetchedCfg, fetchedProfile, fetchedAudit] = await Promise.all([
         fetchZones().catch(() => []),
         fetchGates().catch(() => []),
         fetchAlerts(50).catch(() => []),
         fetchHardwareStatus().catch(() => null),
         fetchHardwareManagerState().catch(() => null),
-        fetchSystemConfig().catch(() => null)
+        fetchSystemConfig().catch(() => null),
+        hasToken ? fetchOperatorProfile().catch(() => null) : Promise.resolve(null),
+        hasToken ? fetchAuditLogs(50).catch(() => []) : Promise.resolve([])
       ]);
       if (fetchedZones && fetchedZones.length > 0) setZones(fetchedZones);
       if (fetchedGates && fetchedGates.length > 0) setGates(fetchedGates);
@@ -136,6 +173,12 @@ const AppRoutes: React.FC = () => {
       if (fetchedHwMgr) setHardwareManager(fetchedHwMgr);
       if (fetchedCfg?.cameraStreamUrl !== undefined) {
         setCameraStreamUrl(fetchedCfg.cameraStreamUrl || '');
+      }
+      if (fetchedProfile?.user) {
+        setOperatorProfile(fetchedProfile.user);
+      }
+      if (Array.isArray(fetchedAudit)) {
+        setAuditLogs(fetchedAudit);
       }
     } catch (err) {
       console.warn('[APP] Could not fetch initial REST data:', err);
@@ -257,6 +300,12 @@ const AppRoutes: React.FC = () => {
               if (msg.data?.cameraStreamUrl !== undefined) {
                 setCameraStreamUrl(msg.data.cameraStreamUrl || '');
               }
+            } else if (msg.type === 'ALERT_UPDATED' && msg.data?.id) {
+              setAlerts((prev) => prev.map((a) => (a.id === msg.data.id ? msg.data : a)));
+            } else if (msg.type === 'AUDIT_UPDATED' && msg.data?.id) {
+              setAuditLogs((prev) => [msg.data, ...prev.slice(0, 99)]);
+            } else if (msg.type === 'GATES_SYNCED' && Array.isArray(msg.data)) {
+              setGates(msg.data);
             }
           } catch (e) {
             console.error('[WS] Error parsing message:', e);
@@ -348,6 +397,22 @@ const AppRoutes: React.FC = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (soundEnabled && worst.state === 'RED' && prevWorstStateRef.current !== 'RED') {
+      playCriticalChime();
+    }
+    prevWorstStateRef.current = worst.state;
+  }, [soundEnabled, worst.state]);
+
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    try {
+      const updated = await acknowledgeAlert(alertId);
+      setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    } catch (err) {
+      console.warn('Could not acknowledge alert:', err);
+    }
+  };
+
   // Shared Dashboard Shell for /dashboard and /sandbox
   const renderShell = (activeKey: string, content: React.ReactNode) => (
     <div className="relative min-h-dvh flex flex-col bg-[#08090a] text-text-primary antialiased safe-area-shell overflow-x-hidden">
@@ -364,6 +429,13 @@ const AppRoutes: React.FC = () => {
         onToggleSimulator={handleToggleSimulator}
         onLogout={handleLogout}
         onGoDashboard={() => setDashboardTab('overview')}
+        operatorLabel={operatorProfile?.displayName || operatorProfile?.email}
+        onOpenProfile={() => {
+          setDashboardTab('profile');
+          if (location.pathname !== '/dashboard') navigate('/dashboard');
+        }}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled((v) => !v)}
       />
       <div className="flex-1 flex flex-col lg:flex-row">
         <Navigation
@@ -383,6 +455,13 @@ const AppRoutes: React.FC = () => {
   );
 
   return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh bg-[#08090a] text-neutral-300 flex items-center justify-center text-xs font-mono">
+          Loading Crowd Pressure Radar...
+        </div>
+      }
+    >
     <Routes>
       {/* Public Landing Page */}
       <Route path="/" element={<Landing />} />
@@ -417,13 +496,30 @@ const AppRoutes: React.FC = () => {
                     onSelectZoneId={setSelectedZoneId}
                   />
                 )}
-                {dashboardTab === 'alerts' && <AlertsTab alerts={alerts} />}
+                {dashboardTab === 'alerts' && (
+                  <AlertsTab
+                    alerts={alerts}
+                    auditLogs={auditLogs}
+                    onAcknowledgeAlert={handleAcknowledgeAlert}
+                  />
+                )}
                 {dashboardTab === 'setup' && (
                   <SetupTab
                     zones={zones}
+                    gates={gates}
                     onZoneUpdated={handleZoneUpdated}
+                    onGateUpdated={handleGateUpdated}
+                    onGatesSynced={setGates}
                     cameraStreamUrl={cameraStreamUrl}
                     onCameraUrlUpdated={setCameraStreamUrl}
+                  />
+                )}
+                {dashboardTab === 'profile' && (
+                  <ProfileTab
+                    gates={gates}
+                    profile={operatorProfile}
+                    onProfileUpdated={setOperatorProfile}
+                    onLogout={handleLogout}
                   />
                 )}
                 {dashboardTab === 'about' && <AboutTab />}
@@ -469,6 +565,7 @@ const AppRoutes: React.FC = () => {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 

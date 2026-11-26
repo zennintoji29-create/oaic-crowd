@@ -119,3 +119,12 @@ Version 20 (2026-11-27)
 Version 21 (2026-11-27)
 - Added React Bits UI/UX motion and interactive effects suite under frontend/src/components/reactbits/ (BlurText, ShinyText, DecryptedText, CountUp, SpotlightCard, StarBorder, ClickSpark, RadarBackdrop) with full prefers-reduced-motion compliance and Mintlify #18e299 emerald styling.
 - Applied BlurText hero headline, ShinyText live status pill, RadarBackdrop millimeter-wave sweep, StarBorder CTA rim, SpotlightCard radial hover glow, CountUp live telemetry numbers, DecryptedText login header, and ClickSpark emerald pointer feedback across Landing.tsx, OverviewTab.tsx, GateCard.tsx, and Login.tsx.
+
+Version 22 (2026-11-27)
+- Operator Profile & Account Settings:
+  * Added GET /api/auth/me, PUT /api/auth/profile (email rename with current-password confirmation, automatic user_gates ownership migration, JWT token refresh, phone & displayName updates), and PUT /api/auth/password (bcrypt cost 12) plus ProfileTab.tsx in sidebar Navigation and GlobalHeader.
+- UX & Config Enhancements:
+  * Added post-setup Gate Thresholds & Per-Gate Camera Feed builder in SetupTab.tsx (PUT /api/gates/:id/settings, POST /api/gates, DELETE /api/gates/:id supporting 1-4 gates).
+  * Added live JWT session countdown pill & GlobalHeader sound toggle, plus React.lazy route code-splitting in App.tsx.
+- Operations & Audit Upgrades:
+  * Added POST /api/alerts/:id/ack, GET /api/audit (operator audit trail), CSV export + Acknowledge actions in AlertsTab.tsx, and opt-in Web Audio RED critical chime.

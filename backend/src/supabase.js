@@ -39,6 +39,15 @@ export async function dbUpsertOperator(user) {
   }
 }
 
+export async function dbDeleteOperator(email) {
+  if (!supabase || !email) return;
+  try {
+    await supabase.from('cpr_operators').delete().eq('email', email);
+  } catch (err) {
+    console.warn('[SUPABASE] dbDeleteOperator failed:', err.message);
+  }
+}
+
 export async function dbLoadOperators() {
   if (!supabase) return [];
   try {

@@ -42,6 +42,27 @@ export interface AlertRecord {
   density?: number;
   avgSpeed?: number;
   message: string;
+  acknowledged?: boolean;
+  acknowledgedAt?: number;
+  acknowledgedBy?: string;
+  ackNote?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: number;
+  actorEmail: string;
+  action: string;
+  target: string;
+  detail: string;
+}
+
+export interface OperatorProfile {
+  email: string;
+  phone: string;
+  displayName?: string;
+  setupComplete: boolean;
+  createdAt: number | null;
 }
 
 export type OperatorCommand = 'MANUAL_GATE_OPEN' | 'MANUAL_GATE_CLOSE' | 'SILENCE_BUZZER' | 'RESET_ZONE';
@@ -95,6 +116,7 @@ export interface GateState {
   lastUpdated: number;
   amberThreshold: number;  // Default 5
   redThreshold: number;    // Default 10
+  cameraStreamUrl?: string;
 }
 
 export interface SystemConfig {

@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   WifiOff,
   Eye,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { GateState } from '../types';
 import { controlGateOverride, controlGatePower } from '../lib/api';
@@ -19,12 +20,14 @@ import { SpotlightCard, CountUp } from './reactbits';
 
 interface GateCardProps {
   gate: GateState;
+  globalCameraUrl?: string;
   onSelectGate: (zoneId: string) => void;
   onGateUpdated?: (updatedGate: GateState) => void;
 }
 
 export const GateCard: React.FC<GateCardProps> = ({
   gate,
+  globalCameraUrl = '',
   onSelectGate,
   onGateUpdated
 }) => {
@@ -349,6 +352,23 @@ export const GateCard: React.FC<GateCardProps> = ({
             </div>
 
             <p className="text-xs text-neutral-300 leading-relaxed">{statusMeta.summary}</p>
+
+            {(gate.cameraStreamUrl || globalCameraUrl) && (
+              <div className="flat-panel-sunken p-3 flex items-center justify-between gap-2 text-xs">
+                <span className="text-neutral-400 font-mono truncate">
+                  {gate.cameraStreamUrl || globalCameraUrl}
+                </span>
+                <a
+                  href={gate.cameraStreamUrl || globalCameraUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#18e299] hover:underline font-medium shrink-0"
+                >
+                  <span>Open Feed</span>
+                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                </a>
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-3 border-t border-white/[0.08] text-xs text-neutral-400">
               <span>Last updated: {new Date(gate.lastUpdated || Date.now()).toLocaleTimeString()}</span>

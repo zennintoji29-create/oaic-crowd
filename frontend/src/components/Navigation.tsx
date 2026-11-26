@@ -10,7 +10,8 @@ import {
   LogOut,
   MoreVertical,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 
 export interface NavTabItem {
@@ -210,7 +211,43 @@ export const Navigation: React.FC<NavigationProps> = ({
           </div>
 
           {/* Bottom Utility Action */}
-          <div className="pt-2 border-t border-border-subtle flex flex-col gap-1">
+          <div className="pt-2 border-t border-white/[0.07] flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`min-h-[44px] flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all text-left border-l-2 ${
+                activeTab === 'profile'
+                  ? 'bg-[#18e299]/10 text-[#18e299] border-[#18e299] font-semibold'
+                  : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+              aria-current={activeTab === 'profile' ? 'page' : undefined}
+            >
+              <span
+                className={`p-1.5 rounded-md ${
+                  activeTab === 'profile' ? 'bg-[#18e299]/15 text-[#18e299]' : 'bg-white/[0.03] text-neutral-400'
+                }`}
+              >
+                <User className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              </span>
+              <span>Profile &amp; Account</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('profile');
+                setMobileMenuOpen(false);
+              }}
+              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left ${
+                activeTab === 'profile'
+                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                  : 'text-text-secondary hover:bg-surface-sunken'
+              }`}
+            >
+              <User className="w-4 h-4 text-accent" aria-hidden="true" />
+              <span>Profile &amp; Account</span>
+            </button>
+
             {onLogout && (
               <button
                 type="button"
@@ -312,6 +349,22 @@ export const Navigation: React.FC<NavigationProps> = ({
             >
               <ShieldCheck className="w-4 h-4 text-accent" aria-hidden="true" />
               <span>About & Safety</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('profile');
+                setMobileMenuOpen(false);
+              }}
+              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left ${
+                activeTab === 'profile'
+                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                  : 'text-text-secondary hover:bg-surface-sunken'
+              }`}
+            >
+              <User className="w-4 h-4 text-accent" aria-hidden="true" />
+              <span>Profile &amp; Account</span>
             </button>
 
             {onLogout && (

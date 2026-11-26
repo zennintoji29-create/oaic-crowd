@@ -309,6 +309,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <GateCard
               key={gate.id}
               gate={gate}
+              globalCameraUrl={cameraStreamUrl}
               onSelectGate={onSelectZone}
               onGateUpdated={onGateUpdated}
             />

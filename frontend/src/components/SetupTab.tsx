@@ -1,18 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { Save, Camera, ExternalLink } from 'lucide-react';
-import { ZoneInfo } from '../types';
-import { fetchSystemConfig, updateSystemConfig, updateZoneConfig } from '../lib/api';
+import { Save, Camera, ExternalLink, Sliders, Plus, Trash2 } from 'lucide-react';
+import { GateState, ZoneInfo } from '../types';
+import {
+  addGate,
+  fetchSystemConfig,
+  removeGate,
+  updateGateSettings,
+  updateSystemConfig,
+  updateZoneConfig
+} from '../lib/api';
 
 interface SetupTabProps {
   zones: ZoneInfo[];
+  gates?: GateState[];
   onZoneUpdated: (updated: ZoneInfo) => void;
+  onGateUpdated?: (updated: GateState) => void;
+  onGatesSynced?: (gates: GateState[]) => void;
   cameraStreamUrl?: string;
   onCameraUrlUpdated?: (url: string) => void;
 }
 
 export const SetupTab: React.FC<SetupTabProps> = ({
   zones,
+  gates = [],
   onZoneUpdated,
+  onGateUpdated,
+  onGatesSynced,
   cameraStreamUrl: initialCameraUrl = '',
   onCameraUrlUpdated
 }) => {
@@ -23,6 +36,25 @@ export const SetupTab: React.FC<SetupTabProps> = ({
   const [formArea, setFormArea] = useState(currentZone?.areaSqM?.toString() || '24.0');
   const [formWidth, setFormWidth] = useState(currentZone?.corridorWidthM?.toString() || '4.0');
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  const [selectedGateId, setSelectedGateId] = useState(gates[0]?.id || 'gate-a');
+  const currentGate = gates.find((g) => g.id === selectedGateId) || gates[0];
+  const [gateNameInput, setGateNameInput] = useState(currentGate?.name || '');
+  const [amberInput, setAmberInput] = useState(String(currentGate?.amberThreshold ?? 5));
+  const [redInput, setRedInput] = useState(String(currentGate?.redThreshold ?? 10));
+  const [gateCameraInput, setGateCameraInput] = useState(currentGate?.cameraStreamUrl || '');
+  const [gateStatusMsg, setGateStatusMsg] = useState<string | null>(null);
+  const [gateErrorMsg, setGateErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentGate) {
+      setSelectedGateId(currentGate.id);
+      setGateNameInput(currentGate.name || '');
+      setAmberInput(String(currentGate.amberThreshold ?? 5));
+      setRedInput(String(currentGate.redThreshold ?? 10));
+      setGateCameraInput(currentGate.cameraStreamUrl || '');
+    }
+  }, [currentGate?.id]);
 
   const [cameraUrl, setCameraUrl] = useState(initialCameraUrl);
   const [cameraStatusMsg, setCameraStatusMsg] = useState<string | null>(null);
@@ -302,6 +334,214 @@ export const SetupTab: React.FC<SetupTabProps> = ({
           </div>
         </form>
       </div>
+
+      {/* 3. Post-Setup Gate Thresholds, Per-Gate Camera Links & Add/Remove Gate */}
+      {gates.length > 0 && (
+        <div className="flat-panel p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
+                <h2 className="text-base font-semibold text-text-primary">
+                  Gate Thresholds &amp; Per-Gate Camera Feeds
+                </h2>
+              </div>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Tune Amber/Red thresholds, assign dedicated localhost camera links per gate, or add/remove gates (1–4).
+              </p>
+            </div>
+            {gates.length < 4 && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setGateErrorMsg(null);
+                  setGateStatusMsg(null);
+                  try {
+                    const res = await addGate({
+                      name: `Gate ${String.fromCharCode(65 + gates.length)}`,
+                      amberThreshold: 5,
+                      redThreshold: 10
+                    });
+                    onGatesSynced?.(res.gates);
+                    setSelectedGateId(res.gate.id);
+                    setGateNameInput(res.gate.name);
+                    setAmberInput(String(res.gate.amberThreshold));
+                    setRedInput(String(res.gate.redThreshold));
+                    setGateCameraInput(res.gate.cameraStreamUrl || '');
+                    setGateStatusMsg(`Added ${res.gate.name}.`);
+                  } catch (err: any) {
+                    setGateErrorMsg(err?.message || 'Could not add gate');
+                  }
+                }}
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#18e299]/10 border border-[#18e299]/35 text-[#18e299] text-xs font-semibold hover:bg-[#18e299]/20"
+              >
+                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Add Gate</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {gates.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => {
+                  setSelectedGateId(g.id);
+                  setGateNameInput(g.name);
+                  setAmberInput(String(g.amberThreshold));
+                  setRedInput(String(g.redThreshold));
+                  setGateCameraInput(g.cameraStreamUrl || '');
+                  setGateErrorMsg(null);
+                  setGateStatusMsg(null);
+                }}
+                className={`min-h-[40px] px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                  selectedGateId === g.id
+                    ? 'bg-[#18e299]/15 border-[#18e299] text-[#18e299]'
+                    : 'bg-surface-base border-border-subtle text-text-secondary hover:text-white'
+                }`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+
+          {currentGate && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setGateErrorMsg(null);
+                setGateStatusMsg(null);
+                const amber = parseInt(amberInput, 10);
+                const red = parseInt(redInput, 10);
+                if (!Number.isInteger(amber) || amber < 1 || !Number.isInteger(red) || red <= amber || red > 200) {
+                  setGateErrorMsg('Red threshold must be strictly greater than Amber threshold (max 200).');
+                  return;
+                }
+                const cam = gateCameraInput.trim();
+                if (cam && !/^https?:\/\/.+/.test(cam)) {
+                  setGateErrorMsg('Per-gate camera URL must start with http:// or https://');
+                  return;
+                }
+                try {
+                  const updated = await updateGateSettings(currentGate.id, {
+                    name: gateNameInput.trim() || currentGate.name,
+                    amberThreshold: amber,
+                    redThreshold: red,
+                    cameraStreamUrl: cam
+                  });
+                  onGateUpdated?.(updated);
+                  setGateStatusMsg('Gate thresholds and camera link saved.');
+                  setTimeout(() => setGateStatusMsg(null), 3000);
+                } catch (err: any) {
+                  setGateErrorMsg(err?.message || 'Failed to save gate settings');
+                }
+              }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label htmlFor="gate-edit-name" className="block text-xs font-medium text-text-primary mb-1">
+                    Gate Name
+                  </label>
+                  <input
+                    id="gate-edit-name"
+                    type="text"
+                    required
+                    value={gateNameInput}
+                    onChange={(e) => setGateNameInput(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded text-text-primary"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="gate-edit-amber" className="block text-xs font-medium text-text-primary mb-1">
+                    Amber Threshold (count)
+                  </label>
+                  <input
+                    id="gate-edit-amber"
+                    type="number"
+                    min={1}
+                    max={150}
+                    required
+                    value={amberInput}
+                    onChange={(e) => setAmberInput(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="gate-edit-red" className="block text-xs font-medium text-text-primary mb-1">
+                    Red Lock Threshold (count)
+                  </label>
+                  <input
+                    id="gate-edit-red"
+                    type="number"
+                    min={2}
+                    max={200}
+                    required
+                    value={redInput}
+                    onChange={(e) => setRedInput(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="gate-edit-camera" className="block text-xs font-medium text-text-primary mb-1">
+                  Dedicated Gate Camera Stream URL (optional)
+                </label>
+                <input
+                  id="gate-edit-camera"
+                  type="url"
+                  value={gateCameraInput}
+                  onChange={(e) => setGateCameraInput(e.target.value)}
+                  placeholder="http://localhost:5001/video_feed (falls back to global link if blank)"
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+
+              {gateErrorMsg && (
+                <p role="alert" className="text-xs text-rose-400">
+                  {gateErrorMsg}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-subtle">
+                <span className="text-xs font-mono text-status-clear-text">{gateStatusMsg}</span>
+                <div className="flex items-center gap-2">
+                  {gates.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setGateErrorMsg(null);
+                        try {
+                          const nextGates = await removeGate(currentGate.id);
+                          onGatesSynced?.(nextGates);
+                          if (nextGates[0]) {
+                            setSelectedGateId(nextGates[0].id);
+                          }
+                        } catch (err: any) {
+                          setGateErrorMsg(err?.message || 'Failed to remove gate');
+                        }
+                      }}
+                      className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-status-danger-border bg-status-danger-bg text-status-danger-text text-xs font-semibold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Remove Gate</span>
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-sunken hover:bg-surface-raised border border-border-strong text-text-primary rounded text-xs font-semibold transition-colors"
+                  >
+                    <Save className="w-3.5 h-3.5 text-text-secondary" aria-hidden="true" />
+                    <span>Save Gate Settings</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
     </div>
   );
 };

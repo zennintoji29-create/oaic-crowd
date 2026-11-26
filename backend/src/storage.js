@@ -4,6 +4,7 @@ import { config } from './config.js';
 import {
   isSupabaseEnabled,
   dbUpsertOperator,
+  dbDeleteOperator,
   dbLoadOperators,
   dbInsertTelemetry,
   dbInsertAlert,
@@ -17,6 +18,7 @@ class StorageManager {
     this.zones = new Map();
     this.telemetryRingBuffers = new Map(); // zoneId -> Array of up to 1000 records
     this.alerts = [];                      // Historical alerts list
+    this.auditLogs = [];                   // Operator action audit trail
     this.commandQueues = new Map();        // deviceId -> Array of queued commands
     this.rateLimiter = new Map();          // deviceId -> { count, windowStart }
     this.users = new Map();                // email -> { email, phone, passwordHash, setupComplete, createdAt }
@@ -90,7 +92,8 @@ class StorageManager {
         power: true,
         lastUpdated: now,
         amberThreshold: 5,
-        redThreshold: 10
+        redThreshold: 10,
+        cameraStreamUrl: ''
       });
     });
     this.userGates.set(norm, map);
@@ -164,16 +167,65 @@ class StorageManager {
     return this.users.get(String(email).trim().toLowerCase()) || null;
   }
 
-  createUser({ email, phone, passwordHash }) {
+  createUser({ email, phone, passwordHash, displayName = '' }) {
     const normEmail = String(email).trim().toLowerCase();
     const user = {
       email: normEmail,
       phone: String(phone || '').trim(),
+      displayName: String(displayName || '').trim(),
       passwordHash,
       setupComplete: false,
       createdAt: Date.now()
     };
     this.users.set(normEmail, user);
+    this.saveUsers();
+    dbUpsertOperator(user);
+    return user;
+  }
+
+  updateUserProfile(currentEmail, { newEmail, phone, displayName } = {}) {
+    const currentUser = this.getUserByEmail(currentEmail);
+    if (!currentUser) return { notFound: true };
+
+    const normalizedNew = newEmail
+      ? String(newEmail).trim().toLowerCase()
+      : currentUser.email;
+
+    if (normalizedNew !== currentUser.email && this.users.has(normalizedNew)) {
+      return { conflict: true };
+    }
+
+    const updatedUser = {
+      ...currentUser,
+      email: normalizedNew,
+      phone: phone !== undefined ? String(phone).trim() : (currentUser.phone || ''),
+      displayName: displayName !== undefined ? String(displayName).trim() : (currentUser.displayName || ''),
+      updatedAt: Date.now()
+    };
+
+    if (normalizedNew !== currentUser.email) {
+      this.users.delete(currentUser.email);
+      dbDeleteOperator(currentUser.email);
+      if (this.userGates.has(currentUser.email)) {
+        const gatesMap = this.userGates.get(currentUser.email);
+        this.userGates.delete(currentUser.email);
+        this.userGates.set(normalizedNew, gatesMap);
+        this.saveUserGates();
+      }
+    }
+
+    this.users.set(normalizedNew, updatedUser);
+    this.saveUsers();
+    dbUpsertOperator(updatedUser);
+    return { user: updatedUser };
+  }
+
+  updateUserPassword(email, passwordHash) {
+    const user = this.getUserByEmail(email);
+    if (!user) return null;
+    user.passwordHash = passwordHash;
+    user.updatedAt = Date.now();
+    this.users.set(user.email, user);
     this.saveUsers();
     dbUpsertOperator(user);
     return user;
@@ -376,6 +428,40 @@ class StorageManager {
     return this.alerts.slice(0, limit);
   }
 
+  acknowledgeAlert(alertId, actorEmail = 'operator', note = '') {
+    const idx = this.alerts.findIndex((a) => a.id === alertId);
+    if (idx === -1) return null;
+    const updated = {
+      ...this.alerts[idx],
+      acknowledged: true,
+      acknowledgedAt: Date.now(),
+      acknowledgedBy: String(actorEmail || 'operator'),
+      ackNote: String(note || '').trim()
+    };
+    this.alerts[idx] = updated;
+    return updated;
+  }
+
+  addAuditLog({ actorEmail = 'system', action, target = '', detail = '' }) {
+    const entry = {
+      id: `audit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      timestamp: Date.now(),
+      actorEmail: String(actorEmail || 'system'),
+      action: String(action || 'EVENT'),
+      target: String(target || ''),
+      detail: String(detail || '')
+    };
+    this.auditLogs.unshift(entry);
+    if (this.auditLogs.length > 500) {
+      this.auditLogs.pop();
+    }
+    return entry;
+  }
+
+  getAuditLogs(limit = 100) {
+    return this.auditLogs.slice(0, limit);
+  }
+
   queueCommand(deviceId, command, reason = '') {
     if (!this.commandQueues.has(deviceId)) {
       this.commandQueues.set(deviceId, []);
@@ -515,6 +601,103 @@ class StorageManager {
     if (email) this.saveUserGates();
     dbUpsertGate(gate);
     return gate;
+  }
+
+  updateGateSettings(id, { name, amberThreshold, redThreshold, cameraStreamUrl }, email) {
+    const map = this.getGateMap(email);
+    const gate = map.get(id);
+    if (!gate) return null;
+
+    if (typeof name === 'string' && name.trim()) {
+      gate.name = name.trim();
+      const zone = this.zones.get(gate.zoneId);
+      if (zone) zone.name = gate.name;
+    }
+    if (amberThreshold !== undefined) {
+      gate.amberThreshold = Number(amberThreshold);
+    }
+    if (redThreshold !== undefined) {
+      gate.redThreshold = Number(redThreshold);
+    }
+    if (cameraStreamUrl !== undefined) {
+      gate.cameraStreamUrl = String(cameraStreamUrl || '').trim();
+    }
+
+    gate.status = gate.count >= gate.redThreshold ? 'RED' : (gate.count >= gate.amberThreshold ? 'AMBER' : 'GREEN');
+    if (!gate.isManualOverride) {
+      gate.servoAngle = gate.status === 'RED' ? 0 : (gate.status === 'AMBER' ? 45 : 90);
+      gate.servoStatus = gate.status === 'RED' ? 'CLOSED (LOCKED)' : (gate.status === 'AMBER' ? 'METERED (PARTIAL)' : 'OPEN');
+    }
+    gate.lastUpdated = Date.now();
+    if (email) this.saveUserGates();
+    dbUpsertGate(gate);
+    return { ...gate };
+  }
+
+  addGateForUser(email, { name, amberThreshold = 5, redThreshold = 10, cameraStreamUrl = '' } = {}) {
+    const slots = [
+      { id: 'gate-a', zoneId: 'zone-entry-a', fallbackName: 'Main Temple Gate A' },
+      { id: 'gate-b', zoneId: 'zone-corridor-b', fallbackName: 'North Pavilion Gate B' },
+      { id: 'gate-c', zoneId: 'zone-entry-c', fallbackName: 'East Courtyard Gate C' },
+      { id: 'gate-d', zoneId: 'zone-corridor-d', fallbackName: 'South Exit Gate D' }
+    ];
+    let map = this.getGateMap(email);
+    if (email && !this.userGates.has(email.toLowerCase())) {
+      map = new Map(Array.from(this.gates.entries()).map(([k, v]) => [k, { ...v }]));
+      this.userGates.set(email.toLowerCase(), map);
+    }
+    if (map.size >= 4) return { limitReached: true };
+
+    const nextSlot = slots.find((s) => !map.has(s.id));
+    if (!nextSlot) return { limitReached: true };
+
+    const gateName = String(name || nextSlot.fallbackName).trim();
+    const newGate = {
+      id: nextSlot.id,
+      name: gateName,
+      zoneId: nextSlot.zoneId,
+      status: 'GREEN',
+      count: 0,
+      density: 0,
+      riskScore: 0,
+      servoAngle: 90,
+      servoStatus: 'OPEN',
+      isManualOverride: false,
+      manualState: 'AUTO',
+      power: true,
+      lastUpdated: Date.now(),
+      amberThreshold: Number(amberThreshold),
+      redThreshold: Number(redThreshold),
+      cameraStreamUrl: String(cameraStreamUrl || '').trim()
+    };
+
+    map.set(newGate.id, newGate);
+    if (!this.zones.has(newGate.zoneId)) {
+      this.zones.set(newGate.zoneId, {
+        zoneId: newGate.zoneId,
+        name: gateName,
+        areaSqM: 24.0,
+        corridorWidthM: 4.0,
+        deviceId: `esp32-radar-0${map.size}`,
+        lastTelemetry: null
+      });
+    }
+    if (email) this.saveUserGates();
+    dbUpsertGate(newGate);
+    return { gate: { ...newGate } };
+  }
+
+  removeGateForUser(email, gateId) {
+    let map = this.getGateMap(email);
+    if (email && !this.userGates.has(email.toLowerCase())) {
+      map = new Map(Array.from(this.gates.entries()).map(([k, v]) => [k, { ...v }]));
+      this.userGates.set(email.toLowerCase(), map);
+    }
+    if (!map.has(gateId)) return { notFound: true };
+    if (map.size <= 1) return { minReached: true };
+    map.delete(gateId);
+    if (email) this.saveUserGates();
+    return { removed: true };
   }
 
   resetAllGates(email) {

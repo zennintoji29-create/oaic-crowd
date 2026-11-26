@@ -22,15 +22,21 @@ import {
   CartesianGrid,
   Legend
 } from 'recharts';
-import { AlertRecord, TrafficAnalytics } from '../types';
+import { AlertRecord, AuditLogEntry, TrafficAnalytics } from '../types';
 import { fetchAnalytics } from '../lib/api';
 import { StateBadge } from './StateBadge';
 
 interface AlertsTabProps {
   alerts: AlertRecord[];
+  auditLogs?: AuditLogEntry[];
+  onAcknowledgeAlert?: (alertId: string) => void;
 }
 
-export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
+export const AlertsTab: React.FC<AlertsTabProps> = ({
+  alerts,
+  auditLogs = [],
+  onAcknowledgeAlert
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState<'ALL' | 'RED' | 'AMBER'>('ALL');
   const [filterZone, setFilterZone] = useState<string>('ALL');
@@ -128,9 +134,30 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
     doc.save(`cpr-safety-summary-${Date.now()}.pdf`);
   };
 
+  const downloadCsvExport = () => {
+    const headers = ['Time', 'Zone', 'From', 'To', 'RiskScore', 'AcknowledgedBy', 'Message'];
+    const rows = filteredAlerts.map((a) => [
+      new Date(a.timestamp).toISOString(),
+      `"${(a.zoneName || '').replace(/"/g, '""')}"`,
+      a.fromState,
+      a.toState,
+      a.score,
+      `"${(a.acknowledgedBy || 'Pending').replace(/"/g, '""')}"`,
+      `"${(a.message || '').replace(/"/g, '""')}"`
+    ]);
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cpr-alerts-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
-      {/* 1. Summary Section + Download PDF */}
+      {/* 1. Summary Section + Download PDF / CSV */}
       <div className="flat-panel p-5 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -142,14 +169,24 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={downloadPdfSummary}
-            className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
-          >
-            <FileDown className="w-4 h-4" aria-hidden="true" />
-            <span>Download PDF</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={downloadCsvExport}
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-white transition-colors"
+            >
+              <FileDown className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={downloadPdfSummary}
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
+            >
+              <FileDown className="w-4 h-4" aria-hidden="true" />
+              <span>Download PDF</span>
+            </button>
+          </div>
         </div>
 
         {/* Summary Important Numbers */}
@@ -494,12 +531,30 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                       <StateBadge state={alert.toState as any} size="sm" />
                     </div>
                     <p className="text-xs text-text-secondary">{alert.message}</p>
-                    <div className="flex items-center justify-between text-xs text-text-muted">
-                      <span>{new Date(alert.timestamp).toLocaleTimeString()}</span>
-                      <span className="tabular-nums font-medium">
-                        {alert.fromState} → {alert.toState} (Risk {alert.score})
-                      </span>
-                    </div>
+                      <div className="flex items-center justify-between text-xs text-text-muted">
+                        <span>{new Date(alert.timestamp).toLocaleTimeString()}</span>
+                        <span className="tabular-nums font-medium">
+                          {alert.fromState} → {alert.toState} (Risk {alert.score})
+                        </span>
+                      </div>
+                      {onAcknowledgeAlert && (
+                        <div className="pt-1">
+                          {alert.acknowledged ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[#18e299] font-medium">
+                              <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>Ack by {alert.acknowledgedBy || 'operator'}</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onAcknowledgeAlert(alert.id)}
+                              className="min-h-[44px] px-3 py-1.5 rounded border border-white/[0.12] bg-white/[0.04] text-xs font-medium text-white"
+                            >
+                              Acknowledge
+                            </button>
+                          )}
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>
@@ -514,6 +569,7 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                       <th className="py-3 px-4">State Transition</th>
                       <th className="py-3 px-4">Risk Index</th>
                       <th className="py-3 px-4">Operator Message</th>
+                      <th className="py-3 px-4 text-right">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-subtle">
@@ -536,6 +592,24 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
                           {alert.score}
                         </td>
                         <td className="py-3 px-4 text-text-secondary">{alert.message}</td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          {alert.acknowledged ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[#18e299] font-medium">
+                              <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>Ack ({alert.acknowledgedBy || 'operator'})</span>
+                            </span>
+                          ) : onAcknowledgeAlert ? (
+                            <button
+                              type="button"
+                              onClick={() => onAcknowledgeAlert(alert.id)}
+                              className="px-2.5 py-1 rounded border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.1] text-white text-[11px] font-medium transition-colors"
+                            >
+                              Acknowledge
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-neutral-500">Logged</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -586,6 +660,41 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({ alerts }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Operator Audit Trail */}
+      <div className="flat-panel p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-text-primary">Operator Audit Trail</h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Recent manual overrides, hardware mode changes, gate threshold updates, and profile actions.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-neutral-400 tabular-nums">{auditLogs.length} entries</span>
+        </div>
+
+        {auditLogs.length === 0 ? (
+          <p className="text-xs text-neutral-500 py-4">No operator actions logged in this session yet.</p>
+        ) : (
+          <div className="divide-y divide-white/[0.06] max-h-60 overflow-y-auto text-xs">
+            {auditLogs.slice(0, 25).map((entry) => (
+              <div key={entry.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.1] text-[#18e299] font-mono text-[10px]">
+                    {entry.action}
+                  </span>
+                  <span className="text-neutral-200">{entry.detail}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-neutral-500 font-mono">
+                  <span>{entry.actorEmail}</span>
+                  <span>•</span>
+                  <span>{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

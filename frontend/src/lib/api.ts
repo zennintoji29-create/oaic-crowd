@@ -7,7 +7,9 @@ import {
   KeepAliveStats,
   GateState,
   SystemConfig,
-  TrafficAnalytics
+  TrafficAnalytics,
+  OperatorProfile,
+  AuditLogEntry
 } from '../types';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
@@ -26,6 +28,20 @@ export function setSessionToken(token: string): void {
 export function clearSessionToken(): void {
   if (typeof window === 'undefined') return;
   sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+export function getTokenExpiryMs(): number | null {
+  const token = getSessionToken();
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
@@ -246,6 +262,112 @@ export async function verifyOperatorPassword(password: string): Promise<{ succes
     throw new Error('Invalid password');
   }
   return res.json();
+}
+
+export async function fetchOperatorProfile(): Promise<{ user: OperatorProfile; sessionExpiresAt: number | null }> {
+  const res = await authFetch(`${API_BASE}/auth/me`);
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('AUTH_EXPIRED');
+    throw new Error('Failed to load profile');
+  }
+  return res.json();
+}
+
+export async function updateOperatorProfile(payload: {
+  email?: string;
+  phone?: string;
+  displayName?: string;
+  currentPassword?: string;
+}): Promise<{ success: boolean; user: OperatorProfile; token?: string | null }> {
+  const res = await authFetch(`${API_BASE}/auth/profile`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to update profile');
+  }
+  return data;
+}
+
+export async function changeOperatorPassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ success: boolean }> {
+  const res = await authFetch(`${API_BASE}/auth/password`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to update password');
+  }
+  return data;
+}
+
+export async function updateGateSettings(
+  gateId: string,
+  payload: { name?: string; amberThreshold?: number; redThreshold?: number; cameraStreamUrl?: string }
+): Promise<GateState> {
+  const res = await authFetch(`${API_BASE}/gates/${encodeURIComponent(gateId)}/settings`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to update gate settings');
+  }
+  return data.gate;
+}
+
+export async function addGate(payload: {
+  name?: string;
+  amberThreshold?: number;
+  redThreshold?: number;
+  cameraStreamUrl?: string;
+}): Promise<{ gate: GateState; gates: GateState[] }> {
+  const res = await authFetch(`${API_BASE}/gates`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to add gate');
+  }
+  return data;
+}
+
+export async function removeGate(gateId: string): Promise<GateState[]> {
+  const res = await authFetch(`${API_BASE}/gates/${encodeURIComponent(gateId)}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to remove gate');
+  }
+  return data.gates;
+}
+
+export async function acknowledgeAlert(alertId: string, note = ''): Promise<AlertRecord> {
+  const res = await authFetch(`${API_BASE}/alerts/${encodeURIComponent(alertId)}/ack`, {
+    method: 'POST',
+    body: JSON.stringify({ note })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to acknowledge alert');
+  }
+  return data.alert;
+}
+
+export async function fetchAuditLogs(limit = 100): Promise<AuditLogEntry[]> {
+  const res = await authFetch(`${API_BASE}/audit?limit=${limit}`);
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('AUTH_EXPIRED');
+    throw new Error('Failed to load audit logs');
+  }
+  const data = await res.json();
+  return data.auditLogs || [];
 }
 
 // ============================================================================

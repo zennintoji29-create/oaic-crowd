@@ -409,6 +409,13 @@ app.post('/api/hardware/mode', requireMasterAuth, async (req, res) => {
   if (!result.ok) {
     return res.status(504).json({ status: 'error', error: result.error, hardware: hardwareManager.getSnapshot() });
   }
+  const auditEntry = storage.addAuditLog({
+    actorEmail: req.masterUser?.email || 'operator',
+    action: 'HARDWARE_MODE',
+    target: 'system',
+    detail: `Switched operating mode to ${result.mode}`
+  });
+  broadcast('AUDIT_UPDATED', auditEntry);
   return res.json({ status: 'ok', mode: result.mode, hardware: hardwareManager.getSnapshot() });
 });
 
@@ -495,6 +502,13 @@ function handleResetAll(req, res) {
     }
   });
   broadcast('HARDWARE_UPDATE', hardwareState);
+  const auditReset = storage.addAuditLog({
+    actorEmail: userEmail || 'operator',
+    action: 'GATE_RESET_ALL',
+    target: 'all-gates',
+    detail: 'Reset all gates to GREEN (90 deg OPEN)'
+  });
+  broadcast('AUDIT_UPDATED', auditReset);
   res.json({ status: 'ok', gates: updatedGates, hardware: hardwareState });
 }
 app.post('/api/gates/reset-all', requireMasterAuth, handleResetAll);
@@ -535,7 +549,112 @@ app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
 
   broadcast('GATE_UPDATED', updated);
   broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates(email) });
+  const auditOverride = storage.addAuditLog({
+    actorEmail: email || 'operator',
+    action: 'GATE_OVERRIDE',
+    target: updated.id,
+    detail: `${updated.name} -> ${manualState}`
+  });
+  broadcast('AUDIT_UPDATED', auditOverride);
   res.json({ status: 'ok', gate: updated });
+});
+
+// PUT /api/gates/:id/settings - Post-setup gate thresholds, name & per-gate camera URL
+app.put('/api/gates/:id/settings', requireMasterAuth, (req, res) => {
+  const { id } = req.params;
+  const body = req.body || {};
+  const email = req.masterUser?.email || null;
+  const existing = storage.getGate(id, email);
+  if (!existing) {
+    return res.status(404).json({ error: 'Gate not found' });
+  }
+
+  const amber = body.amberThreshold !== undefined ? Number(body.amberThreshold) : existing.amberThreshold;
+  const red = body.redThreshold !== undefined ? Number(body.redThreshold) : existing.redThreshold;
+  if (!Number.isInteger(amber) || amber < 1 || amber > 150) {
+    return res.status(400).json({ error: 'amberThreshold must be an integer between 1 and 150' });
+  }
+  if (!Number.isInteger(red) || red <= amber || red > 200) {
+    return res.status(400).json({ error: 'redThreshold must be an integer greater than amberThreshold (max 200)' });
+  }
+  if (body.cameraStreamUrl !== undefined && typeof body.cameraStreamUrl === 'string' && body.cameraStreamUrl.trim() !== '') {
+    if (!/^https?:\/\/.+/.test(body.cameraStreamUrl.trim())) {
+      return res.status(400).json({ error: 'cameraStreamUrl must start with http:// or https://' });
+    }
+  }
+
+  const updated = storage.updateGateSettings(id, {
+    name: body.name,
+    amberThreshold: amber,
+    redThreshold: red,
+    cameraStreamUrl: body.cameraStreamUrl
+  }, email);
+
+  broadcast('GATE_UPDATED', updated);
+  const zone = storage.zones.get(updated.zoneId);
+  if (zone) broadcast('ZONE_CONFIG_UPDATED', zone);
+  const auditEntry = storage.addAuditLog({
+    actorEmail: email || 'operator',
+    action: 'GATE_SETTINGS_UPDATED',
+    target: updated.id,
+    detail: `${updated.name} (Amber ${updated.amberThreshold}, Red ${updated.redThreshold})`
+  });
+  broadcast('AUDIT_UPDATED', auditEntry);
+  res.json({ status: 'ok', gate: updated });
+});
+
+// POST /api/gates - Add a gate post-setup (max 4 per operator)
+app.post('/api/gates', requireMasterAuth, (req, res) => {
+  const email = req.masterUser?.email || null;
+  const body = req.body || {};
+  const amber = body.amberThreshold !== undefined ? Number(body.amberThreshold) : 5;
+  const red = body.redThreshold !== undefined ? Number(body.redThreshold) : 10;
+  if (!Number.isInteger(amber) || amber < 1 || !Number.isInteger(red) || red <= amber || red > 200) {
+    return res.status(400).json({ error: 'Invalid gate thresholds' });
+  }
+  if (body.cameraStreamUrl && typeof body.cameraStreamUrl === 'string' && body.cameraStreamUrl.trim() !== '' && !/^https?:\/\/.+/.test(body.cameraStreamUrl.trim())) {
+    return res.status(400).json({ error: 'cameraStreamUrl must start with http:// or https://' });
+  }
+
+  const result = storage.addGateForUser(email, {
+    name: body.name,
+    amberThreshold: amber,
+    redThreshold: red,
+    cameraStreamUrl: body.cameraStreamUrl
+  });
+  if (result.limitReached) {
+    return res.status(400).json({ error: 'Maximum of 4 gates allowed per operator' });
+  }
+  const allGates = storage.getGates(email);
+  broadcast('GATES_SYNCED', allGates);
+  const auditEntry = storage.addAuditLog({
+    actorEmail: email || 'operator',
+    action: 'GATE_ADDED',
+    target: result.gate.id,
+    detail: `Added gate ${result.gate.name}`
+  });
+  broadcast('AUDIT_UPDATED', auditEntry);
+  res.status(201).json({ status: 'ok', gate: result.gate, gates: allGates });
+});
+
+// DELETE /api/gates/:id - Remove a gate post-setup (minimum 1 gate kept)
+app.delete('/api/gates/:id', requireMasterAuth, (req, res) => {
+  const { id } = req.params;
+  const email = req.masterUser?.email || null;
+  const result = storage.removeGateForUser(email, id);
+  if (result.notFound) return res.status(404).json({ error: 'Gate not found' });
+  if (result.minReached) return res.status(400).json({ error: 'At least one gate must remain active' });
+
+  const allGates = storage.getGates(email);
+  broadcast('GATES_SYNCED', allGates);
+  const auditEntry = storage.addAuditLog({
+    actorEmail: email || 'operator',
+    action: 'GATE_REMOVED',
+    target: id,
+    detail: `Removed gate ${id}`
+  });
+  broadcast('AUDIT_UPDATED', auditEntry);
+  res.json({ status: 'ok', gates: allGates });
 });
 
 // POST /api/gates/:id/power - Toggle gate power (protected)
@@ -551,6 +670,13 @@ app.post('/api/gates/:id/power', requireMasterAuth, (req, res) => {
 
   broadcast('GATE_UPDATED', updated);
   broadcastSSE({ type: 'GATE_UPDATED', gate: updated, gates: storage.getGates(email) });
+  const auditPower = storage.addAuditLog({
+    actorEmail: email || 'operator',
+    action: 'GATE_POWER',
+    target: updated.id,
+    detail: `${updated.name} -> ${power ? 'ON' : 'OFF'}`
+  });
+  broadcast('AUDIT_UPDATED', auditPower);
   res.json({ status: 'ok', gate: updated });
 });
 
@@ -743,6 +869,142 @@ app.post('/api/auth/verify-password', requireMasterAuth, masterAuthLimiter, asyn
     return res.json({ success: true, email: user.email });
   } catch {
     return res.status(401).json({ error: 'Invalid password' });
+  }
+});
+
+// GET /api/auth/me - Fetch current signed-in operator profile
+app.get('/api/auth/me', requireMasterAuth, (req, res) => {
+  const email = req.masterUser?.email;
+  const user = email ? storage.getUserByEmail(email) : null;
+  res.json({
+    user: user
+      ? {
+          email: user.email,
+          phone: user.phone || '',
+          displayName: user.displayName || '',
+          setupComplete: Boolean(user.setupComplete),
+          createdAt: user.createdAt || null
+        }
+      : {
+          email: email || 'master-operator',
+          phone: '',
+          displayName: 'Master Operator',
+          setupComplete: true,
+          createdAt: null
+        },
+    sessionExpiresAt: req.masterUser?.exp ? req.masterUser.exp * 1000 : null
+  });
+});
+
+// PUT /api/auth/profile - Update operator email, phone, and displayName
+app.put('/api/auth/profile', requireMasterAuth, async (req, res) => {
+  const currentEmail = req.masterUser?.email;
+  if (!currentEmail) {
+    return res.status(400).json({ error: 'Account profile editing requires an operator email login' });
+  }
+  const user = storage.getUserByEmail(currentEmail);
+  if (!user) {
+    return res.status(404).json({ error: 'Operator account not found' });
+  }
+
+  const nextEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : user.email;
+  const nextPhone = typeof req.body?.phone === 'string' ? req.body.phone.trim() : (user.phone || '');
+  const nextDisplayName = typeof req.body?.displayName === 'string' ? req.body.displayName.trim() : (user.displayName || '');
+  const currentPassword = typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : '';
+
+  if (!nextEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+    return res.status(400).json({ error: 'Valid email address is required' });
+  }
+  if (nextPhone && nextPhone.replace(/[^0-9]/g, '').length < 7) {
+    return res.status(400).json({ error: 'Valid phone number is required (at least 7 digits)' });
+  }
+
+  const emailChanged = nextEmail !== user.email;
+  if (emailChanged) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required to change your email address' });
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+  }
+
+  const result = storage.updateUserProfile(user.email, {
+    newEmail: nextEmail,
+    phone: nextPhone,
+    displayName: nextDisplayName
+  });
+
+  if (result.conflict) {
+    return res.status(409).json({ error: 'Another account already uses this email address' });
+  }
+  if (!result.user) {
+    return res.status(404).json({ error: 'Operator account not found' });
+  }
+
+  const updatedToken = emailChanged && config.jwtSecret
+    ? jwt.sign({ role: 'operator', email: result.user.email }, config.jwtSecret, { expiresIn: '2h' })
+    : null;
+
+  const auditEntry = storage.addAuditLog({
+    actorEmail: result.user.email,
+    action: 'PROFILE_UPDATED',
+    target: result.user.email,
+    detail: emailChanged ? `Updated email (${user.email} -> ${result.user.email})` : 'Updated profile contact details'
+  });
+  broadcast('AUDIT_UPDATED', auditEntry);
+
+  return res.json({
+    success: true,
+    token: updatedToken,
+    user: {
+      email: result.user.email,
+      phone: result.user.phone || '',
+      displayName: result.user.displayName || '',
+      setupComplete: Boolean(result.user.setupComplete),
+      createdAt: result.user.createdAt || null
+    }
+  });
+});
+
+// PUT /api/auth/password - Update operator password
+app.put('/api/auth/password', requireMasterAuth, masterAuthLimiter, async (req, res) => {
+  const email = req.masterUser?.email;
+  if (!email) {
+    return res.status(400).json({ error: 'Password change requires an operator email login' });
+  }
+  const user = storage.getUserByEmail(email);
+  if (!user) {
+    return res.status(404).json({ error: 'Operator account not found' });
+  }
+
+  const currentPassword = typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : '';
+  const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Current password is required' });
+  }
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+
+  try {
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    const newHash = await bcrypt.hash(newPassword, 12);
+    storage.updateUserPassword(user.email, newHash);
+    const auditEntry = storage.addAuditLog({
+      actorEmail: user.email,
+      action: 'PASSWORD_CHANGED',
+      target: user.email,
+      detail: 'Operator password updated'
+    });
+    broadcast('AUDIT_UPDATED', auditEntry);
+    return res.json({ success: true });
+  } catch {
+    return res.status(500).json({ error: 'Failed to update password' });
   }
 });
 
@@ -951,6 +1213,32 @@ app.put('/api/zones/:id', requireMasterAuth, (req, res) => {
 app.get('/api/alerts', (req, res) => {
   const limit = parseInt(req.query.limit || '50', 10);
   res.json({ alerts: storage.getAlerts(limit) });
+});
+
+// POST /api/alerts/:id/ack - Acknowledge an alert (protected)
+app.post('/api/alerts/:id/ack', requireMasterAuth, (req, res) => {
+  const { id } = req.params;
+  const note = typeof req.body?.note === 'string' ? req.body.note : '';
+  const actorEmail = req.masterUser?.email || 'operator';
+  const updated = storage.acknowledgeAlert(id, actorEmail, note);
+  if (!updated) {
+    return res.status(404).json({ error: 'Alert not found' });
+  }
+  const auditEntry = storage.addAuditLog({
+    actorEmail,
+    action: 'ALERT_ACKNOWLEDGED',
+    target: updated.zoneId,
+    detail: `Acknowledged ${updated.toState} alert in ${updated.zoneName}`
+  });
+  broadcast('ALERT_UPDATED', updated);
+  broadcast('AUDIT_UPDATED', auditEntry);
+  res.json({ status: 'ok', alert: updated });
+});
+
+// GET /api/audit - Operator audit trail (protected)
+app.get('/api/audit', requireMasterAuth, (req, res) => {
+  const limit = parseInt(req.query.limit || '100', 10);
+  res.json({ auditLogs: storage.getAuditLogs(limit) });
 });
 
 // POST /api/commands - Operator commands from dashboard (protected)

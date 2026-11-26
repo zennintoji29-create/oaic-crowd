@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wifi, WifiOff, Play, Pause, LogOut, ShieldCheck } from 'lucide-react';
+import { Wifi, WifiOff, Play, Pause, LogOut, ShieldCheck, User, Volume2, VolumeX, Clock } from 'lucide-react';
 import { CrowdState } from '../types';
 import { StateBadge } from './StateBadge';
+import { getTokenExpiryMs } from '../lib/api';
 
 interface GlobalHeaderProps {
   worstState: CrowdState;
@@ -13,6 +14,10 @@ interface GlobalHeaderProps {
   onToggleSimulator: () => void;
   onLogout?: () => void;
   onGoDashboard?: () => void;
+  operatorLabel?: string;
+  onOpenProfile?: () => void;
+  soundEnabled?: boolean;
+  onToggleSound?: () => void;
 }
 
 export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
@@ -23,8 +28,26 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   simulatorRunning,
   onToggleSimulator,
   onLogout,
-  onGoDashboard
+  onGoDashboard,
+  operatorLabel,
+  onOpenProfile,
+  soundEnabled = false,
+  onToggleSound
 }) => {
+  const [minutesLeft, setMinutesLeft] = useState<number | null>(() => {
+    const exp = getTokenExpiryMs();
+    return exp ? Math.max(0, Math.round((exp - Date.now()) / 60000)) : null;
+  });
+
+  useEffect(() => {
+    const update = () => {
+      const exp = getTokenExpiryMs();
+      setMinutesLeft(exp ? Math.max(0, Math.round((exp - Date.now()) / 60000)) : null);
+    };
+    update();
+    const timer = setInterval(update, 30000);
+    return () => clearInterval(timer);
+  }, []);
   return (
     <header className="border-b border-white/[0.08] bg-[#08090a]/85 backdrop-blur-md sticky top-0 z-30">
       <div className="px-4 py-2 sm:px-6 flex flex-wrap items-center justify-between gap-3">
@@ -101,6 +124,49 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
               </>
             )}
           </div>
+
+          {onToggleSound && (
+            <button
+              type="button"
+              onClick={onToggleSound}
+              aria-pressed={soundEnabled}
+              title={soundEnabled ? 'Mute critical RED audio alerts' : 'Enable critical RED audio alerts'}
+              className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-md transition-colors ${
+                soundEnabled
+                  ? 'border-[#18e299]/40 bg-[#18e299]/10 text-[#18e299]'
+                  : 'border-border-strong bg-surface-sunken text-text-secondary hover:text-white'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" aria-hidden="true" /> : <VolumeX className="w-4 h-4" aria-hidden="true" />}
+              <span className="hidden xl:inline">{soundEnabled ? 'Alert Sound On' : 'Muted'}</span>
+            </button>
+          )}
+
+          {minutesLeft !== null && (
+            <span
+              className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-2 min-h-[44px] rounded-md text-xs border tabular-nums ${
+                minutesLeft <= 15
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                  : 'border-border-subtle bg-surface-sunken text-neutral-400'
+              }`}
+              title="Remaining JWT session window"
+            >
+              <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{minutesLeft}m</span>
+            </span>
+          )}
+
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-white/[0.12] rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-white transition-colors max-w-[160px]"
+              title="Open operator profile & account settings"
+            >
+              <User className="w-4 h-4 text-[#18e299] shrink-0" aria-hidden="true" />
+              <span className="truncate">{operatorLabel || 'Profile'}</span>
+            </button>
+          )}
 
           {onLogout && (
             <button
