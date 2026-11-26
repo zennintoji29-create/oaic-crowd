@@ -162,3 +162,11 @@ Version 27 (2026-11-27)
 Version 28 (2026-11-27)
 - Added built-in thread-safe HTTP MJPEG video stream server (--stream-port 5000, /video_feed and /snapshot.jpg) and --no-window mode to CPR-AI/main.py.
 - Updated CPR-AI/config.py defaults to post YOLO11n telemetry directly to http://localhost:3000/api/telemetry for zone-entry-a.
+
+Version 29 (2026-11-27)
+- Integrated official React Bits StarBorder (HTML5 Canvas multi-star animated outline + sparkle + clickPulse) on Landing.tsx primary CTA buttons ("Request a pilot", "Operator login", "Send pilot request").
+- Integrated official React Bits BranchedMenu (animated curved SVG branch tree + gliding active section marker + foldable sections) for the dashboard Navigation.tsx desktop sidebar.
+
+Version 29 (2026-11-27)
+- Integrated official React Bits StarBorder canvas component (from @react-bits/StarBorder-TS-TW) for primary CTA buttons on Landing.tsx ("Request a pilot", "Operator login", "Send pilot request").
+- Integrated official React Bits BranchedMenu animated tree navigation (from @react-bits/BranchedMenu-JS-CSS) into Navigation.tsx across desktop sidebar and mobile drawer with emerald #18e299 branch illumination.

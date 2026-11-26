@@ -6,3 +6,5 @@ export { SpotlightCard } from './SpotlightCard';
 export { StarBorder } from './StarBorder';
 export { ClickSpark } from './ClickSpark';
 export { RadarBackdrop } from './RadarBackdrop';
+export { BranchedMenu } from './BranchedMenu';
+export type { BranchedMenuItem, BranchedMenuChild } from './BranchedMenu';

@@ -378,22 +378,40 @@ export const Landing: React.FC = () => {
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <StarBorder color="#18e299" speedSec={5}>
-                  <a
-                    href="#contact"
-                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
-                  >
-                    <span>Request a pilot</span>
-                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                  </a>
+                <StarBorder
+                  as="a"
+                  href="#contact"
+                  color="#18e299"
+                  trailColor="#10b981"
+                  stars={2}
+                  sparkle
+                  radius={999}
+                  duration={3.8}
+                  thickness={1.5}
+                  backgroundColor="#ffffff"
+                  textColor="#08090a"
+                  className="min-h-[44px] px-5 py-2 text-sm font-semibold hover:bg-neutral-200 transition-colors"
+                >
+                  <span>Request a pilot</span>
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </StarBorder>
-                <Link
+                <StarBorder
+                  as={Link}
                   to="/login"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-white text-sm font-medium transition-colors"
+                  color="#18e299"
+                  trailColor="#0d9373"
+                  stars={1}
+                  radius={999}
+                  duration={5}
+                  thickness={1}
+                  backgroundColor="rgba(255,255,255,0.04)"
+                  textColor="#ffffff"
+                  borderColor="rgba(255,255,255,0.14)"
+                  className="min-h-[44px] px-5 py-2 text-sm font-medium hover:bg-white/[0.08] transition-colors"
                 >
                   <Lock className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
                   <span>Operator login</span>
-                </Link>
+                </StarBorder>
               </div>
             </div>
 
@@ -766,13 +784,23 @@ export const Landing: React.FC = () => {
                 )}
               </div>
 
-              <button
+              <StarBorder
+                as="button"
                 type="submit"
-                className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
+                color="#18e299"
+                trailColor="#10b981"
+                stars={2}
+                sparkle
+                radius={999}
+                duration={4}
+                thickness={1.5}
+                backgroundColor="#ffffff"
+                textColor="#08090a"
+                className="w-full min-h-[44px] px-5 py-2.5 text-sm font-semibold hover:bg-neutral-200 transition-colors"
               >
                 <Mail className="w-4 h-4" aria-hidden="true" />
                 <span>Send pilot request</span>
-              </button>
+              </StarBorder>
 
               {submitted && (
                 <p className="text-xs text-[#18e299] font-medium">
