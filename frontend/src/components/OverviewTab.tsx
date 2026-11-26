@@ -9,8 +9,9 @@ import {
   CartesianGrid,
   ReferenceLine
 } from 'recharts';
-import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState } from '../types';
+import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState, HardwareManagerSnapshot } from '../types';
 import { GateCard } from './GateCard';
+import { HardwareControlPanel } from './HardwareControlPanel';
 import { fetchZoneHistory, resetAllGates } from '../lib/api';
 import { formatSystemActions } from '../lib/formatter';
 import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock, RotateCcw, ChevronRight } from 'lucide-react';
@@ -20,6 +21,8 @@ interface OverviewTabProps {
   gates?: GateState[];
   worstState: CrowdState;
   hardware?: HardwareActuatorState | null;
+  hardwareManager?: HardwareManagerSnapshot | null;
+  onHardwareManagerUpdated?: (next: HardwareManagerSnapshot) => void;
   onSelectZone: (zoneId: string) => void;
   onGateUpdated?: (updatedGate: GateState) => void;
   onResetAll?: () => void;
@@ -30,6 +33,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   gates = [],
   worstState,
   hardware,
+  hardwareManager = null,
+  onHardwareManagerUpdated,
   onSelectZone,
   onGateUpdated,
   onResetAll
@@ -292,6 +297,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ))}
         </div>
       </section>
+
+      {/* 2.5. ESP32 Wi-Fi Hardware, Fallback & Combined Demo Panel */}
+      <HardwareControlPanel
+        snapshot={hardwareManager}
+        onUpdated={onHardwareManagerUpdated}
+      />
 
       {/* 3. Real-Time 10-Minute Risk Score Chart */}
       <section className="p-5 flat-panel">

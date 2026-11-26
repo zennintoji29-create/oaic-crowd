@@ -13,6 +13,7 @@ import {
   CrowdState,
   TelemetryPoint,
   HardwareActuatorState,
+  HardwareManagerSnapshot,
   GateState
 } from './types';
 import {
@@ -20,6 +21,7 @@ import {
   fetchAlerts,
   controlSimulator,
   fetchHardwareStatus,
+  fetchHardwareManagerState,
   fetchGates,
   clearSessionToken
 } from './lib/api';
@@ -82,6 +84,7 @@ const AppRoutes: React.FC = () => {
   ]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [hardware, setHardware] = useState<HardwareActuatorState | null>(null);
+  const [hardwareManager, setHardwareManager] = useState<HardwareManagerSnapshot | null>(null);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [lastTelemetryTimestamp, setLastTelemetryTimestamp] = useState<number>(Date.now());
   const [simulatorRunning, setSimulatorRunning] = useState<boolean>(false);
@@ -116,16 +119,18 @@ const AppRoutes: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     try {
-      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw] = await Promise.all([
+      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw, fetchedHwMgr] = await Promise.all([
         fetchZones().catch(() => []),
         fetchGates().catch(() => []),
         fetchAlerts(50).catch(() => []),
-        fetchHardwareStatus().catch(() => null)
+        fetchHardwareStatus().catch(() => null),
+        fetchHardwareManagerState().catch(() => null)
       ]);
       if (fetchedZones && fetchedZones.length > 0) setZones(fetchedZones);
       if (fetchedGates && fetchedGates.length > 0) setGates(fetchedGates);
       if (fetchedAlerts) setAlerts(fetchedAlerts);
       if (fetchedHw) setHardware(fetchedHw);
+      if (fetchedHwMgr) setHardwareManager(fetchedHwMgr);
     } catch (err) {
       console.warn('[APP] Could not fetch initial REST data:', err);
     }
@@ -198,6 +203,7 @@ const AppRoutes: React.FC = () => {
               if (msg.data.gates) setGates(msg.data.gates);
               if (msg.data.alerts) setAlerts(msg.data.alerts);
               if (msg.data.hardware) setHardware(msg.data.hardware);
+              if (msg.data.hardwareManager) setHardwareManager(msg.data.hardwareManager);
               if (typeof msg.data.simulatorRunning === 'boolean') {
                 setSimulatorRunning(msg.data.simulatorRunning);
               }
@@ -210,6 +216,8 @@ const AppRoutes: React.FC = () => {
               );
             } else if (msg.type === 'HARDWARE_UPDATE' || msg.type === 'FAILOVER_ALERT') {
               setHardware(msg.data);
+            } else if (msg.type === 'HARDWARE_MANAGER_UPDATE') {
+              setHardwareManager(msg.data);
             } else if (msg.type === 'SIMULATOR_STATE') {
               setSimulatorRunning(msg.data.isRunning);
             } else if (msg.type === 'ZONE_CONFIG_UPDATED') {
@@ -341,6 +349,8 @@ const AppRoutes: React.FC = () => {
                     gates={gates}
                     worstState={worst.state}
                     hardware={hardware}
+                    hardwareManager={hardwareManager}
+                    onHardwareManagerUpdated={setHardwareManager}
                     onSelectZone={handleSelectZone}
                     onGateUpdated={handleGateUpdated}
                     onResetAll={refreshData}

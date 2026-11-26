@@ -7,10 +7,21 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
 import { config } from './config.js';
-import { TelemetrySchema, CommandSchema, ZoneConfigSchema } from './schema.js';
+import {
+  TelemetrySchema,
+  CommandSchema,
+  ZoneConfigSchema,
+  HardwareRegisterSchema,
+  HardwareHeartbeatSchema,
+  HardwareAckSchema,
+  HardwareModeSchema,
+  HardwareDemoSchema,
+  HardwareCommandSchema
+} from './schema.js';
 import { storage } from './storage.js';
 import { simulator } from './simulator.js';
 import { keepAliveEngine } from './keepAlive.js';
+import { hardwareManager } from './hardwareManager.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -61,14 +72,10 @@ const hardwareState = {
   }
 };
 
-// Evaluates Traffic Light LEDs, SG90 Gate & OLED text based on count & mode
+// Evaluates Traffic Light LEDs, SG90 Gate & OLED text from authoritative YOLO count
+// Note: Hardware presence/ToF NEVER overwrites YOLO person count or density.
 function updateControlLogic(overrideCount) {
-  let count = typeof overrideCount === 'number' ? overrideCount : hardwareState.currentCount;
-
-  if (hardwareState.systemMode === 'HARDWARE_FAILOVER' || !hardwareState.cameraOnline) {
-    count = Math.max(1, Math.round((hardwareState.radarEnergy || 30) / 8));
-  }
-
+  const count = typeof overrideCount === 'number' ? overrideCount : hardwareState.currentCount;
   hardwareState.currentCount = count;
 
   // Threshold Rules:
@@ -117,18 +124,20 @@ function updateControlLogic(overrideCount) {
   broadcastSSE({ type: 'HARDWARE_UPDATE', state: hardwareState });
 }
 
-// Watchdog: If camera doesn't ping for > 4.5 seconds, switch to Radar Failover
+// Watchdog: check ESP32 heartbeat timeouts & camera health
 setInterval(() => {
-  const elapsed = Date.now() - hardwareState.lastCameraPing;
-  if (elapsed > 4500 && hardwareState.cameraOnline && hardwareState.systemMode === 'AI_VISION_PRIMARY') {
-    hardwareState.cameraOnline = false;
-    hardwareState.systemMode = 'HARDWARE_FAILOVER';
-    console.log('[WATCHDOG ALERT] Camera stream dropped! Autonomous Hardware Failover active.');
-    updateControlLogic();
-    broadcast('FAILOVER_ALERT', hardwareState);
-    broadcastSSE({ type: 'FAILOVER_ALERT', state: hardwareState });
+  hardwareManager.checkTimeouts();
+}, 2000);
+
+hardwareManager.setChangeCallback((eventType, payload) => {
+  if (eventType === 'HARDWARE_ACK') {
+    broadcast('HARDWARE_ACK', payload);
+    broadcastSSE({ type: 'HARDWARE_ACK', payload });
+  } else {
+    broadcast('HARDWARE_MANAGER_UPDATE', payload);
+    broadcastSSE({ type: 'HARDWARE_MANAGER_UPDATE', state: payload });
   }
-}, 1000);
+});
 
 // ----------------------------------------------------------------------------
 // WebSocket Real-time Broadcast
@@ -156,7 +165,35 @@ simulator.setBroadcastCallback(record => {
   broadcastSSE({ type: 'TELEMETRY_UPDATE', point: record, hardware: hardwareState });
 });
 
-wss.on('connection', ws => {
+wss.on('connection', (ws, req) => {
+  const devKey = req?.headers?.['x-device-key'];
+  const devIdHeader = req?.headers?.['x-device-id'];
+  if (devKey && devKey === config.deviceKey && typeof devIdHeader === 'string' && devIdHeader.trim()) {
+    const devId = devIdHeader.trim();
+    hardwareManager.registerDevice({ deviceId: devId, ip: req.socket?.remoteAddress || '' });
+    hardwareManager.attachDeviceSocket(devId, ws);
+
+    ws.on('message', (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        if (msg.type === 'HEARTBEAT') {
+          const parsed = HardwareHeartbeatSchema.safeParse({ ...msg.data, deviceId: devId });
+          if (parsed.success) hardwareManager.recordHeartbeat(parsed.data, req.socket?.remoteAddress || '');
+        } else if (msg.type === 'ACK') {
+          const parsed = HardwareAckSchema.safeParse({ ...msg.data, deviceId: devId });
+          if (parsed.success) hardwareManager.recordAck(parsed.data);
+        }
+      } catch {
+        // Ignore malformed WS frame
+      }
+    });
+
+    ws.on('close', () => {
+      hardwareManager.detachDeviceSocket(devId);
+    });
+    return;
+  }
+
   console.log('[WS] Dashboard client connected. Total clients:', wss.clients.size);
 
   // Send initial snapshot on connect (including hardware state, gates, and config)
@@ -168,7 +205,8 @@ wss.on('connection', ws => {
       config: storage.getConfig(),
       alerts: storage.getAlerts(20),
       simulatorRunning: simulator.isRunning,
-      hardware: hardwareState
+      hardware: hardwareState,
+      hardwareManager: hardwareManager.getSnapshot()
     },
     timestamp: Date.now()
   }));
@@ -266,6 +304,12 @@ app.post('/api/telemetry', requireDeviceAuth, (req, res) => {
     console.log('[CPR-Backend] Camera reconnected. Primary AI Vision mode restored.');
   }
   updateControlLogic(targetCount);
+  hardwareManager.onYoloTelemetry({
+    count: targetCount,
+    density: parsed.data.density,
+    score: parsed.data.score,
+    state: parsed.data.state
+  });
 
   const record = storage.addTelemetry(parsed.data);
 
@@ -278,12 +322,20 @@ app.post('/api/telemetry', requireDeviceAuth, (req, res) => {
 
 // GET /api/esp32/status (Direct polling endpoint for physical ESP32 Master node)
 app.get('/api/esp32/status', (req, res) => {
-  const isRed = hardwareState.ledState.red;
-  const isYellow = hardwareState.ledState.yellow;
+  const cmd = hardwareManager.targetCommand;
+  const isRed = cmd.alertLevel === 'RED';
+  const isYellow = cmd.alertLevel === 'AMBER';
   const ledColor = isRed ? 'RED' : (isYellow ? 'YELLOW' : 'GREEN');
 
   res.json({
+    operatingMode: hardwareManager.operatingMode,
     mode: hardwareState.systemMode,
+    seq: cmd.seq,
+    nonce: cmd.nonce,
+    ts: cmd.ts,
+    alertLevel: cmd.alertLevel,
+    commandType: cmd.type,
+    buzzerPattern: cmd.buzzer,
     count: hardwareState.currentCount,
     led: ledColor,
     rgb: hardwareState.rgb,
@@ -292,11 +344,93 @@ app.get('/api/esp32/status', (req, res) => {
       yellow: isYellow ? 1 : 0,
       green: (!isRed && !isYellow) ? 1 : 0
     },
-    servoAngle: hardwareState.servoAngle,
+    servoAngle: cmd.servoAngle,
     servoStatus: hardwareState.servoStatus,
-    buzzer: hardwareState.buzzer,
+    buzzer: cmd.buzzer !== 'OFF',
     oled: hardwareState.oled
   });
+});
+
+// ============================================================================
+// ESP32 DIRECT WI-FI INTEGRATION, MODE CONTROL & HARDWARE TELEMETRY
+// ============================================================================
+app.post('/api/hardware/register', requireDeviceAuth, (req, res) => {
+  const parsed = HardwareRegisterSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid registration payload', details: parsed.error.format() });
+  }
+  const device = hardwareManager.registerDevice({
+    ...parsed.data,
+    ip: parsed.data.ip || req.ip || ''
+  });
+  return res.status(201).json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
+});
+
+app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
+  const parsed = HardwareHeartbeatSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid heartbeat payload', details: parsed.error.format() });
+  }
+  const device = hardwareManager.recordHeartbeat(parsed.data, req.ip || '');
+  return res.json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
+});
+
+app.post('/api/hardware/telemetry', requireDeviceAuth, (req, res) => {
+  const parsed = HardwareHeartbeatSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid hardware telemetry payload', details: parsed.error.format() });
+  }
+  const device = hardwareManager.recordHeartbeat(parsed.data, req.ip || '');
+  return res.json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
+});
+
+app.post('/api/hardware/ack', requireDeviceAuth, (req, res) => {
+  const parsed = HardwareAckSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid ack payload', details: parsed.error.format() });
+  }
+  const result = hardwareManager.recordAck(parsed.data);
+  if (result.duplicate) {
+    return res.status(409).json({ status: 'duplicate_rejected', seq: result.seq });
+  }
+  return res.json({ status: 'ok', ...result });
+});
+
+app.get('/api/hardware/state', (req, res) => {
+  return res.json({ status: 'ok', hardware: hardwareManager.getSnapshot() });
+});
+
+app.post('/api/hardware/mode', requireMasterAuth, async (req, res) => {
+  const parsed = HardwareModeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid operating mode', details: parsed.error.format() });
+  }
+  const result = await hardwareManager.setOperatingMode(parsed.data.mode);
+  if (!result.ok) {
+    return res.status(504).json({ status: 'error', error: result.error, hardware: hardwareManager.getSnapshot() });
+  }
+  return res.json({ status: 'ok', mode: result.mode, hardware: hardwareManager.getSnapshot() });
+});
+
+app.post('/api/hardware/command', requireMasterAuth, (req, res) => {
+  const parsed = HardwareCommandSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid hardware command', details: parsed.error.format() });
+  }
+  const cmd = hardwareManager.issueCommand({
+    ...parsed.data,
+    source: 'OPERATOR_DASHBOARD'
+  });
+  return res.json({ status: 'ok', command: cmd, hardware: hardwareManager.getSnapshot() });
+});
+
+app.post('/api/hardware/demo', requireMasterAuth, (req, res) => {
+  const parsed = HardwareDemoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid demo payload', details: parsed.error.format() });
+  }
+  const result = hardwareManager.setDemoSimulation(parsed.data);
+  return res.json({ status: 'ok', ...result, hardware: hardwareManager.getSnapshot() });
 });
 
 // GET /api/stream - Server-Sent Events (SSE) stream for browsers

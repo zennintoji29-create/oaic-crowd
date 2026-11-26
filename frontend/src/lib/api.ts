@@ -249,6 +249,58 @@ export async function verifyOperatorPassword(password: string): Promise<{ succes
 }
 
 // ============================================================================
+// ESP32 WI-FI HARDWARE MANAGER, FALLBACK & COMBINED DEMO API
+// ============================================================================
+export async function fetchHardwareManagerState(): Promise<any> {
+  const res = await authFetch(`${API_BASE}/hardware/state`);
+  if (!res.ok) throw new Error('Failed to fetch hardware manager state');
+  const data = await res.json();
+  return data.hardware;
+}
+
+export async function setHardwareOperatingMode(
+  mode: 'AI_CAMERA' | 'HARDWARE_FALLBACK' | 'COMBINED_DEMO'
+): Promise<{ status: string; mode?: string; error?: string; hardware?: any }> {
+  const res = await authFetch(`${API_BASE}/hardware/mode`, {
+    method: 'POST',
+    body: JSON.stringify({ mode })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err: any = new Error(data.error || 'Failed to switch operating mode');
+    err.hardware = data.hardware;
+    throw err;
+  }
+  return data;
+}
+
+export async function sendHardwareCommand(payload: {
+  deviceId?: string;
+  type: 'GATE_OPEN' | 'GATE_CLOSE' | 'GATE_METER' | 'SERVO_TEST' | 'GATE_RESET' | 'BUZZER_OFF' | 'SYNC_ALERT';
+  alertLevel?: 'GREEN' | 'AMBER' | 'RED';
+  servoAngle?: number;
+}): Promise<any> {
+  const res = await authFetch(`${API_BASE}/hardware/command`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to send hardware command');
+  return res.json();
+}
+
+export async function sendHardwareDemo(
+  action: 'SET_ALERT' | 'RESET',
+  alertLevel?: 'GREEN' | 'AMBER' | 'RED'
+): Promise<any> {
+  const res = await authFetch(`${API_BASE}/hardware/demo`, {
+    method: 'POST',
+    body: JSON.stringify({ action, alertLevel })
+  });
+  if (!res.ok) throw new Error('Failed to update demonstration mode');
+  return res.json();
+}
+
+// ============================================================================
 // PROTECTED MASTER REMOTE API
 // ============================================================================
 export async function authenticateMaster(

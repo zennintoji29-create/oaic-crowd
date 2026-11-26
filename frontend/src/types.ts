@@ -122,5 +122,87 @@ export interface TrafficAnalytics {
   gateBreakdown: { gateId: string; name: string; totalPassages: number; criticalIncidents: number }[];
 }
 
+export type OperatingMode = 'AI_CAMERA' | 'HARDWARE_FALLBACK' | 'COMBINED_DEMO';
+
+export interface Esp32DeviceRecord {
+  deviceId: string;
+  zoneId: string;
+  role: 'MASTER_ACTUATOR' | 'TRANSMITTER_SENSOR';
+  firmwareVersion: string;
+  ip: string;
+  capabilities: string[];
+  online: boolean;
+  registeredAt: number;
+  lastSeen: number;
+  uptimeSec: number;
+  wifiRssi: number | null;
+  sensors: {
+    presenceDetected: boolean | null;
+    radarEnergy: number | null;
+    radarOnline: boolean;
+    tofDistanceMm: number | null;
+    tofOnline: boolean;
+    irCount: number | null;
+  };
+  reportedOutputs: {
+    alertLevel: 'GREEN' | 'AMBER' | 'RED' | 'SAFE';
+    led: 'GREEN' | 'AMBER' | 'RED' | 'SAFE';
+    buzzer: 'OFF' | 'WARNING_BEEPS' | 'CRITICAL_ALARM';
+    servoAngle: number;
+    lastAckSeq: number;
+  };
+}
+
+export interface HardwareManagerSnapshot {
+  operatingMode: OperatingMode;
+  yoloState: {
+    count: number;
+    density: number;
+    score: number;
+    alertLevel: 'GREEN' | 'AMBER' | 'RED';
+    cameraHealthy: boolean;
+    lastUpdated: number;
+  };
+  demoState: {
+    active: boolean;
+    alertLevel: 'GREEN' | 'AMBER' | 'RED' | null;
+    updatedAt: number;
+  };
+  esp32Connected: boolean;
+  primaryDevice: Esp32DeviceRecord | null;
+  devices: Esp32DeviceRecord[];
+  targetCommand: {
+    seq: number;
+    nonce: string;
+    ts: number;
+    type: string;
+    alertLevel: 'GREEN' | 'AMBER' | 'RED';
+    led: string;
+    buzzer: string;
+    servoAngle: number;
+    source: string;
+  };
+  commandHistory: {
+    seq: number;
+    type: string;
+    alertLevel: string;
+    servoAngle: number;
+    buzzer: string;
+    source: string;
+    status: string;
+    issuedAt: number;
+    ackedAt: number | null;
+  }[];
+  eventLogs: {
+    id: string;
+    ts: number;
+    level: string;
+    deviceId: string;
+    event: string;
+    detail: string;
+  }[];
+}
+
+
 
 
