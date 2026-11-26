@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
   ChevronLeft,
@@ -12,7 +12,8 @@ import {
   Sliders,
   Save,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  Home
 } from 'lucide-react';
 import { updateSystemConfig, fetchHardwareStatus, sendMasterCommand } from '../lib/api';
 import { SpaceAiAdvisor } from '../components/SpaceAiAdvisor';
@@ -315,6 +316,13 @@ export const Setup: React.FC = () => {
               Step {step} of {TOTAL_STEPS}: {STEP_LABELS[step - 1]}
             </p>
           </div>
+          <Link
+            to="/"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.09] text-xs font-medium text-white transition-colors"
+          >
+            <Home className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+            <span>Home</span>
+          </Link>
         </div>
 
         {/* Progress Bar */}

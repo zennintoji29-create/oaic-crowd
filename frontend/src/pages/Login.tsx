@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Lock, Mail, Phone, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, Phone, ArrowLeft, AlertCircle, ShieldCheck, Home } from 'lucide-react';
 import { loginOperator, signupOperator, setSessionToken } from '../lib/api';
 import { DecryptedText, RadarBackdrop } from '../components/reactbits';
 
@@ -94,9 +94,30 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden min-h-dvh bg-surface-base text-text-primary flex flex-col justify-center items-center px-4 py-12 safe-area-shell">
+    <div className="relative overflow-hidden min-h-dvh bg-surface-base text-text-primary flex flex-col safe-area-shell">
       <RadarBackdrop className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-25" />
-      <div className="relative z-10 w-full max-w-sm space-y-6">
+
+      {/* Top Navigation Bar with Home Tab */}
+      <header className="relative z-10 border-b border-white/[0.08] bg-[#08090a]/85 backdrop-blur-md">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 min-h-[56px] flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-sm font-bold text-white">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border-2 border-dashed border-[#18e299] bg-[#18e299]/10 text-[#18e299]">
+              <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span>CPR</span>
+          </Link>
+          <Link
+            to="/"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.09] text-xs font-medium text-white transition-colors"
+          >
+            <Home className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+            <span>Home</span>
+          </Link>
+        </div>
+      </header>
+
+      <div className="relative z-10 flex-1 flex flex-col justify-center items-center px-4 py-10">
+      <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-surface-raised border border-border-strong text-accent">
             <ShieldCheck className="w-6 h-6" aria-hidden="true" />
@@ -242,6 +263,7 @@ export const Login: React.FC = () => {
             <span>Back to home</span>
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );

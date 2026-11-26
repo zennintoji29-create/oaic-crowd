@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   User,
-  Wifi
+  Wifi,
+  Home
 } from 'lucide-react';
 
 export interface NavTabItem {
@@ -90,6 +91,16 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <MoreVertical className="w-4 h-4" />
               </button>
             </div>
+
+            <Link
+              to="/"
+              className="min-h-[44px] flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all border-l-2 border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.04]"
+            >
+              <span className="p-1.5 rounded-md bg-white/[0.03] text-[#18e299]">
+                <Home className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              </span>
+              <span>Home</span>
+            </Link>
 
             <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 px-2.5 pt-1 pb-0.5">
               Monitoring
@@ -267,6 +278,15 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {mobileMenuOpen && (
           <nav aria-label="Mobile navigation" className="pt-2 pb-1 flex flex-col gap-1">
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-sunken"
+            >
+              <Home className="w-4 h-4 text-accent" aria-hidden="true" />
+              <span>Home</span>
+            </Link>
+
             {primaryItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;

@@ -152,6 +152,7 @@ export const Landing: React.FC = () => {
   };
 
   const navLinks = [
+    { href: '#', label: 'Home' },
     { href: '#features', label: 'Platform' },
     { href: '#how-it-works', label: 'Architecture' },
     { href: '#pricing', label: 'Pricing' },

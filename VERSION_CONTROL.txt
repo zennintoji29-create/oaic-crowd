@@ -147,3 +147,11 @@ Version 25 (2026-11-27)
 - Moved ESP32 Fallback & Hardware Control Panel into its own dedicated navbar page ("ESP32 & Fallback") in Navigation.tsx and App.tsx.
 - Set live refresh & stale telemetry auto-clear interval to 1 minute (60s).
 - Added AI Space & Crowd Capacity Advisor (SpaceAiAdvisor.tsx) in SetupTab.tsx & Setup.tsx plus custom Green/Amber/Red limit inputs and Hall presets in DemoTab.tsx & SetupTab.tsx.
+
+Version 26 (2026-11-27)
+- Added a quick Home tab/link across every page for instant navigation:
+  * Landing.tsx: Added explicit "Home" item to the top navigation links.
+  * Navigation.tsx: Added "Home" link (/) at the top of the sidebar and mobile menu.
+  * Login.tsx (Sign In & Sign Up): Added sticky minimal top bar with CPR logo and Home pill.
+  * Setup.tsx (/setup): Added top-right Home pill in the wizard header.
+  * MasterRemote.tsx (/master): Added Home + Dashboard links on the password lock screen and top Home button inside the unlocked remote.

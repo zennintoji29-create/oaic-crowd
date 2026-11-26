@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Lock,
   Unlock,
@@ -6,7 +7,8 @@ import {
   RotateCcw,
   Radio,
   EyeOff,
-  LogOut
+  LogOut,
+  Home
 } from 'lucide-react';
 import { GateState, CrowdState } from '../types';
 import {
@@ -209,6 +211,22 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
               {authLoading ? 'Verifying...' : 'Unlock Remote'}
             </button>
           </form>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Link
+              to="/"
+              className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-neutral-300 hover:text-white transition-colors"
+            >
+              <Home className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+              <span>Home</span>
+            </Link>
+            <Link
+              to="/dashboard"
+              className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-neutral-300 hover:text-white transition-colors"
+            >
+              <span>Dashboard</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -216,12 +234,19 @@ export const MasterRemote: React.FC<MasterRemoteProps> = ({ initialGates = [] })
 
   return (
     <div className="min-h-dvh bg-surface-base text-text-primary flex flex-col p-4 max-w-md mx-auto font-sans select-none pb-8 safe-area-shell">
-      {/* Top Header with Reset & Logout */}
+      {/* Top Header with Home, Reset & Logout */}
       <div className="flex items-center justify-between py-2 border-b border-border-subtle mb-3">
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden="true" />
-          <span className="text-xs font-semibold tracking-wider text-text-secondary uppercase">
-            CPR Master Remote
+          <Link
+            to="/"
+            className="min-h-[40px] inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-xs font-medium text-neutral-300 hover:text-white transition-colors"
+            title="Go to Home page"
+          >
+            <Home className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+            <span>Home</span>
+          </Link>
+          <span className="text-xs font-semibold tracking-wider text-text-secondary uppercase hidden sm:inline">
+            Master
           </span>
         </div>
 
