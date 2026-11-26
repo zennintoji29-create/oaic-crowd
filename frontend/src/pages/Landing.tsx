@@ -39,7 +39,6 @@ import {
   GradientText,
   TiltedCard,
   Magnet,
-  LogoLoop,
   AnimatedContent
 } from '../components/reactbits';
 
@@ -503,21 +502,6 @@ export const Landing: React.FC = () => {
             </div>
             </TiltedCard>
           </div>
-        </section>
-
-        {/* Sensor Hardware LogoLoop Marquee */}
-        <section aria-label="Hardware and AI stack" className="border-b border-white/[0.08] py-4 bg-[#0a0c0e]">
-          <LogoLoop
-            items={[
-              { label: 'YOLO11n Edge Vision', tag: 'PRIMARY' },
-              { label: 'HLK-LD2410C 24 GHz Radar', tag: 'FMCW' },
-              { label: 'VL53L0X Laser ToF', tag: 'I2C 0x29' },
-              { label: 'ESP32-WROOM-32D + Ra-02 LoRa', tag: '433 MHz' },
-              { label: 'SG90 Barrier Metering', tag: '90° / 45° / 0°' },
-              { label: '1.5s Edge Failover', tag: 'OFFLINE SAFE' },
-              { label: 'JWT + bcrypt Cost 12', tag: 'HARDENED' }
-            ]}
-          />
         </section>
 
         {/* Hairline Trust Grid (Mintlify-style divided grid) */}
