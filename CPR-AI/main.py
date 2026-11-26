@@ -306,6 +306,15 @@ class CPRVisionMaster:
 
     def run(self):
         print("\n[CPR-Master] Vision pipeline started successfully.")
+        if self.mjpeg_server:
+            port = self.args.stream_port
+            print("=" * 65)
+            print(f"  CAMERA STREAM PORT : {port}")
+            print(f"  LIVE YOLO FEED URL : http://localhost:{port}/video_feed")
+            print(f"  SNAPSHOT URL       : http://localhost:{port}/snapshot.jpg")
+            print("=" * 65)
+        if not getattr(self.args, "no_window", False):
+            cv2.namedWindow("CPR - Crowd Pressure Radar (Master Vision Engine)", cv2.WINDOW_NORMAL)
         print("  Press 'e' to toggle low-light boost | 'w'/'s' to adjust line | 'r' to reset | 'q' to quit.\n")
 
         while True:
