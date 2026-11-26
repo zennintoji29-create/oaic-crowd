@@ -40,6 +40,7 @@ import { AlertsTab } from './components/AlertsTab';
 import { SetupTab } from './components/SetupTab';
 import { AboutTab } from './components/AboutTab';
 import { ProfileTab } from './components/ProfileTab';
+import { HardwareControlPanel } from './components/HardwareControlPanel';
 import { RequireAuth } from './components/RequireAuth';
 import { Login } from './pages/Login';
 
@@ -187,8 +188,8 @@ const AppRoutes: React.FC = () => {
 
   useEffect(() => {
     refreshData();
-    // Re-check live backend telemetry every 2 minutes & immediately when returning to the tab
-    const pollTimer = setInterval(refreshData, 120000);
+    // Re-check live backend telemetry every 1 minute & immediately when returning to the tab
+    const pollTimer = setInterval(refreshData, 60000);
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         refreshData();
@@ -443,11 +444,6 @@ const AppRoutes: React.FC = () => {
         onToggleSimulator={handleToggleSimulator}
         onLogout={handleLogout}
         onGoDashboard={() => setDashboardTab('overview')}
-        operatorLabel={operatorProfile?.displayName || operatorProfile?.email}
-        onOpenProfile={() => {
-          setDashboardTab('profile');
-          if (location.pathname !== '/dashboard') navigate('/dashboard');
-        }}
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled((v) => !v)}
       />
@@ -494,12 +490,17 @@ const AppRoutes: React.FC = () => {
                     gates={gates}
                     worstState={worst.state}
                     hardware={hardware}
-                    hardwareManager={hardwareManager}
                     cameraStreamUrl={cameraStreamUrl}
-                    onHardwareManagerUpdated={setHardwareManager}
                     onSelectZone={handleSelectZone}
                     onGateUpdated={handleGateUpdated}
                     onResetAll={refreshData}
+                  />
+                )}
+                {dashboardTab === 'hardware' && (
+                  <HardwareControlPanel
+                    snapshot={hardwareManager}
+                    onUpdated={setHardwareManager}
+                    cameraStreamUrl={cameraStreamUrl}
                   />
                 )}
                 {dashboardTab === 'detail' && (

@@ -395,7 +395,7 @@ export class HardwareManager {
       changed = true;
     }
 
-    const staleResetMs = parseInt(process.env.TELEMETRY_STALE_CLEAR_MS || '120000', 10);
+    const staleResetMs = parseInt(process.env.TELEMETRY_STALE_CLEAR_MS || '60000', 10);
     if (
       !this.demoState.active &&
       this.yoloState.lastUpdated > 0 &&

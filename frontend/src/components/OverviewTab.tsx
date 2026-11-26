@@ -9,9 +9,8 @@ import {
   CartesianGrid,
   ReferenceLine
 } from 'recharts';
-import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState, HardwareManagerSnapshot } from '../types';
+import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState } from '../types';
 import { GateCard } from './GateCard';
-import { HardwareControlPanel } from './HardwareControlPanel';
 import { fetchZoneHistory, resetAllGates } from '../lib/api';
 import { formatSystemActions } from '../lib/formatter';
 import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock, RotateCcw, ChevronRight } from 'lucide-react';
@@ -22,9 +21,7 @@ interface OverviewTabProps {
   gates?: GateState[];
   worstState: CrowdState;
   hardware?: HardwareActuatorState | null;
-  hardwareManager?: HardwareManagerSnapshot | null;
   cameraStreamUrl?: string;
-  onHardwareManagerUpdated?: (next: HardwareManagerSnapshot) => void;
   onSelectZone: (zoneId: string) => void;
   onGateUpdated?: (updatedGate: GateState) => void;
   onResetAll?: () => void;
@@ -35,9 +32,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   gates = [],
   worstState,
   hardware,
-  hardwareManager = null,
   cameraStreamUrl = '',
-  onHardwareManagerUpdated,
   onSelectZone,
   onGateUpdated,
   onResetAll
@@ -162,7 +157,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             />
           </div>
           <p className="text-xs sm:text-sm text-neutral-400 mt-0.5">
-            Live gate status, people count, and pressure trends. Stale sensor counts auto-clear to 0 after 2 minutes idle.
+            Live gate status, people count, and pressure trends. Auto-checks every 1 minute &amp; clears idle counts after 1 minute.
           </p>
         </div>
         <button
@@ -316,13 +311,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ))}
         </div>
       </section>
-
-      {/* 2.5. ESP32 Wi-Fi Hardware, Fallback & Combined Demo Panel */}
-      <HardwareControlPanel
-        snapshot={hardwareManager}
-        onUpdated={onHardwareManagerUpdated}
-        cameraStreamUrl={cameraStreamUrl}
-      />
 
       {/* 3. Real-Time 10-Minute Risk Score Chart */}
       <section className="p-5 flat-panel">

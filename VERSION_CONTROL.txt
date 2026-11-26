@@ -140,3 +140,10 @@ Version 24 (2026-11-27)
   * Set default startup gate counts to 0 (no fake counts when camera/USB hardware is offline).
   * Added clearStaleTelemetry() in storage.js, stale YOLO reset in hardwareManager.js, and watchdog sweep in index.js so old test/camera counts auto-reset to 0 after 2 minutes (120,000ms, configurable via TELEMETRY_STALE_CLEAR_MS) without live updates.
   * Added 2-minute periodic refresh and tab visibilitychange re-sync in App.tsx so revisiting hours later always reflects current truth.
+
+Version 25 (2026-11-27)
+- Enhanced Landing Page with 7 new React Bits components (AuroraGlow, ParticlesField, GradientText, TiltedCard, Magnet, LogoLoop marquee, AnimatedContent).
+- Kept strictly ONE Profile & Account link in Navigation.tsx (removed duplicate profile pill from GlobalHeader.tsx).
+- Moved ESP32 Fallback & Hardware Control Panel into its own dedicated navbar page ("ESP32 & Fallback") in Navigation.tsx and App.tsx.
+- Set live refresh & stale telemetry auto-clear interval to 1 minute (60s).
+- Added AI Space & Crowd Capacity Advisor (SpaceAiAdvisor.tsx) in SetupTab.tsx & Setup.tsx plus custom Green/Amber/Red limit inputs and Hall presets in DemoTab.tsx & SetupTab.tsx.

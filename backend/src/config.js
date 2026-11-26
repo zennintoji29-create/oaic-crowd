@@ -20,5 +20,5 @@ export const config = {
   historyRetentionMinutes: 10,
   maxPointsPerZone: 1000,
   commandExpiryMs: 30000, // 30 seconds
-  staleTelemetryResetMs: parseInt(process.env.TELEMETRY_STALE_CLEAR_MS || '120000', 10) // 2 minutes default
+  staleTelemetryResetMs: parseInt(process.env.TELEMETRY_STALE_CLEAR_MS || '60000', 10) // 1 minute default
 };

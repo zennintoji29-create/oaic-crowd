@@ -15,6 +15,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { updateSystemConfig, fetchHardwareStatus, sendMasterCommand } from '../lib/api';
+import { SpaceAiAdvisor } from '../components/SpaceAiAdvisor';
 
 interface Point2D {
   x: number;
@@ -132,7 +133,9 @@ export const Setup: React.FC = () => {
   const [lockedAngle, setLockedAngle] = useState<number>(0);
   const [servoTestStatus, setServoTestStatus] = useState<string | null>(null);
 
-  // Step 7: Save
+  // Step 7: Save + Thresholds (editable or AI-recommended)
+  const [amberThreshold, setAmberThreshold] = useState<number>(5);
+  const [redThreshold, setRedThreshold] = useState<number>(10);
   const [saving, setSaving] = useState<boolean>(false);
 
   const activeGateNames = gateNames.slice(0, gateCount);
@@ -276,6 +279,8 @@ export const Setup: React.FC = () => {
         webcamIndex,
         cameraStreamUrl: cameraStreamUrl.trim(),
         esp32BaseUrl: esp32Url.trim(),
+        amberThreshold,
+        redThreshold,
         homography,
         servoOpenAngle: openAngle,
         servoLockedAngle: lockedAngle,
@@ -374,6 +379,73 @@ export const Setup: React.FC = () => {
                     />
                   </div>
                 ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div>
+                  <label className="block text-xs font-medium text-emerald-300 mb-1">
+                    Green Safe Max (&le;)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={149}
+                    value={Math.max(0, amberThreshold - 1)}
+                    onChange={(e) => {
+                      const g = Math.max(0, Math.min(149, parseInt(e.target.value, 10) || 0));
+                      setAmberThreshold(g + 1);
+                      if (redThreshold <= g + 1) setRedThreshold(g + 3);
+                    }}
+                    className="w-full px-3 py-2 text-sm font-mono rounded-lg bg-slate-950 border border-emerald-500/40 text-emerald-300"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="setup-amber-thr" className="block text-xs font-medium text-amber-300 mb-1">
+                    Amber Threshold
+                  </label>
+                  <input
+                    id="setup-amber-thr"
+                    type="number"
+                    min={1}
+                    max={150}
+                    value={amberThreshold}
+                    onChange={(e) => {
+                      const val = Math.max(1, Math.min(150, parseInt(e.target.value, 10) || 1));
+                      setAmberThreshold(val);
+                      if (redThreshold <= val) setRedThreshold(val + 1);
+                    }}
+                    className="w-full px-3 py-2 text-sm font-mono rounded-lg bg-slate-950 border border-amber-500/40 text-amber-300"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="setup-red-thr" className="block text-xs font-medium text-rose-300 mb-1">
+                    Red Lock Threshold
+                  </label>
+                  <input
+                    id="setup-red-thr"
+                    type="number"
+                    min={amberThreshold + 1}
+                    max={200}
+                    value={redThreshold}
+                    onChange={(e) => {
+                      const val = Math.max(amberThreshold + 1, Math.min(200, parseInt(e.target.value, 10) || amberThreshold + 1));
+                      setRedThreshold(val);
+                    }}
+                    className="w-full px-3 py-2 text-sm font-mono rounded-lg bg-slate-950 border border-rose-500/40 text-rose-300"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <SpaceAiAdvisor
+                  initialGateCount={gateCount}
+                  onApplyRecommendation={(rec) => {
+                    setGateCount(rec.recommendedGateCount);
+                    setAmberThreshold(rec.amberThreshold);
+                    setRedThreshold(rec.redThreshold);
+                  }}
+                  applyButtonLabel="Apply AI Gates & Limits to Setup"
+                />
               </div>
             </div>
           )}

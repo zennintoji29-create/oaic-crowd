@@ -182,8 +182,9 @@ export const DemoTab: React.FC = () => {
   };
 
   // Compute dynamic visual representations purely from local sandbox state (never live data)
-  const effectiveAmber = sensitivityMode === 'LOW' ? amberThreshold + 2 : (sensitivityMode === 'HIGH' ? amberThreshold - 1 : amberThreshold);
-  const effectiveRed = sensitivityMode === 'LOW' ? redThreshold + 3 : (sensitivityMode === 'HIGH' ? redThreshold - 2 : redThreshold);
+  const effectiveAmber = sensitivityMode === 'LOW' ? amberThreshold + 2 : (sensitivityMode === 'HIGH' ? Math.max(2, amberThreshold - 1) : amberThreshold);
+  const effectiveRed = sensitivityMode === 'LOW' ? redThreshold + 3 : (sensitivityMode === 'HIGH' ? Math.max(effectiveAmber + 1, redThreshold - 2) : redThreshold);
+  const sliderMax = Math.max(25, effectiveRed + 15);
 
   const count = simulatedCount;
   const isFailover = isSimulatingCameraFail;
@@ -274,44 +275,66 @@ export const DemoTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Threshold Inc / Dec Controls */}
-          <div className="flex items-center gap-4 text-xs font-mono">
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-muted text-[11px]">Amber Thr:</span>
-              <div className="flex items-center bg-surface-sunken border border-border-strong rounded px-1">
-                <button
-                  onClick={() => setAmberThreshold(prev => Math.max(2, prev - 1))}
-                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
-                >
-                  -
-                </button>
-                <span className="px-1.5 font-bold text-amber-400">{amberThreshold}</span>
-                <button
-                  onClick={() => setAmberThreshold(prev => Math.min(redThreshold - 1, prev + 1))}
-                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
-                >
-                  +
-                </button>
-              </div>
+          {/* Custom Green / Amber / Red Limit Controls & Hall Presets */}
+          <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+            <div className="flex items-center gap-1">
+              <span className="text-emerald-400 text-[11px]">Green &le;</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 font-bold tabular-nums">
+                {Math.max(0, amberThreshold - 1)}
+              </span>
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-text-muted text-[11px]">Red Thr:</span>
-              <div className="flex items-center bg-surface-sunken border border-border-strong rounded px-1">
+              <label htmlFor="demo-amber-limit" className="text-amber-300 text-[11px]">Amber Limit:</label>
+              <input
+                id="demo-amber-limit"
+                type="number"
+                min={2}
+                max={Math.max(2, redThreshold - 1)}
+                value={amberThreshold}
+                onChange={(e) => {
+                  const val = Math.max(2, Math.min(250, parseInt(e.target.value, 10) || 2));
+                  setAmberThreshold(val);
+                  if (redThreshold <= val) setRedThreshold(val + 2);
+                }}
+                className="w-16 px-2 py-1 text-xs bg-surface-sunken border border-border-strong rounded font-mono text-amber-400 font-bold text-center"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="demo-red-limit" className="text-rose-300 text-[11px]">Red Lock:</label>
+              <input
+                id="demo-red-limit"
+                type="number"
+                min={amberThreshold + 1}
+                max={300}
+                value={redThreshold}
+                onChange={(e) => {
+                  const val = Math.max(amberThreshold + 1, Math.min(300, parseInt(e.target.value, 10) || amberThreshold + 1));
+                  setRedThreshold(val);
+                }}
+                className="w-16 px-2 py-1 text-xs bg-surface-sunken border border-border-strong rounded font-mono text-rose-400 font-bold text-center"
+              />
+            </div>
+
+            <div className="flex items-center gap-1">
+              {[
+                { label: 'Corridor 5/10', a: 5, r: 10 },
+                { label: 'Wing 15/30', a: 15, r: 30 },
+                { label: 'Hall 45/85', a: 45, r: 85 }
+              ].map((preset) => (
                 <button
-                  onClick={() => setRedThreshold(prev => Math.max(amberThreshold + 1, prev - 1))}
-                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    setAmberThreshold(preset.a);
+                    setRedThreshold(preset.r);
+                  }}
+                  className="px-2 py-1 rounded border border-border-subtle bg-surface-sunken hover:bg-surface-raised text-[10px] text-neutral-300"
                 >
-                  -
+                  {preset.label}
                 </button>
-                <span className="px-1.5 font-bold text-rose-400">{redThreshold}</span>
-                <button
-                  onClick={() => setRedThreshold(prev => Math.min(30, prev + 1))}
-                  className="px-1.5 py-0.5 text-text-muted hover:text-text-primary"
-                >
-                  +
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -336,12 +359,12 @@ export const DemoTab: React.FC = () => {
               <input
                 type="range"
                 min={0}
-                max={25}
+                max={sliderMax}
                 value={count}
                 onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
                 className="w-full h-2.5 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
               />
-              <span className="text-xs font-mono text-text-muted">25</span>
+              <span className="text-xs font-mono text-text-muted">{sliderMax}</span>
             </div>
           </div>
 

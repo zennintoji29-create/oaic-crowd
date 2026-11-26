@@ -1214,7 +1214,10 @@ app.post('/api/config', requireMasterAuth, (req, res) => {
   const updated = storage.updateConfig(body);
   if (req.masterUser?.email) {
     if (Array.isArray(body.gateNames) && body.gateNames.length > 0) {
-      storage.setGatesForUser(req.masterUser.email, body.gateNames);
+      storage.setGatesForUser(req.masterUser.email, body.gateNames, {
+        amberThreshold: body.amberThreshold,
+        redThreshold: body.redThreshold
+      });
     }
     if (body.setupComplete) {
       storage.markUserSetupComplete(req.masterUser.email);

@@ -137,9 +137,79 @@ select {
   animation: rb-radar-sweep 7.5s linear infinite;
 }
 
+@keyframes rb-aurora-drift-1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(40px, 18px, 0) scale(1.08);
+  }
+}
+
+@keyframes rb-aurora-drift-2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-36px, -16px, 0) scale(1.06);
+  }
+}
+
+.rb-aurora-lobe-1 {
+  animation: rb-aurora-drift-1 14s ease-in-out infinite;
+}
+
+.rb-aurora-lobe-2 {
+  animation: rb-aurora-drift-2 18s ease-in-out infinite;
+}
+
+@keyframes rb-gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.rb-gradient-text {
+  background: linear-gradient(90deg, #ffffff 0%, #18e299 35%, #6ee7b7 65%, #ffffff 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rb-gradient-flow 6s ease infinite;
+}
+
+@keyframes rb-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.rb-marquee-track {
+  animation: rb-marquee 26s linear infinite;
+}
+
+.rb-marquee-track:hover {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .rb-shiny-animate {
+  .rb-shiny-animate,
+  .rb-gradient-text {
     -webkit-text-fill-color: currentColor;
+    animation: none;
+  }
+  .rb-aurora-lobe-1,
+  .rb-aurora-lobe-2,
+  .rb-marquee-track {
     animation: none;
   }
 }

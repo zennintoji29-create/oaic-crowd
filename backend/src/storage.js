@@ -68,12 +68,14 @@ class StorageManager {
     }
   }
 
-  setGatesForUser(email, gateNames = []) {
+  setGatesForUser(email, gateNames = [], thresholds = {}) {
     if (!email) return [];
     const norm = email.toLowerCase();
     const ids = ['gate-a', 'gate-b', 'gate-c', 'gate-d'];
     const zones = ['zone-entry-a', 'zone-corridor-b', 'zone-entry-c', 'zone-corridor-d'];
     const now = Date.now();
+    const amber = Number.isInteger(Number(thresholds.amberThreshold)) && Number(thresholds.amberThreshold) >= 1 ? Number(thresholds.amberThreshold) : 5;
+    const red = Number.isInteger(Number(thresholds.redThreshold)) && Number(thresholds.redThreshold) > amber ? Number(thresholds.redThreshold) : Math.max(amber + 2, 10);
     const map = new Map();
     gateNames.slice(0, 4).forEach((name, idx) => {
       const id = ids[idx];
@@ -91,8 +93,8 @@ class StorageManager {
         manualState: 'AUTO',
         power: true,
         lastUpdated: now,
-        amberThreshold: 5,
-        redThreshold: 10,
+        amberThreshold: amber,
+        redThreshold: red,
         cameraStreamUrl: ''
       });
     });

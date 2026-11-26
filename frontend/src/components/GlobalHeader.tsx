@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wifi, WifiOff, Play, Pause, LogOut, ShieldCheck, User, Volume2, VolumeX, Clock } from 'lucide-react';
+import { Wifi, WifiOff, Play, Pause, LogOut, ShieldCheck, Volume2, VolumeX, Clock } from 'lucide-react';
 import { CrowdState } from '../types';
 import { StateBadge } from './StateBadge';
 import { getTokenExpiryMs } from '../lib/api';
@@ -14,8 +14,6 @@ interface GlobalHeaderProps {
   onToggleSimulator: () => void;
   onLogout?: () => void;
   onGoDashboard?: () => void;
-  operatorLabel?: string;
-  onOpenProfile?: () => void;
   soundEnabled?: boolean;
   onToggleSound?: () => void;
 }
@@ -29,8 +27,6 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   onToggleSimulator,
   onLogout,
   onGoDashboard,
-  operatorLabel,
-  onOpenProfile,
   soundEnabled = false,
   onToggleSound
 }) => {
@@ -154,18 +150,6 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
               <Clock className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{minutesLeft}m</span>
             </span>
-          )}
-
-          {onOpenProfile && (
-            <button
-              type="button"
-              onClick={onOpenProfile}
-              className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-white/[0.12] rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-white transition-colors max-w-[160px]"
-              title="Open operator profile & account settings"
-            >
-              <User className="w-4 h-4 text-[#18e299] shrink-0" aria-hidden="true" />
-              <span className="truncate">{operatorLabel || 'Profile'}</span>
-            </button>
           )}
 
           {onLogout && (

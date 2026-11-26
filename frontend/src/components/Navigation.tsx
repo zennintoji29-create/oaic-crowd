@@ -11,7 +11,8 @@ import {
   MoreVertical,
   Menu,
   X,
-  User
+  User,
+  Wifi
 } from 'lucide-react';
 
 export interface NavTabItem {
@@ -45,6 +46,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   ];
 
   const configItems: NavTabItem[] = [
+    { id: 'hardware', label: 'ESP32 & Fallback', icon: Wifi },
     { id: 'setup', label: 'System Setup', icon: Sliders },
     // Hardware Demo placed last in configuration/tools
     { id: 'sandbox', label: 'Hardware Demo', icon: Cpu, to: '/sandbox' }
@@ -232,22 +234,6 @@ export const Navigation: React.FC<NavigationProps> = ({
               <span>Profile &amp; Account</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('profile');
-                setMobileMenuOpen(false);
-              }}
-              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left ${
-                activeTab === 'profile'
-                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
-                  : 'text-text-secondary hover:bg-surface-sunken'
-              }`}
-            >
-              <User className="w-4 h-4 text-accent" aria-hidden="true" />
-              <span>Profile &amp; Account</span>
-            </button>
-
             {onLogout && (
               <button
                 type="button"
@@ -305,6 +291,22 @@ export const Navigation: React.FC<NavigationProps> = ({
                 </button>
               );
             })}
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('hardware');
+                setMobileMenuOpen(false);
+              }}
+              className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left ${
+                activeTab === 'hardware'
+                  ? 'bg-surface-sunken text-text-primary border border-accent font-semibold'
+                  : 'text-text-secondary hover:bg-surface-sunken'
+              }`}
+            >
+              <Wifi className="w-4 h-4 text-accent" aria-hidden="true" />
+              <span>ESP32 &amp; Fallback</span>
+            </button>
 
             <button
               type="button"

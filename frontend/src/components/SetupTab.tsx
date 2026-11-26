@@ -9,6 +9,7 @@ import {
   updateSystemConfig,
   updateZoneConfig
 } from '../lib/api';
+import { SpaceAiAdvisor } from './SpaceAiAdvisor';
 
 interface SetupTabProps {
   zones: ZoneInfo[];
@@ -115,6 +116,38 @@ export const SetupTab: React.FC<SetupTabProps> = ({
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* 0. AI Space & Crowd Capacity Advisor */}
+      <SpaceAiAdvisor
+        initialAreaSqM={currentZone?.areaSqM || 24}
+        initialGateCount={gates.length || 2}
+        onApplyRecommendation={async (rec) => {
+          setFormArea(String(rec.areaSqM));
+          setFormWidth(String(rec.corridorWidthM));
+          setAmberInput(String(rec.amberThreshold));
+          setRedInput(String(rec.redThreshold));
+          try {
+            if (currentZone) {
+              const updatedZone = await updateZoneConfig(currentZone.zoneId, {
+                areaSqM: rec.areaSqM,
+                corridorWidthM: rec.corridorWidthM
+              });
+              onZoneUpdated(updatedZone);
+            }
+            if (currentGate) {
+              const updatedGate = await updateGateSettings(currentGate.id, {
+                amberThreshold: rec.amberThreshold,
+                redThreshold: rec.redThreshold
+              });
+              onGateUpdated?.(updatedGate);
+            }
+            setGateStatusMsg('AI-recommended Green / Amber / Red limits applied.');
+          } catch (err: any) {
+            setGateErrorMsg(err?.message || 'Failed to apply AI limits');
+          }
+        }}
+        applyButtonLabel="Apply AI Limits to Current Zone & Gate"
+      />
+
       {/* 1. Zone Dimensions & Geometry Form */}
       <div className="flat-panel p-5">
         <h2 className="text-base font-semibold text-text-primary mb-1">
@@ -439,7 +472,7 @@ export const SetupTab: React.FC<SetupTabProps> = ({
               }}
               className="space-y-3"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
                   <label htmlFor="gate-edit-name" className="block text-xs font-medium text-text-primary mb-1">
                     Gate Name
@@ -454,7 +487,28 @@ export const SetupTab: React.FC<SetupTabProps> = ({
                   />
                 </div>
                 <div>
-                  <label htmlFor="gate-edit-amber" className="block text-xs font-medium text-text-primary mb-1">
+                  <label htmlFor="gate-edit-green" className="block text-xs font-medium text-emerald-300 mb-1">
+                    Green Safe Max (&le;)
+                  </label>
+                  <input
+                    id="gate-edit-green"
+                    type="number"
+                    min={0}
+                    max={149}
+                    value={Math.max(0, (parseInt(amberInput, 10) || 1) - 1)}
+                    onChange={(e) => {
+                      const gMax = Math.max(0, Math.min(149, parseInt(e.target.value, 10) || 0));
+                      const nextAmber = gMax + 1;
+                      setAmberInput(String(nextAmber));
+                      if ((parseInt(redInput, 10) || 0) <= nextAmber) {
+                        setRedInput(String(nextAmber + 2));
+                      }
+                    }}
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-emerald-500/40 rounded font-mono text-emerald-300"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="gate-edit-amber" className="block text-xs font-medium text-amber-300 mb-1">
                     Amber Threshold (count)
                   </label>
                   <input
@@ -465,11 +519,11 @@ export const SetupTab: React.FC<SetupTabProps> = ({
                     required
                     value={amberInput}
                     onChange={(e) => setAmberInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-amber-500/40 rounded font-mono text-amber-300"
                   />
                 </div>
                 <div>
-                  <label htmlFor="gate-edit-red" className="block text-xs font-medium text-text-primary mb-1">
+                  <label htmlFor="gate-edit-red" className="block text-xs font-medium text-rose-300 mb-1">
                     Red Lock Threshold (count)
                   </label>
                   <input
@@ -480,7 +534,7 @@ export const SetupTab: React.FC<SetupTabProps> = ({
                     required
                     value={redInput}
                     onChange={(e) => setRedInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-rose-500/40 rounded font-mono text-rose-300"
                   />
                 </div>
               </div>
