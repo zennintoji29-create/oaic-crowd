@@ -262,9 +262,9 @@ class StorageManager {
       name: 'Main Temple Gate A',
       zoneId: 'zone-entry-a',
       status: 'GREEN',
-      count: 2,
-      density: 0.15,
-      riskScore: 20,
+      count: 0,
+      density: 0,
+      riskScore: 0,
       servoAngle: 90,
       servoStatus: 'OPEN',
       isManualOverride: false,
@@ -272,7 +272,8 @@ class StorageManager {
       power: true,
       lastUpdated: Date.now(),
       amberThreshold: 5,
-      redThreshold: 10
+      redThreshold: 10,
+      cameraStreamUrl: ''
     });
 
     this.gates.set('gate-b', {
@@ -280,9 +281,9 @@ class StorageManager {
       name: 'North Pavilion Gate B',
       zoneId: 'zone-corridor-b',
       status: 'GREEN',
-      count: 1,
-      density: 0.12,
-      riskScore: 18,
+      count: 0,
+      density: 0,
+      riskScore: 0,
       servoAngle: 90,
       servoStatus: 'OPEN',
       isManualOverride: false,
@@ -290,7 +291,8 @@ class StorageManager {
       power: true,
       lastUpdated: Date.now(),
       amberThreshold: 5,
-      redThreshold: 10
+      redThreshold: 10,
+      cameraStreamUrl: ''
     });
   }
 
@@ -724,6 +726,55 @@ class StorageManager {
     }
     if (email) this.saveUserGates();
     return updated;
+  }
+
+  clearStaleTelemetry(staleMs = config.staleTelemetryResetMs || 120000) {
+    const now = Date.now();
+    const clearedZones = [];
+    const clearedGates = [];
+
+    for (const [zoneId, zone] of this.zones.entries()) {
+      const lastTs = zone.lastTelemetry?.serverTimestamp || zone.lastTelemetry?.timestamp;
+      if (lastTs && now - lastTs >= staleMs) {
+        zone.lastTelemetry = null;
+        clearedZones.push(zoneId);
+      }
+    }
+
+    const resetStaleMap = (map, persistOwner = null) => {
+      let dirty = false;
+      for (const [id, gate] of map.entries()) {
+        const ageMs = now - (gate.lastUpdated || 0);
+        const hasActiveCount = gate.count > 0 || gate.status !== 'GREEN' || gate.riskScore > 0;
+        if (!gate.isManualOverride && hasActiveCount && ageMs >= staleMs) {
+          const fresh = {
+            ...gate,
+            status: 'GREEN',
+            count: 0,
+            density: 0,
+            riskScore: 0,
+            servoAngle: 90,
+            servoStatus: 'OPEN',
+            lastUpdated: now
+          };
+          map.set(id, fresh);
+          clearedGates.push({ gate: fresh, email: persistOwner });
+          dirty = true;
+        }
+      }
+      return dirty;
+    };
+
+    resetStaleMap(this.gates, null);
+    let anyUserDirty = false;
+    for (const [email, map] of this.userGates.entries()) {
+      if (resetStaleMap(map, email)) anyUserDirty = true;
+    }
+    if (anyUserDirty) {
+      this.saveUserGates();
+    }
+
+    return { clearedZones, clearedGates };
   }
 
   updateGateDensity(id, delta, email) {

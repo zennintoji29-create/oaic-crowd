@@ -52,9 +52,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       name: 'Main Temple Gate A',
       zoneId: 'zone-entry-a',
       status: worstState,
-      count: hardware?.currentCount || 2,
-      density: 0.15,
-      riskScore: worstState === 'RED' ? 88 : (worstState === 'AMBER' ? 58 : 20),
+      count: hardware?.currentCount || 0,
+      density: 0,
+      riskScore: worstState === 'RED' ? 88 : (worstState === 'AMBER' ? 58 : 0),
       servoAngle: hardware?.servoAngle || 90,
       servoStatus: hardware?.servoStatus || 'OPEN',
       isManualOverride: false,
@@ -69,9 +69,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       name: 'North Pavilion Gate B',
       zoneId: 'zone-corridor-b',
       status: 'GREEN' as const,
-      count: 1,
-      density: 0.10,
-      riskScore: 16,
+      count: 0,
+      density: 0,
+      riskScore: 0,
       servoAngle: 90,
       servoStatus: 'OPEN',
       isManualOverride: false,
@@ -162,7 +162,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             />
           </div>
           <p className="text-xs sm:text-sm text-neutral-400 mt-0.5">
-            Live gate status, people count, and pressure trends. Pinned values stay until Reset.
+            Live gate status, people count, and pressure trends. Stale sensor counts auto-clear to 0 after 2 minutes idle.
           </p>
         </div>
         <button

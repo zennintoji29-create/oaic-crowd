@@ -83,9 +83,9 @@ const AppRoutes: React.FC = () => {
       name: 'Main Temple Gate Alpha',
       zoneId: 'zone-entry-a',
       status: 'GREEN',
-      count: 2,
-      density: 0.8,
-      riskScore: 18,
+      count: 0,
+      density: 0,
+      riskScore: 0,
       servoAngle: 90,
       servoStatus: 'OPEN (90°)',
       isManualOverride: false,
@@ -100,9 +100,9 @@ const AppRoutes: React.FC = () => {
       name: 'North Pavilion Gate Beta',
       zoneId: 'zone-corridor-b',
       status: 'GREEN',
-      count: 1,
-      density: 0.4,
-      riskScore: 12,
+      count: 0,
+      density: 0,
+      riskScore: 0,
       servoAngle: 90,
       servoStatus: 'OPEN (90°)',
       isManualOverride: false,
@@ -187,6 +187,18 @@ const AppRoutes: React.FC = () => {
 
   useEffect(() => {
     refreshData();
+    // Re-check live backend telemetry every 2 minutes & immediately when returning to the tab
+    const pollTimer = setInterval(refreshData, 120000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshData();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(pollTimer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [refreshData]);
 
   const handleIncomingTelemetry = useCallback((point: TelemetryPoint) => {
@@ -306,6 +318,8 @@ const AppRoutes: React.FC = () => {
               setAuditLogs((prev) => [msg.data, ...prev.slice(0, 99)]);
             } else if (msg.type === 'GATES_SYNCED' && Array.isArray(msg.data)) {
               setGates(msg.data);
+            } else if (msg.type === 'ZONES_SYNCED' && Array.isArray(msg.data)) {
+              setZones(msg.data);
             }
           } catch (e) {
             console.error('[WS] Error parsing message:', e);

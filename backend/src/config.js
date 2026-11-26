@@ -19,5 +19,6 @@ export const config = {
   rateLimitReqPerSec: parseInt(process.env.RATE_LIMIT_REQ_PER_SEC || '10', 10),
   historyRetentionMinutes: 10,
   maxPointsPerZone: 1000,
-  commandExpiryMs: 30000 // 30 seconds
+  commandExpiryMs: 30000, // 30 seconds
+  staleTelemetryResetMs: parseInt(process.env.TELEMETRY_STALE_CLEAR_MS || '120000', 10) // 2 minutes default
 };

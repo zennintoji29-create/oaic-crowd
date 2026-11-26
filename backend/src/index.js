@@ -135,9 +135,31 @@ function updateControlLogic(overrideCount) {
   broadcastSSE({ type: 'HARDWARE_UPDATE', state: hardwareState });
 }
 
-// Watchdog: check ESP32 heartbeat timeouts & camera health
+// Watchdog: check ESP32 heartbeat timeouts, camera health, and clear stale telemetry (>2m idle)
 setInterval(() => {
   hardwareManager.checkTimeouts();
+
+  const { clearedZones, clearedGates } = storage.clearStaleTelemetry(config.staleTelemetryResetMs);
+  if (clearedZones.length > 0 || clearedGates.length > 0) {
+    if (!hardwareState.lastCameraPing || Date.now() - hardwareState.lastCameraPing >= config.staleTelemetryResetMs) {
+      hardwareState.cameraOnline = false;
+      hardwareState.currentCount = 0;
+      updateControlLogic(0);
+    }
+    clearedGates.forEach(({ gate }) => {
+      broadcast('GATE_UPDATED', gate);
+    });
+    if (clearedZones.length > 0) {
+      broadcast('ZONES_SYNCED', storage.getZones());
+    }
+    const auditStale = storage.addAuditLog({
+      actorEmail: 'system-watchdog',
+      action: 'STALE_DATA_CLEARED',
+      target: clearedZones[0] || clearedGates[0]?.gate?.id || 'telemetry',
+      detail: `Cleared stale telemetry to 0 after ${Math.round(config.staleTelemetryResetMs / 1000)}s without live camera/USB updates`
+    });
+    broadcast('AUDIT_UPDATED', auditStale);
+  }
 }, 2000);
 
 hardwareManager.setChangeCallback((eventType, payload) => {

@@ -395,6 +395,26 @@ export class HardwareManager {
       changed = true;
     }
 
+    const staleResetMs = parseInt(process.env.TELEMETRY_STALE_CLEAR_MS || '120000', 10);
+    if (
+      !this.demoState.active &&
+      this.yoloState.lastUpdated > 0 &&
+      (this.yoloState.count > 0 || this.yoloState.score > 0 || this.yoloState.alertLevel !== 'GREEN') &&
+      now - this.yoloState.lastUpdated >= staleResetMs
+    ) {
+      this.yoloState = {
+        count: 0,
+        density: 0,
+        score: 0,
+        alertLevel: 'GREEN',
+        cameraHealthy: false,
+        lastUpdated: 0
+      };
+      this.lastSentAlertLevel = 'GREEN';
+      this.addEvent('INFO', 'YOLO_STALE_CLEARED', `No camera/USB telemetry for ${Math.round(staleResetMs / 1000)}s — cleared stale count to 0`);
+      changed = true;
+    }
+
     // Auto-return to AI_CAMERA if hardware disconnects while camera is healthy
     const master = this.getPrimaryMasterDevice();
     if (this.operatingMode === 'HARDWARE_FALLBACK' && (!master || !master.online) && this.yoloState.cameraHealthy) {
