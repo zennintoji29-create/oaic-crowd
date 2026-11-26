@@ -33,13 +33,7 @@ import {
   SpotlightCard,
   StarBorder,
   ClickSpark,
-  RadarBackdrop,
-  AuroraGlow,
-  ParticlesField,
-  GradientText,
-  TiltedCard,
-  Magnet,
-  AnimatedContent
+  RadarBackdrop
 } from '../components/reactbits';
 
 const INITIAL_SERIES = [
@@ -351,10 +345,13 @@ export const Landing: React.FC = () => {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section with Flowing Emerald Wave Mesh + Aurora + Particles */}
+        {/* Hero Section with Flowing Emerald Wave Mesh */}
         <section className="relative overflow-hidden border-b border-white/[0.08]">
-          <AuroraGlow />
-          <ParticlesField count={30} />
+          {/* Subtle top radial emerald ambience + diagonal flowing wave lines */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[420px] rounded-full bg-[#18e299]/[0.07] blur-[110px]"
+          />
           <EmeraldWaveMesh
             idPrefix="heroWave"
             className="absolute inset-0 w-full h-full opacity-80"
@@ -381,32 +378,27 @@ export const Landing: React.FC = () => {
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Magnet strength={0.18}>
-                  <StarBorder color="#18e299" speedSec={5}>
-                    <a
-                      href="#contact"
-                      className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
-                    >
-                      <span>Request a pilot</span>
-                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                    </a>
-                  </StarBorder>
-                </Magnet>
-                <Magnet strength={0.15}>
-                  <Link
-                    to="/login"
-                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-white text-sm font-medium transition-colors"
+                <StarBorder color="#18e299" speedSec={5}>
+                  <a
+                    href="#contact"
+                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
                   >
-                    <Lock className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
-                    <span>Operator login</span>
-                  </Link>
-                </Magnet>
+                    <span>Request a pilot</span>
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </a>
+                </StarBorder>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-white text-sm font-medium transition-colors"
+                >
+                  <Lock className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+                  <span>Operator login</span>
+                </Link>
               </div>
             </div>
 
-            {/* Mintlify-style Framed Dark Glass Dashboard Preview with 3D TiltedCard */}
-            <TiltedCard maxTiltDeg={2.5} className="mt-12">
-            <div className="rounded-2xl border border-white/[0.1] bg-[#0d0f11]/90 backdrop-blur-xl overflow-hidden shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)]">
+            {/* Mintlify-style Framed Dark Glass Dashboard Preview */}
+            <div className="mt-12 rounded-2xl border border-white/[0.1] bg-[#0d0f11]/90 backdrop-blur-xl overflow-hidden shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)]">
               {/* Top Window Bar */}
               <div className="px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-white/[0.02] flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -500,7 +492,6 @@ export const Landing: React.FC = () => {
                 </div>
               </div>
             </div>
-            </TiltedCard>
           </div>
         </section>
 
@@ -538,11 +529,11 @@ export const Landing: React.FC = () => {
 
         {/* Bento Feature Grid */}
         <section id="features" className="relative border-b border-white/[0.08] py-16 sm:py-24 overflow-hidden">
-          <AnimatedContent className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div className="max-w-xl space-y-2">
                 <h2 className="text-2xl sm:text-4xl font-semibold text-white tracking-[-0.02em]">
-                  One platform for your entire <GradientText>corridor stack</GradientText>.
+                  One platform for your entire corridor stack.
                 </h2>
                 <p className="text-sm sm:text-base text-neutral-400">
                   Every subsystem is built to keep monitoring and metering gates when visibility or connectivity degrades.
@@ -585,7 +576,7 @@ export const Landing: React.FC = () => {
                 );
               })}
             </div>
-          </AnimatedContent>
+          </div>
         </section>
 
         {/* Architecture & Scale Metrics (Mintlify 4-step + metric strip) */}

@@ -155,3 +155,6 @@ Version 26 (2026-11-27)
   * Login.tsx (Sign In & Sign Up): Added sticky minimal top bar with CPR logo and Home pill.
   * Setup.tsx (/setup): Added top-right Home pill in the wizard header.
   * MasterRemote.tsx (/master): Added Home + Dashboard links on the password lock screen and top Home button inside the unlocked remote.
+
+Version 27 (2026-11-27)
+- Reverted the 7 extra Landing Page React Bits effects (AuroraGlow, ParticlesField, GradientText, TiltedCard, Magnet, LogoLoop, AnimatedContent) back to the clean simple Mintlify + base React Bits setup (BlurText, ShinyText, DecryptedText, CountUp, SpotlightCard, StarBorder, ClickSpark, RadarBackdrop) while preserving Home links, single Profile button, ESP32 & Fallback page, 1-minute refresh, and AI Space Advisor.
