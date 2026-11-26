@@ -7,6 +7,7 @@ Features:
 - Technical HUD overlay (FPS, Device, Person Count, Tracked IDs).
 """
 
+import argparse
 import cv2
 import time
 import sys
@@ -20,18 +21,47 @@ CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
+from vision.stream import FrameBroadcaster, start_mjpeg_server
+
 try:
     from integration.backend import TelemetryClient
 except ImportError:
     TelemetryClient = None
 
+
+def open_webcam(preferred_index: int | None = None):
+    """Try physical webcam indices using Windows/OS native capture backends."""
+    indices = [preferred_index] if preferred_index is not None else [0, 1, 2]
+    if sys.platform.startswith("win"):
+        backends = [("DirectShow", cv2.CAP_DSHOW), ("MediaFoundation", cv2.CAP_MSMF), ("Default", cv2.CAP_ANY)]
+    else:
+        backends = [("Default", cv2.CAP_ANY)]
+
+    for idx in indices:
+        for b_name, b_code in backends:
+            cap = cv2.VideoCapture(idx, b_code)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None and frame.size > 0:
+                    return cap, idx, b_name
+            cap.release()
+    return None, None, None
+
+
 class CPRPersonTracker:
-    def __init__(self, model_name: str = "yolo11n.pt", camera_index: int = 0, conf_threshold: float = 0.45, backend_url: str = "http://localhost:3000/api/telemetry"):
+    def __init__(
+        self,
+        model_name: str = "yolo11n.pt",
+        camera_index: int | None = None,
+        conf_threshold: float = 0.45,
+        backend_url: str = "http://localhost:3000/api/telemetry",
+        stream_port: int = 5000,
+    ):
         self.conf_threshold = conf_threshold
-        self.camera_index = camera_index
         self.backend_url = os.getenv("CPR_BACKEND_URL", backend_url)
         self.auth_token = os.getenv("CPR_AUTH_KEY", "cpr-secret-key-2026")
-        
+        self.stream_port = stream_port
+
         # 1. Device Resolution (CUDA -> MPS -> CPU)
         self.device = self._resolve_compute_device()
         print(f"[CPR-Tracker] Target Compute Device: {self.device}")
@@ -39,11 +69,10 @@ class CPRPersonTracker:
         # 2. Model Initialization
         print(f"[CPR-Tracker] Loading YOLO detector: {model_name}...")
         self.model = YOLO(model_name)
-        # Move model to target device
         self.model.to(self.device)
         print("[CPR-Tracker] Model loaded successfully.")
 
-        # 3. Telemetry Client (Connects to Express Backend / Render Cloud)
+        # 3. Telemetry Client (Connects to Express Backend)
         self.telemetry = None
         if TelemetryClient:
             try:
@@ -52,20 +81,30 @@ class CPRPersonTracker:
             except Exception as e:
                 print(f"[CPR-Tracker] Warning: Telemetry failed to initialize: {e}")
 
-        # 4. Camera Setup
-        backend = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_ANY
-        self.cap = cv2.VideoCapture(self.camera_index, backend)
-        
-        # Request 1280x720 (falls back to native camera max if unsupported)
+        # 4. Physical Webcam Setup
+        self.cap, found_idx, found_backend = open_webcam(camera_index)
+        if self.cap is None:
+            raise RuntimeError(
+                "No working physical webcam found on indices 0-2. "
+                "Plug in your USB/built-in camera, allow Windows Camera access, and retry."
+            )
+
+        self.camera_index = found_idx
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        
-        if not self.cap.isOpened():
-            raise RuntimeError(f"Unable to access camera on index {self.camera_index}")
-        
+
         self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        print(f"[CPR-Tracker] Camera initialized: {self.frame_width}x{self.frame_height}")
+        print(f"[CPR-Tracker] Webcam opened (Index {found_idx}, {found_backend}): {self.frame_width}x{self.frame_height}")
+
+        # 5. Live HTTP MJPEG Stream Server for Dashboard / Browser
+        self.broadcaster = FrameBroadcaster()
+        self.mjpeg_server = None
+        if self.stream_port > 0:
+            try:
+                self.mjpeg_server = start_mjpeg_server(self.stream_port, self.broadcaster)
+            except OSError as e:
+                print(f"[CPR-Tracker] Warning: Could not bind stream port {self.stream_port}: {e}")
 
         # Performance tracking
         self.fps_history = []
@@ -86,9 +125,17 @@ class CPRPersonTracker:
 
     def run(self):
         print("\n" + "=" * 65)
-        print("  CPR AI Crowd Pressure Radar — Stage 1 Live Tracking")
-        print("  Controls: Press 'q' to quit | 'c' to clear frame")
+        print("  CPR AI Crowd Pressure Radar — Webcam People Counter")
+        if self.mjpeg_server:
+            print(f"  CAMERA STREAM PORT : {self.stream_port}")
+            print(f"  LIVE YOLO FEED URL : http://localhost:{self.stream_port}/video_feed")
+            print(f"  SNAPSHOT URL       : http://localhost:{self.stream_port}/snapshot.jpg")
+        print("  Controls: Press 'q' in the camera window to quit")
         print("=" * 65 + "\n")
+        try:
+            cv2.namedWindow("CPR - Crowd Pressure Radar (Vision Engine)", cv2.WINDOW_NORMAL)
+        except cv2.error:
+            pass
 
         while True:
             t0 = time.perf_counter()
@@ -171,6 +218,7 @@ class CPRPersonTracker:
 
             # Draw Technical Monitoring HUD
             self._draw_monitoring_hud(frame, current_people_count, tracked_ids, avg_fps, frame_time)
+            self.broadcaster.update(frame)
 
             try:
                 cv2.imshow("CPR - Crowd Pressure Radar (Vision Engine)", frame)
@@ -230,6 +278,11 @@ class CPRPersonTracker:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (203, 213, 225), 1, cv2.LINE_AA)
 
     def cleanup(self):
+        if self.mjpeg_server:
+            try:
+                self.mjpeg_server.shutdown()
+            except Exception:
+                pass
         if self.telemetry:
             self.telemetry.stop()
         self.cap.release()
@@ -239,6 +292,21 @@ class CPRPersonTracker:
             pass
         print("[CPR-Tracker] Camera released. Resources cleared.")
 
+
 if __name__ == "__main__":
-    tracker = CPRPersonTracker(model_name="yolo11n.pt", camera_index=0, conf_threshold=0.45)
+    parser = argparse.ArgumentParser(description="CPR AI Webcam YOLO People Counter")
+    parser.add_argument("--camera", type=int, default=None, help="Webcam index (default: auto-detect 0..2)")
+    parser.add_argument(
+        "--stream-port",
+        type=int,
+        default=int(os.getenv("CPR_STREAM_PORT", "5000")),
+        help="HTTP MJPEG stream port (default 5000, 0 disables)",
+    )
+    args = parser.parse_args()
+    tracker = CPRPersonTracker(
+        model_name="yolo11n.pt",
+        camera_index=args.camera,
+        conf_threshold=0.45,
+        stream_port=args.stream_port,
+    )
     tracker.run()
