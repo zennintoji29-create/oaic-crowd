@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { GateState } from '../types';
 import { controlGateOverride, controlGatePower } from '../lib/api';
+import { SpotlightCard, CountUp } from './reactbits';
 
 interface GateCardProps {
   gate: GateState;
@@ -105,7 +106,8 @@ export const GateCard: React.FC<GateCardProps> = ({
     : 'border-t-2 border-t-border-strong';
 
   return (
-    <div className={`flat-panel ${topBorderClass} p-5 flex flex-col justify-between gap-4`}>
+    <SpotlightCard className={`flat-panel ${topBorderClass} p-5`}>
+      <div className="flex flex-col justify-between gap-4 h-full">
       <div>
         {/* Header: Gate ID, Name, Status Badge, Power Toggle */}
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
@@ -152,7 +154,7 @@ export const GateCard: React.FC<GateCardProps> = ({
           <div>
             <span className="text-xs text-text-muted block">People count</span>
             <span className="text-2xl sm:text-3xl font-bold text-text-primary tabular-nums mt-0.5 block">
-              {gate.count}
+              <CountUp to={gate.count} />
             </span>
           </div>
 
@@ -364,6 +366,7 @@ export const GateCard: React.FC<GateCardProps> = ({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </SpotlightCard>
   );
 };

@@ -26,6 +26,15 @@ import {
   Tooltip,
   CartesianGrid
 } from 'recharts';
+import {
+  BlurText,
+  ShinyText,
+  CountUp,
+  SpotlightCard,
+  StarBorder,
+  ClickSpark,
+  RadarBackdrop
+} from '../components/reactbits';
 
 const INITIAL_SERIES = [
   { t: '10:00', pressure: 24, count: 12 },
@@ -255,7 +264,7 @@ export const Landing: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-dvh bg-[#08090a] text-neutral-100 flex flex-col safe-area-shell selection:bg-[#18e299]/25 selection:text-white">
+    <ClickSpark sparkColor="#18e299" className="min-h-dvh bg-[#08090a] text-neutral-100 flex flex-col safe-area-shell selection:bg-[#18e299]/25 selection:text-white">
       {/* Sticky Minimal Top Navigation */}
       <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#08090a]/85 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 min-h-[60px] flex items-center justify-between gap-4">
@@ -346,30 +355,37 @@ export const Landing: React.FC = () => {
             idPrefix="heroWave"
             className="absolute inset-0 w-full h-full opacity-80"
           />
+          <RadarBackdrop className="absolute -right-28 -top-12 opacity-40 hidden md:flex" />
 
           <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-16 sm:pt-20 sm:pb-24">
             <div className="max-w-2xl space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.1] text-xs font-medium text-neutral-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#18e299]" aria-hidden="true" />
-                <span>Autonomous crowd safety telemetry</span>
+                <ShinyText text="Autonomous crowd safety telemetry" speedSec={4.5} />
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-semibold tracking-[-0.025em] text-white leading-[1.08]">
-                Crowd crush prevention infrastructure.
-              </h1>
+              <BlurText
+                as="h1"
+                text="Crowd crush prevention infrastructure."
+                delay={30}
+                stepDelay={55}
+                className="text-4xl sm:text-5xl lg:text-[56px] font-semibold tracking-[-0.025em] text-white leading-[1.08]"
+              />
 
               <p className="text-base sm:text-lg text-neutral-400 leading-relaxed max-w-xl">
                 Crowd Pressure Radar fuses 24 GHz radar, laser ranging, and edge computer vision into one operations platform—metering gate inflow automatically even without internet.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <a
-                  href="#contact"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
-                >
-                  <span>Request a pilot</span>
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </a>
+                <StarBorder color="#18e299" speedSec={5}>
+                  <a
+                    href="#contact"
+                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold transition-colors"
+                  >
+                    <span>Request a pilot</span>
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </a>
+                </StarBorder>
                 <Link
                   to="/login"
                   className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2 rounded-full border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-white text-sm font-medium transition-colors"
@@ -420,24 +436,24 @@ export const Landing: React.FC = () => {
 
               <div className="p-5 sm:p-6 space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
+                  <SpotlightCard className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
                     <span className="text-xs text-neutral-500 block">People detected</span>
                     <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
-                      {latestPoint.count}
+                      <CountUp to={latestPoint.count} />
                     </span>
-                  </div>
-                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
+                  </SpotlightCard>
+                  <SpotlightCard className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
                     <span className="text-xs text-neutral-500 block">Pressure score</span>
                     <span className="text-2xl font-semibold text-[#18e299] tabular-nums mt-1 block">
-                      {latestPoint.pressure}
+                      <CountUp to={latestPoint.pressure} />
                     </span>
-                  </div>
-                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
+                  </SpotlightCard>
+                  <SpotlightCard className="rounded-xl bg-white/[0.02] border border-white/[0.07] p-4">
                     <span className="text-xs text-neutral-500 block">Barrier angle</span>
                     <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
                       {isBusy ? '45°' : '90°'}
                     </span>
-                  </div>
+                  </SpotlightCard>
                 </div>
 
                 <div className="h-52 w-full rounded-xl bg-[#08090a]/70 border border-white/[0.07] p-3">
@@ -534,26 +550,28 @@ export const Landing: React.FC = () => {
               {features.map((feat, idx) => {
                 const Icon = feat.icon;
                 return (
-                  <article
+                  <SpotlightCard
                     key={feat.title}
-                    className={`relative p-6 sm:p-7 space-y-3 border-white/[0.08] ${
+                    className={`p-6 sm:p-7 border-white/[0.08] ${
                       idx % 3 !== 2 ? 'lg:border-r' : ''
                     } ${idx < 3 ? 'lg:border-b' : ''} ${
                       idx % 2 === 0 ? 'md:border-r lg:border-r-0' : ''
-                    } border-b md:border-b lg:last:border-b-0 overflow-hidden`}
+                    } border-b md:border-b lg:last:border-b-0`}
                   >
-                    {idx === 0 && (
-                      <EmeraldWaveMesh
-                        idPrefix="bentoWave"
-                        className="absolute inset-0 w-full h-full opacity-35"
-                      />
-                    )}
-                    <div className="relative z-10 h-9 w-9 rounded-lg bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center text-[#18e299]">
-                      <Icon className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <h3 className="relative z-10 text-base font-semibold text-white">{feat.title}</h3>
-                    <p className="relative z-10 text-sm text-neutral-400 leading-relaxed">{feat.description}</p>
-                  </article>
+                    <article className="space-y-3 h-full">
+                      {idx === 0 && (
+                        <EmeraldWaveMesh
+                          idPrefix="bentoWave"
+                          className="pointer-events-none absolute -inset-7 w-[calc(100%+3.5rem)] h-[calc(100%+3.5rem)] opacity-35"
+                        />
+                      )}
+                      <div className="relative z-10 h-9 w-9 rounded-lg bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center text-[#18e299]">
+                        <Icon className="w-4 h-4" aria-hidden="true" />
+                      </div>
+                      <h3 className="relative z-10 text-base font-semibold text-white">{feat.title}</h3>
+                      <p className="relative z-10 text-sm text-neutral-400 leading-relaxed">{feat.description}</p>
+                    </article>
+                  </SpotlightCard>
                 );
               })}
             </div>
@@ -576,17 +594,19 @@ export const Landing: React.FC = () => {
               {steps.map((step) => {
                 const Icon = step.icon;
                 return (
-                  <div
+                  <SpotlightCard
                     key={step.num}
-                    className="rounded-xl bg-[#0d0f11] border border-white/[0.08] p-5 space-y-3"
+                    className="rounded-xl bg-[#0d0f11] border border-white/[0.08] p-5"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#18e299]">STEP {step.num}</span>
-                      <Icon className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-[#18e299]">STEP {step.num}</span>
+                        <Icon className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
+                      </div>
+                      <h3 className="text-base font-semibold text-white">{step.title}</h3>
+                      <p className="text-sm text-neutral-400 leading-relaxed">{step.text}</p>
                     </div>
-                    <h3 className="text-base font-semibold text-white">{step.title}</h3>
-                    <p className="text-sm text-neutral-400 leading-relaxed">{step.text}</p>
-                  </div>
+                  </SpotlightCard>
                 );
               })}
             </div>
@@ -770,6 +790,6 @@ export const Landing: React.FC = () => {
           <span>Contact: pilot@cpr-safety.org • Prototype for demonstration and learning</span>
         </div>
       </footer>
-    </div>
+    </ClickSpark>
   );
 };

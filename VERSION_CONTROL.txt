@@ -115,3 +115,7 @@ Version 20 (2026-11-27)
 - Updated GlobalHeader.tsx branding to show "CPR" with a green dashed logo icon (border-2 border-dashed border-[#18e299]) and removed the HLK-LD2410 pill.
 - Enhanced Navigation.tsx desktop sidebar visual hierarchy with grouped section headers (Monitoring, Configuration & Demo, Documentation), Control Panel status badge, active emerald left indicator, and icon containers while keeping exact tab order.
 - Removed browser webcam getUserMedia permission from Setup.tsx and replaced it with configurable USB Camera / Localhost Stream URL (cameraStreamUrl) across Setup.tsx, SetupTab.tsx, backend config validation, App.tsx, OverviewTab.tsx, and HardwareControlPanel.tsx (with inline preview + Open Stream link).
+
+Version 21 (2026-11-27)
+- Added React Bits UI/UX motion and interactive effects suite under frontend/src/components/reactbits/ (BlurText, ShinyText, DecryptedText, CountUp, SpotlightCard, StarBorder, ClickSpark, RadarBackdrop) with full prefers-reduced-motion compliance and Mintlify #18e299 emerald styling.
+- Applied BlurText hero headline, ShinyText live status pill, RadarBackdrop millimeter-wave sweep, StarBorder CTA rim, SpotlightCard radial hover glow, CountUp live telemetry numbers, DecryptedText login header, and ClickSpark emerald pointer feedback across Landing.tsx, OverviewTab.tsx, GateCard.tsx, and Login.tsx.

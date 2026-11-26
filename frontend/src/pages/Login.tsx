@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, Phone, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
 import { loginOperator, signupOperator, setSessionToken } from '../lib/api';
+import { DecryptedText, RadarBackdrop } from '../components/reactbits';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -93,14 +94,15 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-dvh bg-surface-base text-text-primary flex flex-col justify-center items-center px-4 py-12 safe-area-shell">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="relative overflow-hidden min-h-dvh bg-surface-base text-text-primary flex flex-col justify-center items-center px-4 py-12 safe-area-shell">
+      <RadarBackdrop className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-25" />
+      <div className="relative z-10 w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-surface-raised border border-border-strong text-accent">
             <ShieldCheck className="w-6 h-6" aria-hidden="true" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-text-primary">
-            {mode === 'login' ? 'Operator Sign In' : 'Create Operator Account'}
+            <DecryptedText text={mode === 'login' ? 'Operator Sign In' : 'Create Operator Account'} />
           </h1>
           <p className="text-xs text-text-muted">
             {mode === 'login'

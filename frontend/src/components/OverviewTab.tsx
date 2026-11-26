@@ -15,6 +15,7 @@ import { HardwareControlPanel } from './HardwareControlPanel';
 import { fetchZoneHistory, resetAllGates } from '../lib/api';
 import { formatSystemActions } from '../lib/formatter';
 import { ShieldCheck, AlertTriangle, ShieldAlert, Activity, Radio, Lock, RotateCcw, ChevronRight } from 'lucide-react';
+import { ClickSpark, SpotlightCard, CountUp, ShinyText } from './reactbits';
 
 interface OverviewTabProps {
   zones: ZoneInfo[];
@@ -123,7 +124,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   return (
-    <div className="space-y-6">
+    <ClickSpark sparkColor="#18e299" className="space-y-6">
       {/* Consistent Page Header with Mintlify Flowing Wave Accent */}
       <div className="relative overflow-hidden flat-panel p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <svg
@@ -150,9 +151,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ))}
         </svg>
         <div className="relative z-10">
-          <h2 className="text-lg sm:text-xl font-semibold text-white tracking-[-0.015em]">
-            Gate Overview
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-white tracking-[-0.015em]">
+              Gate Overview
+            </h2>
+            <ShinyText
+              text="LIVE"
+              speedSec={3.5}
+              className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border border-[#18e299]/30 bg-[#18e299]/10"
+            />
+          </div>
           <p className="text-xs sm:text-sm text-neutral-400 mt-0.5">
             Live gate status, people count, and pressure trends. Pinned values stay until Reset.
           </p>
@@ -185,7 +193,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         
         {/* Threat Level */}
-        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+        <SpotlightCard className="flat-panel p-5 md:p-6">
+          <div className="flex flex-col justify-between h-full">
           <div className="w-12 h-12 rounded-xl bg-surface-overlay flex items-center justify-center">
             {isRed ? (
               <ShieldAlert className="w-5 h-5 text-status-danger-text" aria-hidden="true" />
@@ -214,10 +223,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {worstState === 'RED' ? 'Locked' : worstState === 'AMBER' ? 'Metering' : 'Clear'}
             </span>
           </div>
-        </div>
+          </div>
+        </SpotlightCard>
 
         {/* System Mode */}
-        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+        <SpotlightCard className="flat-panel p-5 md:p-6">
+          <div className="flex flex-col justify-between h-full">
           <div className="w-11 h-11 rounded-xl bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center">
             <Radio className="w-5 h-5 text-[#18e299]" aria-hidden="true" />
           </div>
@@ -232,10 +243,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {hardware?.systemMode === 'HARDWARE_FAILOVER' ? '24 GHz' : 'CUDA'}
             </span>
           </div>
-        </div>
+          </div>
+        </SpotlightCard>
 
         {/* Monitored Gates */}
-        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+        <SpotlightCard className="flat-panel p-5 md:p-6">
+          <div className="flex flex-col justify-between h-full">
           <div className="w-11 h-11 rounded-xl bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center">
             <Lock className="w-5 h-5 text-[#18e299]" aria-hidden="true" />
           </div>
@@ -243,17 +256,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <div>
               <span className="text-sm text-neutral-400 block">Smart Gates</span>
               <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
-                {displayGates.length}
+                <CountUp to={displayGates.length} />
               </span>
             </div>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
               Online
             </span>
           </div>
-        </div>
+          </div>
+        </SpotlightCard>
 
         {/* Total Crowd Count */}
-        <div className="flat-panel p-5 md:p-6 flex flex-col justify-between">
+        <SpotlightCard className="flat-panel p-5 md:p-6">
+          <div className="flex flex-col justify-between h-full">
           <div className="w-11 h-11 rounded-xl bg-[#18e299]/10 border border-[#18e299]/25 flex items-center justify-center">
             <Activity className="w-5 h-5 text-[#18e299]" aria-hidden="true" />
           </div>
@@ -261,14 +276,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <div>
               <span className="text-sm text-neutral-400 block">People Monitored</span>
               <span className="text-2xl font-semibold text-white tabular-nums mt-1 block">
-                {displayGates.reduce((acc, g) => acc + g.count, 0)}
+                <CountUp to={displayGates.reduce((acc, g) => acc + g.count, 0)} />
               </span>
             </div>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
               Live
             </span>
           </div>
-        </div>
+          </div>
+        </SpotlightCard>
 
       </section>
 
@@ -411,6 +427,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </ul>
       </section>
 
-    </div>
+    </ClickSpark>
   );
 };
