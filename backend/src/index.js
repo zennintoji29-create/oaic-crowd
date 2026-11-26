@@ -24,6 +24,7 @@ import { keepAliveEngine } from './keepAlive.js';
 import { hardwareManager } from './hardwareManager.js';
 
 const app = express();
+app.set('trust proxy', 1); // Respect Render / reverse-proxy X-Forwarded-For for accurate rate limiting
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -48,6 +49,16 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '100kb' }));
+
+// Global baseline IP rate limiter to mitigate API flooding / DoS
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' }
+});
+app.use('/api', apiLimiter);
 
 // ----------------------------------------------------------------------------
 // Central Hardware & Actuator State (ESP32 Master & Failover)
@@ -168,7 +179,7 @@ simulator.setBroadcastCallback(record => {
 wss.on('connection', (ws, req) => {
   const devKey = req?.headers?.['x-device-key'];
   const devIdHeader = req?.headers?.['x-device-id'];
-  if (devKey && devKey === config.deviceKey && typeof devIdHeader === 'string' && devIdHeader.trim()) {
+  if (config.deviceKey && devKey && devKey === config.deviceKey && typeof devIdHeader === 'string' && devIdHeader.trim()) {
     const devId = devIdHeader.trim();
     hardwareManager.registerDevice({ deviceId: devId, ip: req.socket?.remoteAddress || '' });
     hardwareManager.attachDeviceSocket(devId, ws);
@@ -191,6 +202,13 @@ wss.on('connection', (ws, req) => {
     ws.on('close', () => {
       hardwareManager.detachDeviceSocket(devId);
     });
+    return;
+  }
+
+  // Cross-Site WebSocket Hijacking protection in production
+  const wsOrigin = req?.headers?.origin;
+  if (process.env.NODE_ENV === 'production' && (!wsOrigin || !allowedOrigins.has(wsOrigin))) {
+    ws.close(1008, 'Forbidden origin');
     return;
   }
 
@@ -225,7 +243,7 @@ function requireDeviceAuth(req, res, next) {
   const bearerKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const provided = deviceKey || bearerKey;
 
-  const validKeys = [config.deviceKey];
+  const validKeys = config.deviceKey ? [config.deviceKey] : [];
   if (process.env.NODE_ENV !== 'production') {
     validKeys.push('cpr-secret-key-2026');
   }
@@ -233,9 +251,10 @@ function requireDeviceAuth(req, res, next) {
     return next();
   }
 
-  // Allow local development without strict rejection
-  const isLocal = req.ip === '127.0.0.1' || req.ip === '::1' || req.hostname === 'localhost';
-  if (!provided && isLocal) {
+  // Allow loopback socket only in non-production development (never trust spoofable Host header)
+  const remoteAddr = req.socket?.remoteAddress || '';
+  const isLoopback = remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+  if (process.env.NODE_ENV !== 'production' && !provided && isLoopback) {
     return next();
   }
 
@@ -730,6 +749,14 @@ const masterAuthLimiter = rateLimit({
   message: { error: 'Too many login attempts. Please try again later.' }
 });
 
+const accountUpdateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Authenticated profile/password update limit per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many account update attempts. Please try again later.' }
+});
+
 function requireMasterAuth(req, res, next) {
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
@@ -897,7 +924,7 @@ app.get('/api/auth/me', requireMasterAuth, (req, res) => {
 });
 
 // PUT /api/auth/profile - Update operator email, phone, and displayName
-app.put('/api/auth/profile', requireMasterAuth, async (req, res) => {
+app.put('/api/auth/profile', requireMasterAuth, accountUpdateLimiter, async (req, res) => {
   const currentEmail = req.masterUser?.email;
   if (!currentEmail) {
     return res.status(400).json({ error: 'Account profile editing requires an operator email login' });
@@ -969,7 +996,7 @@ app.put('/api/auth/profile', requireMasterAuth, async (req, res) => {
 });
 
 // PUT /api/auth/password - Update operator password
-app.put('/api/auth/password', requireMasterAuth, masterAuthLimiter, async (req, res) => {
+app.put('/api/auth/password', requireMasterAuth, accountUpdateLimiter, async (req, res) => {
   const email = req.masterUser?.email;
   if (!email) {
     return res.status(400).json({ error: 'Password change requires an operator email login' });

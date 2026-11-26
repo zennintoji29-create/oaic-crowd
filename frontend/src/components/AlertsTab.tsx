@@ -134,16 +134,22 @@ export const AlertsTab: React.FC<AlertsTabProps> = ({
     doc.save(`cpr-safety-summary-${Date.now()}.pdf`);
   };
 
+  const sanitizeCsvCell = (val: unknown) => {
+    const str = String(val ?? '');
+    const neutralized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+    return `"${neutralized.replace(/"/g, '""')}"`;
+  };
+
   const downloadCsvExport = () => {
     const headers = ['Time', 'Zone', 'From', 'To', 'RiskScore', 'AcknowledgedBy', 'Message'];
     const rows = filteredAlerts.map((a) => [
       new Date(a.timestamp).toISOString(),
-      `"${(a.zoneName || '').replace(/"/g, '""')}"`,
-      a.fromState,
-      a.toState,
+      sanitizeCsvCell(a.zoneName || ''),
+      sanitizeCsvCell(a.fromState),
+      sanitizeCsvCell(a.toState),
       a.score,
-      `"${(a.acknowledgedBy || 'Pending').replace(/"/g, '""')}"`,
-      `"${(a.message || '').replace(/"/g, '""')}"`
+      sanitizeCsvCell(a.acknowledgedBy || 'Pending'),
+      sanitizeCsvCell(a.message || '')
     ]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

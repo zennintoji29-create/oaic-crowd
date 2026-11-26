@@ -3,7 +3,7 @@ dotenv.config();
 
 export const config = {
   port: parseInt(process.env.PORT || '3000', 10),
-  deviceKey: process.env.DEVICE_KEY || 'cpr-secret-key-2026',
+  deviceKey: process.env.DEVICE_KEY || (process.env.NODE_ENV === 'production' ? '' : 'cpr-secret-key-2026'),
   corsOrigin: process.env.CORS_ORIGIN || 'https://oaic-crowd.vercel.app',
   jwtSecret: process.env.JWT_SECRET || '',
   masterPinHash: process.env.MASTER_PIN_HASH || '',

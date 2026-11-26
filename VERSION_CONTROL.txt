@@ -128,3 +128,9 @@ Version 22 (2026-11-27)
   * Added live JWT session countdown pill & GlobalHeader sound toggle, plus React.lazy route code-splitting in App.tsx.
 - Operations & Audit Upgrades:
   * Added POST /api/alerts/:id/ack, GET /api/audit (operator audit trail), CSV export + Acknowledge actions in AlertsTab.tsx, and opt-in Web Audio RED critical chime.
+
+Version 23 (2026-11-27)
+- Cybersecurity Hardening Pass:
+  * Removed production fallback device key ('cpr-secret-key-2026') in config.js and removed spoofable req.hostname === 'localhost' check from requireDeviceAuth (restricted loopback bypass strictly to non-production socket IP).
+  * Enabled Express trust proxy (Render proxy IP fidelity), added global /api DDoS rate limiter (300 req/min), enforced masterAuthLimiter on PUT /api/auth/profile, and added production WebSocket Origin verification (CSWSH defense).
+  * Prevented CSV formula injection in AlertsTab.tsx export by neutralizing leading =/+/-/@@/tab/CR characters.
