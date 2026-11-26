@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -81,7 +81,6 @@ function computeHomography(src: Point2D[]): number[][] | null {
 
 export const Setup: React.FC = () => {
   const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [step, setStep] = useState<number>(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -95,52 +94,24 @@ export const Setup: React.FC = () => {
     'Gate D'
   ]);
 
-  // Step 2: Webcam device index & persistent browser stream
+  // Step 2: Camera localhost stream URL & OpenCV USB device index (no browser permission required)
   const [webcamIndex, setWebcamIndex] = useState<number>(0);
+  const [cameraStreamUrl, setCameraStreamUrl] = useState<string>('http://localhost:5000/video_feed');
   const [previewActive, setPreviewActive] = useState<boolean>(false);
   const [previewNote, setPreviewNote] = useState<string>('');
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [streamPreviewError, setStreamPreviewError] = useState<boolean>(false);
 
-  const requestCameraStream = useCallback(async () => {
+  const handlePreviewWebcam = () => {
     setStepError(null);
+    setStreamPreviewError(false);
     setPreviewActive(true);
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = cameraStream?.active
-          ? cameraStream
-          : await navigator.mediaDevices.getUserMedia({ video: true });
-        setCameraStream(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setPreviewNote(`Camera permission allowed — live feed active (mapped to index ${webcamIndex}).`);
-      } else {
-        setPreviewNote(`Browser mediaDevices unavailable — using device index ${webcamIndex}.`);
-      }
-    } catch {
-      setPreviewNote(`Please allow camera permission in your browser address bar to stream live video (index ${webcamIndex}).`);
+    const trimmed = cameraStreamUrl.trim();
+    if (trimmed) {
+      setPreviewNote(`Previewing configured camera stream: ${trimmed} (USB index ${webcamIndex}).`);
+    } else {
+      setPreviewNote(`Using USB/OpenCV device index ${webcamIndex}. Add a localhost stream URL above to preview live video in the dashboard.`);
     }
-  }, [cameraStream, webcamIndex]);
-
-  useEffect(() => {
-    if (videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
-    }
-  }, [cameraStream, previewActive, step]);
-
-  useEffect(() => {
-    if (step === 2 && !cameraStream) {
-      requestCameraStream();
-    }
-  }, [step, cameraStream, requestCameraStream]);
-
-  useEffect(() => {
-    return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach((t) => t.stop());
-      }
-    };
-  }, [cameraStream]);
+  };
 
   // Step 3: ESP32 base URL
   const [esp32Url, setEsp32Url] = useState<string>('http://192.168.1.50');
@@ -168,10 +139,6 @@ export const Setup: React.FC = () => {
 
   const handleGateNameChange = (idx: number, value: string) => {
     setGateNames((prev) => prev.map((n, i) => (i === idx ? value : n)));
-  };
-
-  const handlePreviewWebcam = async () => {
-    await requestCameraStream();
   };
 
   const handlePingEsp32 = async () => {
@@ -259,6 +226,10 @@ export const Setup: React.FC = () => {
         setStepError('Webcam index must be between 0 and 10.');
         return false;
       }
+      if (cameraStreamUrl.trim() && !/^https?:\/\/.+/.test(cameraStreamUrl.trim())) {
+        setStepError('Camera stream URL must start with http:// or https:// (or leave blank).');
+        return false;
+      }
     } else if (step === 3) {
       if (!/^https?:\/\/.+/.test(esp32Url.trim())) {
         setStepError('ESP32 base URL must start with http:// or https://.');
@@ -303,6 +274,7 @@ export const Setup: React.FC = () => {
         gateCount,
         gateNames: activeGateNames,
         webcamIndex,
+        cameraStreamUrl: cameraStreamUrl.trim(),
         esp32BaseUrl: esp32Url.trim(),
         homography,
         servoOpenAngle: openAngle,
@@ -406,17 +378,34 @@ export const Setup: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 2: Webcam device index */}
+          {/* STEP 2: Camera localhost URL & USB device index */}
           {step === 2 && (
             <div className="space-y-4">
               <h2 className="text-base font-semibold text-white flex items-center gap-2">
                 <Camera className="w-4 h-4 text-emerald-400" aria-hidden="true" />
-                <span>2. Webcam Device Index</span>
+                <span>2. Camera Stream Link &amp; USB Device</span>
               </h2>
-              <div className="flex flex-wrap items-end gap-3">
+              <p className="text-xs text-slate-400">
+                Enter your localhost or LAN camera server URL (e.g. from your USB/YOLO vision server) so the dashboard shows the live feed directly without requiring browser camera permissions.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label htmlFor="camera-stream-url" className="block text-xs font-medium text-slate-300 mb-1">
+                    Camera Localhost / Stream URL
+                  </label>
+                  <input
+                    id="camera-stream-url"
+                    type="url"
+                    value={cameraStreamUrl}
+                    onChange={(e) => setCameraStreamUrl(e.target.value)}
+                    placeholder="http://localhost:5000/video_feed"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm font-mono rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
                 <div>
                   <label htmlFor="webcam-index" className="block text-xs font-medium text-slate-300 mb-1">
-                    OpenCV / USB Device Index
+                    USB Device Index
                   </label>
                   <input
                     id="webcam-index"
@@ -425,28 +414,48 @@ export const Setup: React.FC = () => {
                     max={10}
                     value={webcamIndex}
                     onChange={(e) => setWebcamIndex(parseInt(e.target.value || '0', 10))}
-                    className="w-32 px-3 py-2 text-sm font-mono rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm font-mono rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={handlePreviewWebcam}
-                  className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold transition-colors"
+                  className="min-h-[44px] px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold transition-colors"
                 >
-                  Preview Camera
+                  Test Camera Link
                 </button>
+                {cameraStreamUrl.trim() && (
+                  <a
+                    href={cameraStreamUrl.trim()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="min-h-[44px] inline-flex items-center px-4 py-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-200 hover:text-white text-xs font-medium"
+                  >
+                    Open Camera Link
+                  </a>
+                )}
               </div>
 
               {previewActive && (
                 <div className="space-y-2">
                   <div className="relative w-full h-48 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
+                    {cameraStreamUrl.trim() && !streamPreviewError ? (
+                      <img
+                        src={cameraStreamUrl.trim()}
+                        alt="Configured camera stream preview"
+                        onError={() => setStreamPreviewError(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs font-mono text-slate-400 px-4 text-center">
+                        {streamPreviewError
+                          ? `Stream link saved (${cameraStreamUrl.trim()}) — start your local camera server to see live frames.`
+                          : `USB Camera Index #${webcamIndex} ready.`}
+                      </span>
+                    )}
                     <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-mono text-emerald-400 border border-slate-800">
                       CAM INDEX {webcamIndex}
                     </span>
@@ -670,8 +679,10 @@ export const Setup: React.FC = () => {
                   <dd className="text-white mt-0.5">{activeGateNames.join(', ')}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">WEBCAM INDEX</dt>
-                  <dd className="text-white mt-0.5">Device #{webcamIndex}</dd>
+                  <dt className="text-slate-500">CAMERA STREAM &amp; INDEX</dt>
+                  <dd className="text-white mt-0.5 break-all">
+                    {cameraStreamUrl.trim() || 'None'} (Index #{webcamIndex})
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500">ESP32 BASE URL</dt>

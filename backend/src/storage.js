@@ -193,6 +193,7 @@ class StorageManager {
     this.systemConfig = {
       gateName: 'Main Smart Gate Alpha',
       gateId: 'gate-a',
+      cameraStreamUrl: '',
       autoFailover: true,
       buzzerAlerts: true,
       amberThreshold: 5,

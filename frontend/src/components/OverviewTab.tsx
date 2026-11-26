@@ -22,6 +22,7 @@ interface OverviewTabProps {
   worstState: CrowdState;
   hardware?: HardwareActuatorState | null;
   hardwareManager?: HardwareManagerSnapshot | null;
+  cameraStreamUrl?: string;
   onHardwareManagerUpdated?: (next: HardwareManagerSnapshot) => void;
   onSelectZone: (zoneId: string) => void;
   onGateUpdated?: (updatedGate: GateState) => void;
@@ -34,6 +35,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   worstState,
   hardware,
   hardwareManager = null,
+  cameraStreamUrl = '',
   onHardwareManagerUpdated,
   onSelectZone,
   onGateUpdated,
@@ -302,6 +304,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <HardwareControlPanel
         snapshot={hardwareManager}
         onUpdated={onHardwareManagerUpdated}
+        cameraStreamUrl={cameraStreamUrl}
       />
 
       {/* 3. Real-Time 10-Minute Risk Score Chart */}

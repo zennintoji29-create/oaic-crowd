@@ -100,7 +100,8 @@ export interface GateState {
 export interface SystemConfig {
   gateName: string;
   gateId: string;
-  passcode: string;
+  cameraStreamUrl?: string;
+  passcode?: string;
   autoFailover: boolean;
   buzzerAlerts: boolean;
   amberThreshold: number;

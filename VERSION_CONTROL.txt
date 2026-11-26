@@ -110,3 +110,8 @@ Version 19 (2026-11-27)
 - Synced System Setup zone/gate renames across storage.js, index.js (GATE_UPDATED), App.tsx, GlobalHeader, GateCard, and ZoneDetailTab.
 - Removed AboutTab (Research Prototype Notice & safety alerts) from SetupTab.tsx so it appears only in About & Safety.
 - Made DemoTab.tsx (/sandbox) 100% standalone with zero live hardware/data props.
+
+Version 20 (2026-11-27)
+- Updated GlobalHeader.tsx branding to show "CPR" with a green dashed logo icon (border-2 border-dashed border-[#18e299]) and removed the HLK-LD2410 pill.
+- Enhanced Navigation.tsx desktop sidebar visual hierarchy with grouped section headers (Monitoring, Configuration & Demo, Documentation), Control Panel status badge, active emerald left indicator, and icon containers while keeping exact tab order.
+- Removed browser webcam getUserMedia permission from Setup.tsx and replaced it with configurable USB Camera / Localhost Stream URL (cameraStreamUrl) across Setup.tsx, SetupTab.tsx, backend config validation, App.tsx, OverviewTab.tsx, and HardwareControlPanel.tsx (with inline preview + Open Stream link).

@@ -894,6 +894,12 @@ app.post('/api/config', requireMasterAuth, (req, res) => {
   if (body.gateCount !== undefined && (!Number.isInteger(Number(body.gateCount)) || Number(body.gateCount) < 1 || Number(body.gateCount) > 4)) {
     return res.status(400).json({ error: 'gateCount must be an integer between 1 and 4' });
   }
+  if (body.cameraStreamUrl !== undefined && typeof body.cameraStreamUrl === 'string' && body.cameraStreamUrl.trim() !== '') {
+    if (!/^https?:\/\/.+/.test(body.cameraStreamUrl.trim())) {
+      return res.status(400).json({ error: 'cameraStreamUrl must start with http:// or https://' });
+    }
+    body.cameraStreamUrl = body.cameraStreamUrl.trim();
+  }
   const updated = storage.updateConfig(body);
   if (req.masterUser?.email) {
     if (Array.isArray(body.gateNames) && body.gateNames.length > 0) {

@@ -66,23 +66,31 @@ export const Navigation: React.FC<NavigationProps> = ({
       ) : (
         <nav
           aria-label="Primary navigation"
-          className="hidden lg:flex flex-col w-56 shrink-0 border-r border-white/[0.08] bg-[#0b0c0e]/95 p-2.5 sticky top-[61px] h-[calc(100dvh-61px)] overflow-hidden justify-between"
+          className="hidden lg:flex flex-col w-60 shrink-0 border-r border-white/[0.08] bg-[#0a0c0e]/95 p-3 sticky top-[61px] h-[calc(100dvh-61px)] overflow-hidden justify-between"
         >
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between px-2 py-1 mb-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-                Navigation
-              </span>
+          <div className="flex flex-col gap-1">
+            {/* Compact Status Header */}
+            <div className="flex items-center justify-between px-2.5 py-2 mb-1.5 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#18e299]" aria-hidden="true" />
+                <span className="text-xs font-semibold tracking-wide text-white">
+                  Control Panel
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setNavHidden(true)}
-                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-md bg-transparent hover:bg-white/10 text-text-muted hover:text-text-primary transition-colors"
+                className="min-h-[32px] min-w-[32px] inline-flex items-center justify-center rounded-md bg-transparent hover:bg-white/10 text-text-muted hover:text-text-primary transition-colors"
                 title="Hide navigation bar"
                 aria-label="Hide navigation bar"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
             </div>
+
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 px-2.5 pt-1 pb-0.5">
+              Monitoring
+            </span>
 
             {primaryItems.map((item) => {
               const Icon = item.icon;
@@ -92,23 +100,26 @@ export const Navigation: React.FC<NavigationProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`min-h-[44px] flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
+                  className={`min-h-[44px] flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all text-left border-l-2 ${
                     isActive
-                      ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-[#18e299]/10 text-[#18e299] border-[#18e299] font-semibold shadow-sm'
+                      : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <span className="flex items-center gap-2.5 truncate">
-                    <Icon
-                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#18e299]' : 'text-neutral-500'}`}
-                      aria-hidden="true"
-                    />
+                    <span
+                      className={`p-1.5 rounded-md ${
+                        isActive ? 'bg-[#18e299]/15 text-[#18e299]' : 'bg-white/[0.03] text-neutral-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    </span>
                     <span className="truncate">{item.label}</span>
                   </span>
 
                   {typeof item.count === 'number' && item.count > 0 && (
-                    <span className="text-xs px-1.5 py-0.5 border border-border-subtle rounded bg-surface-base text-status-danger-text tabular-nums">
+                    <span className="text-xs px-1.5 py-0.5 border border-rose-500/30 rounded-full bg-rose-500/10 text-rose-300 tabular-nums">
                       {item.count}
                     </span>
                   )}
@@ -117,9 +128,9 @@ export const Navigation: React.FC<NavigationProps> = ({
             })}
 
             {/* Configuration & Demo Section */}
-            <div className="pt-2 mt-1.5 border-t border-border-subtle flex flex-col gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted px-2 py-1">
-                Configuration & Demo
+            <div className="pt-2 mt-1.5 border-t border-white/[0.07] flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 px-2.5 py-0.5">
+                Configuration &amp; Demo
               </span>
               {configItems.map((item) => {
                 const Icon = item.icon;
@@ -129,13 +140,19 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <Link
                       key={item.id}
                       to={item.to}
-                      className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      className={`min-h-[44px] flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all border-l-2 ${
                         isActive
-                          ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
-                          : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+                          ? 'bg-[#18e299]/10 text-[#18e299] border-[#18e299] font-semibold'
+                          : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#18e299]' : 'text-neutral-500'}`} aria-hidden="true" />
+                      <span
+                        className={`p-1.5 rounded-md ${
+                          isActive ? 'bg-[#18e299]/15 text-[#18e299]' : 'bg-white/[0.03] text-neutral-400'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      </span>
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -145,14 +162,20 @@ export const Navigation: React.FC<NavigationProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => setActiveTab(item.id)}
-                    className={`min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
+                    className={`min-h-[44px] flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all text-left border-l-2 ${
                       isActive
-                        ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
-                        : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+                        ? 'bg-[#18e299]/10 text-[#18e299] border-[#18e299] font-semibold'
+                        : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#18e299]' : 'text-neutral-500'}`} aria-hidden="true" />
+                    <span
+                      className={`p-1.5 rounded-md ${
+                        isActive ? 'bg-[#18e299]/15 text-[#18e299]' : 'bg-white/[0.03] text-neutral-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    </span>
                     <span>{item.label}</span>
                   </button>
                 );
@@ -160,22 +183,28 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* About & Safety placed below Configuration & Demo */}
-            <div className="pt-2 mt-1.5 border-t border-border-subtle">
+            <div className="pt-2 mt-1.5 border-t border-white/[0.07] flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 px-2.5 py-0.5">
+                Documentation
+              </span>
               <button
                 type="button"
                 onClick={() => setActiveTab('about')}
-                className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-left ${
+                className={`w-full min-h-[44px] flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all text-left border-l-2 ${
                   activeTab === 'about'
-                    ? 'bg-[#18e299]/10 text-[#18e299] border border-[#18e299]/25 font-semibold'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+                    ? 'bg-[#18e299]/10 text-[#18e299] border-[#18e299] font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
                 aria-current={activeTab === 'about' ? 'page' : undefined}
               >
-                <ShieldCheck
-                  className={`w-4 h-4 shrink-0 ${activeTab === 'about' ? 'text-[#18e299]' : 'text-neutral-500'}`}
-                  aria-hidden="true"
-                />
-                <span>About & Safety</span>
+                <span
+                  className={`p-1.5 rounded-md ${
+                    activeTab === 'about' ? 'bg-[#18e299]/15 text-[#18e299]' : 'bg-white/[0.03] text-neutral-400'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                </span>
+                <span>About &amp; Safety</span>
               </button>
             </div>
           </div>

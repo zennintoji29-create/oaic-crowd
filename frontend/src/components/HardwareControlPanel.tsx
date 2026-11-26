@@ -13,7 +13,8 @@ import {
   Loader2,
   AlertTriangle,
   Activity,
-  Terminal
+  Terminal,
+  ExternalLink
 } from 'lucide-react';
 import { HardwareManagerSnapshot, OperatingMode } from '../types';
 import {
@@ -25,16 +26,20 @@ import {
 interface HardwareControlPanelProps {
   snapshot: HardwareManagerSnapshot | null;
   onUpdated?: (next: HardwareManagerSnapshot) => void;
+  cameraStreamUrl?: string;
 }
 
 export const HardwareControlPanel: React.FC<HardwareControlPanelProps> = ({
   snapshot,
-  onUpdated
+  onUpdated,
+  cameraStreamUrl = ''
 }) => {
   const [connectingFallback, setConnectingFallback] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [logTab, setLogTab] = useState<'events' | 'commands'>('events');
+  const [streamError, setStreamError] = useState(false);
+  const [streamKey, setStreamKey] = useState(0);
 
   const mode: OperatingMode = snapshot?.operatingMode || 'AI_CAMERA';
   const espConnected = Boolean(snapshot?.esp32Connected);
@@ -226,6 +231,60 @@ export const HardwareControlPanel: React.FC<HardwareControlPanelProps> = ({
               <span className="text-lg font-semibold text-[#18e299]">{yolo?.alertLevel || 'GREEN'}</span>
             </div>
           </div>
+
+          {/* Configured Localhost Camera Stream Link */}
+          {cameraStreamUrl ? (
+            <div className="pt-2 border-t border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="text-neutral-400 font-mono truncate" title={cameraStreamUrl}>
+                  {cameraStreamUrl}
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {streamError && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStreamError(false);
+                        setStreamKey((k) => k + 1);
+                      }}
+                      className="text-neutral-300 hover:text-white underline"
+                    >
+                      Retry
+                    </button>
+                  )}
+                  <a
+                    href={cameraStreamUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[#18e299] hover:underline font-medium"
+                  >
+                    <span>Open Stream</span>
+                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                  </a>
+                </div>
+              </div>
+              {!streamError ? (
+                <div className="rounded-lg overflow-hidden border border-white/[0.08] bg-black/60">
+                  <img
+                    key={`${cameraStreamUrl}-${streamKey}`}
+                    src={cameraStreamUrl}
+                    alt="Configured USB camera and YOLO feed"
+                    onLoad={() => setStreamError(false)}
+                    onError={() => setStreamError(true)}
+                    className="w-full max-h-44 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-lg border border-white/[0.08] bg-black/40 px-3 py-2 text-[11px] text-neutral-400">
+                  Camera stream preview unavailable inline — start your localhost camera feed or click Open Stream.
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-[11px] text-neutral-500 pt-1 border-t border-white/[0.06]">
+              No camera localhost stream URL set yet. Add it in System Setup to view or open the camera link here.
+            </p>
+          )}
         </div>
 
         {/* Right: Secondary ESP32 Hardware Telemetry (No fake counts!) */}

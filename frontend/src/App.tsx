@@ -23,6 +23,7 @@ import {
   fetchHardwareStatus,
   fetchHardwareManagerState,
   fetchGates,
+  fetchSystemConfig,
   clearSessionToken
 } from './lib/api';
 import { GlobalHeader } from './components/GlobalHeader';
@@ -89,6 +90,7 @@ const AppRoutes: React.FC = () => {
   const [lastTelemetryTimestamp, setLastTelemetryTimestamp] = useState<number>(Date.now());
   const [simulatorRunning, setSimulatorRunning] = useState<boolean>(false);
   const [isStale, setIsStale] = useState<boolean>(false);
+  const [cameraStreamUrl, setCameraStreamUrl] = useState<string>('');
 
   // Redirect ?tab=landing -> /
   useEffect(() => {
@@ -119,18 +121,22 @@ const AppRoutes: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     try {
-      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw, fetchedHwMgr] = await Promise.all([
+      const [fetchedZones, fetchedGates, fetchedAlerts, fetchedHw, fetchedHwMgr, fetchedCfg] = await Promise.all([
         fetchZones().catch(() => []),
         fetchGates().catch(() => []),
         fetchAlerts(50).catch(() => []),
         fetchHardwareStatus().catch(() => null),
-        fetchHardwareManagerState().catch(() => null)
+        fetchHardwareManagerState().catch(() => null),
+        fetchSystemConfig().catch(() => null)
       ]);
       if (fetchedZones && fetchedZones.length > 0) setZones(fetchedZones);
       if (fetchedGates && fetchedGates.length > 0) setGates(fetchedGates);
       if (fetchedAlerts) setAlerts(fetchedAlerts);
       if (fetchedHw) setHardware(fetchedHw);
       if (fetchedHwMgr) setHardwareManager(fetchedHwMgr);
+      if (fetchedCfg?.cameraStreamUrl !== undefined) {
+        setCameraStreamUrl(fetchedCfg.cameraStreamUrl || '');
+      }
     } catch (err) {
       console.warn('[APP] Could not fetch initial REST data:', err);
     }
@@ -204,6 +210,9 @@ const AppRoutes: React.FC = () => {
               if (msg.data.alerts) setAlerts(msg.data.alerts);
               if (msg.data.hardware) setHardware(msg.data.hardware);
               if (msg.data.hardwareManager) setHardwareManager(msg.data.hardwareManager);
+              if (msg.data.config?.cameraStreamUrl !== undefined) {
+                setCameraStreamUrl(msg.data.config.cameraStreamUrl || '');
+              }
               if (typeof msg.data.simulatorRunning === 'boolean') {
                 setSimulatorRunning(msg.data.simulatorRunning);
               }
@@ -243,6 +252,10 @@ const AppRoutes: React.FC = () => {
                 setGates((prev) =>
                   prev.map((g) => (g.zoneId === msg.data.zoneId ? { ...g, name: msg.data.name } : g))
                 );
+              }
+            } else if (msg.type === 'CONFIG_UPDATED') {
+              if (msg.data?.cameraStreamUrl !== undefined) {
+                setCameraStreamUrl(msg.data.cameraStreamUrl || '');
               }
             }
           } catch (e) {
@@ -389,6 +402,7 @@ const AppRoutes: React.FC = () => {
                     worstState={worst.state}
                     hardware={hardware}
                     hardwareManager={hardwareManager}
+                    cameraStreamUrl={cameraStreamUrl}
                     onHardwareManagerUpdated={setHardwareManager}
                     onSelectZone={handleSelectZone}
                     onGateUpdated={handleGateUpdated}
@@ -405,7 +419,12 @@ const AppRoutes: React.FC = () => {
                 )}
                 {dashboardTab === 'alerts' && <AlertsTab alerts={alerts} />}
                 {dashboardTab === 'setup' && (
-                  <SetupTab zones={zones} onZoneUpdated={handleZoneUpdated} />
+                  <SetupTab
+                    zones={zones}
+                    onZoneUpdated={handleZoneUpdated}
+                    cameraStreamUrl={cameraStreamUrl}
+                    onCameraUrlUpdated={setCameraStreamUrl}
+                  />
                 )}
                 {dashboardTab === 'about' && <AboutTab />}
               </>
