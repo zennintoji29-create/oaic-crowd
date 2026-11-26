@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
 import { Camera, Zap } from 'lucide-react';
-import { HardwareActuatorState } from '../types';
-
-interface DemoTabProps {
-  hardware: HardwareActuatorState | null;
-  onRefreshHardware?: () => void;
-}
 
 interface ComponentDossier {
   icon: string;
@@ -154,7 +148,7 @@ const COMPONENT_DETAILS: Record<string, ComponentDossier> = {
   }
 };
 
-export const DemoTab: React.FC<DemoTabProps> = () => {
+export const DemoTab: React.FC = () => {
   const [selectedInspector, setSelectedInspector] = useState<string>('webcam');
   const [selectedGateId, setSelectedGateId] = useState<string>('gate-a');
   const [gatePower, setGatePower] = useState<boolean>(true);

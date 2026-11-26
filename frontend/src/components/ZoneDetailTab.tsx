@@ -16,7 +16,7 @@ import {
   VolumeX,
   RotateCcw
 } from 'lucide-react';
-import { ZoneInfo, TelemetryPoint, OperatorCommand } from '../types';
+import { ZoneInfo, TelemetryPoint, OperatorCommand, GateState } from '../types';
 import { fetchZoneHistory, sendOperatorCommand } from '../lib/api';
 import { ConfirmModal } from './ConfirmModal';
 import { RadarScope } from './RadarScope';
@@ -25,12 +25,14 @@ import { METRIC_EXPLANATIONS } from '../lib/formatter';
 
 interface ZoneDetailTabProps {
   zones: ZoneInfo[];
+  gates?: GateState[];
   selectedZoneId: string;
   onSelectZoneId: (id: string) => void;
 }
 
 export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
   zones,
+  gates = [],
   selectedZoneId,
   onSelectZoneId
 }) => {
@@ -40,6 +42,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
   const [showTechnical, setShowTechnical] = useState<boolean>(false);
 
   const currentZone = zones.find(z => z.zoneId === selectedZoneId) || zones[0];
+  const matchingGate = currentZone ? gates.find(g => g.zoneId === currentZone.zoneId) : undefined;
 
   // Fetch 10-minute historical telemetry
   useEffect(() => {
@@ -67,7 +70,11 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
     return <div className="p-8 text-center text-text-muted">No zones configured.</div>;
   }
 
-  const status = currentZone.currentStatus || 'OFFLINE';
+  const status = matchingGate?.status || currentZone.currentStatus || 'OFFLINE';
+  const liveScore = matchingGate ? matchingGate.riskScore : currentZone.score;
+  const liveDensity = matchingGate ? matchingGate.density : currentZone.density;
+  const liveTargetCount = matchingGate ? matchingGate.count : (currentZone.lastTelemetry?.targetCount ?? 0);
+  const displayZoneName = matchingGate?.name || currentZone.name;
 
   // Format history for Recharts
   const chartData = history.map(item => {
@@ -114,7 +121,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
       };
     }
     if (status === 'AMBER') {
-      if (currentZone.score >= 60) {
+      if (liveScore >= 60) {
         return {
           word: 'Crowded',
           badgeClass: 'bg-amber-950 text-amber-300 border-amber-700',
@@ -169,7 +176,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
 
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
-                {currentZone.name}
+                {displayZoneName}
               </h2>
               <span
                 className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wide ${plainStatus.badgeClass}`}
@@ -221,12 +228,12 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
         {/* Left, large: Flat Radar View */}
         <div className="lg:col-span-7">
           <RadarScope
-            zoneName={currentZone.name}
+            zoneName={displayZoneName}
             state={status}
-            score={currentZone.score}
-            density={currentZone.density}
+            score={liveScore}
+            density={liveDensity}
             avgSpeed={currentZone.avgSpeed}
-            targetCount={currentZone.lastTelemetry?.targetCount || 2}
+            targetCount={liveTargetCount}
           />
         </div>
 
@@ -330,7 +337,7 @@ export const ZoneDetailTab: React.FC<ZoneDetailTabProps> = ({
             {METRIC_EXPLANATIONS.density.label}
           </span>
           <div className="font-mono text-2xl font-bold text-text-primary mt-1 mb-1">
-            {currentZone.density.toFixed(2)}{' '}
+            {liveDensity.toFixed(2)}{' '}
             <span className="text-xs text-text-muted font-normal">people/m²</span>
           </div>
           <p className="text-xs text-text-secondary leading-relaxed">

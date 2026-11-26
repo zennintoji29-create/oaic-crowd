@@ -413,13 +413,33 @@ class StorageManager {
     return queue.shift();
   }
 
-  updateZoneConfig(zoneId, updates) {
+  updateZoneConfig(zoneId, updates, email = null) {
     const zone = this.zones.get(zoneId);
     if (!zone) return null;
 
     if (updates.name) zone.name = updates.name;
     if (updates.areaSqM) zone.areaSqM = updates.areaSqM;
     if (updates.corridorWidthM) zone.corridorWidthM = updates.corridorWidthM;
+
+    if (updates.name) {
+      for (const gate of this.gates.values()) {
+        if (gate.zoneId === zoneId) {
+          gate.name = updates.name;
+          gate.lastUpdated = Date.now();
+          dbUpsertGate(gate);
+        }
+      }
+      if (email && this.userGates.has(email.toLowerCase())) {
+        for (const gate of this.userGates.get(email.toLowerCase()).values()) {
+          if (gate.zoneId === zoneId) {
+            gate.name = updates.name;
+            gate.lastUpdated = Date.now();
+            dbUpsertGate(gate);
+          }
+        }
+        this.saveUserGates();
+      }
+    }
 
     return zone;
   }
@@ -432,9 +452,9 @@ class StorageManager {
       const zone = this.zones.get(gate.zoneId);
       if (zone && zone.lastTelemetry && !gate.isManualOverride) {
         gate.status = zone.lastTelemetry.state;
-        gate.count = zone.lastTelemetry.targetCount || gate.count;
-        gate.density = zone.lastTelemetry.density || gate.density;
-        gate.riskScore = zone.lastTelemetry.score || gate.riskScore;
+        gate.count = zone.lastTelemetry.targetCount ?? gate.count;
+        gate.density = zone.lastTelemetry.density ?? gate.density;
+        gate.riskScore = zone.lastTelemetry.score ?? gate.riskScore;
         gate.lastUpdated = zone.lastTelemetry.serverTimestamp || Date.now();
 
         if (gate.count >= (gate.redThreshold || 10)) {

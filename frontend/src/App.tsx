@@ -211,8 +211,23 @@ const AppRoutes: React.FC = () => {
             } else if (msg.type === 'TELEMETRY_UPDATE') {
               handleIncomingTelemetry(msg.data);
             } else if (msg.type === 'GATE_UPDATED') {
+              const g = msg.data;
               setGates((prev) =>
-                prev.map((g) => (g.id === msg.data.id ? { ...g, ...msg.data } : g))
+                prev.map((item) => (item.id === g.id ? { ...item, ...g } : item))
+              );
+              setZones((prev) =>
+                prev.map((z) =>
+                  z.zoneId === g.zoneId
+                    ? {
+                        ...z,
+                        name: g.name || z.name,
+                        currentStatus: g.status,
+                        score: g.riskScore,
+                        density: g.density,
+                        lastSeenMsAgo: 0
+                      }
+                    : z
+                )
               );
             } else if (msg.type === 'HARDWARE_UPDATE' || msg.type === 'FAILOVER_ALERT') {
               setHardware(msg.data);
@@ -224,6 +239,11 @@ const AppRoutes: React.FC = () => {
               setZones((prev) =>
                 prev.map((z) => (z.zoneId === msg.data.zoneId ? { ...z, ...msg.data } : z))
               );
+              if (msg.data?.name) {
+                setGates((prev) =>
+                  prev.map((g) => (g.zoneId === msg.data.zoneId ? { ...g, name: msg.data.name } : g))
+                );
+              }
             }
           } catch (e) {
             console.error('[WS] Error parsing message:', e);
@@ -282,10 +302,29 @@ const AppRoutes: React.FC = () => {
 
   const handleGateUpdated = (updatedGate: GateState) => {
     setGates((prev) => prev.map((g) => (g.id === updatedGate.id ? updatedGate : g)));
+    setZones((prev) =>
+      prev.map((z) =>
+        z.zoneId === updatedGate.zoneId
+          ? {
+              ...z,
+              name: updatedGate.name || z.name,
+              currentStatus: updatedGate.status,
+              score: updatedGate.riskScore,
+              density: updatedGate.density,
+              lastSeenMsAgo: 0
+            }
+          : z
+      )
+    );
   };
 
   const handleZoneUpdated = (updated: ZoneInfo) => {
     setZones((prev) => prev.map((z) => (z.zoneId === updated.zoneId ? { ...z, ...updated } : z)));
+    if (updated.name) {
+      setGates((prev) =>
+        prev.map((g) => (g.zoneId === updated.zoneId ? { ...g, name: updated.name } : g))
+      );
+    }
   };
 
   const handleLogout = useCallback(() => {
@@ -359,6 +398,7 @@ const AppRoutes: React.FC = () => {
                 {dashboardTab === 'detail' && (
                   <ZoneDetailTab
                     zones={zones}
+                    gates={gates}
                     selectedZoneId={selectedZoneId}
                     onSelectZoneId={setSelectedZoneId}
                   />
@@ -387,12 +427,12 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Protected Hardware Sandbox */}
+      {/* Protected Hardware Sandbox (100% standalone for judge demo) */}
       <Route
         path="/sandbox"
         element={
           <RequireAuth>
-            {renderShell('sandbox', <DemoTab hardware={hardware} />)}
+            {renderShell('sandbox', <DemoTab />)}
           </RequireAuth>
         }
       />

@@ -928,12 +928,16 @@ app.put('/api/zones/:id', requireMasterAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid config', details: parsed.error.format() });
   }
 
-  const updated = storage.updateZoneConfig(zoneId, parsed.data);
+  const email = req.masterUser?.email || null;
+  const updated = storage.updateZoneConfig(zoneId, parsed.data, email);
   if (!updated) {
     return res.status(404).json({ error: 'Zone not found' });
   }
 
   broadcast('ZONE_CONFIG_UPDATED', updated);
+  storage.getGates(email).forEach((g) => {
+    if (g.zoneId === zoneId) broadcast('GATE_UPDATED', g);
+  });
   res.json({ status: 'ok', zone: updated });
 });
 

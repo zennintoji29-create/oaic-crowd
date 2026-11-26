@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Save } from 'lucide-react';
 import { ZoneInfo } from '../types';
 import { updateZoneConfig } from '../lib/api';
-import { AboutTab } from './AboutTab';
 
 interface SetupTabProps {
   zones: ZoneInfo[];
@@ -154,11 +153,6 @@ export const SetupTab: React.FC<SetupTabProps> = ({ zones, onZoneUpdated }) => {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* 2. About and Safety Sections */}
-      <div className="pt-4 border-t border-border-subtle">
-        <AboutTab />
       </div>
     </div>
   );

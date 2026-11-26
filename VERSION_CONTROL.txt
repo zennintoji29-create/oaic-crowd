@@ -103,3 +103,10 @@ Version 18 (2026-11-27)
   * Removed fake radar-to-count synthesis in backend/src/index.js so YOLO remains authoritative for crowd count/density/severity.
   * Rewrote breadboard1_master.ino (v4.0) and breadboard2_slave.ino (v4.0) with Wi-Fi registration/heartbeats/acks, conflict-free GPIO map (Red=25, Yellow=26, Green=27, Buzzer=32, Servo=13, I2C=21/22, Radar=16/17, IR=14, VSPI LoRa=18/19/23/5/4/33), NO LDR, and fail-open 90-deg safe state on backend timeout.
   * Added frontend/src/components/HardwareControlPanel.tsx inside OverviewTab.tsx with Operating Mode selector, Combined Demo side-by-side (Authoritative YOLO vs Secondary ESP32), Reported Output Status, SG90 Gate controls, Manual Demo Simulation + Reset, and Hardware Event/Command logs.
+
+Version 19 (2026-11-27)
+- Added Overview button & detailed Gate Overview Modal in GateCard.tsx next to Manual Override and Zone Details.
+- Synced ZoneDetailTab with live GateState (status, count, density, riskScore, name) and fixed nullish coalescing (??) in storage.js getGates() so zero counts propagate properly.
+- Synced System Setup zone/gate renames across storage.js, index.js (GATE_UPDATED), App.tsx, GlobalHeader, GateCard, and ZoneDetailTab.
+- Removed AboutTab (Research Prototype Notice & safety alerts) from SetupTab.tsx so it appears only in About & Safety.
+- Made DemoTab.tsx (/sandbox) 100% standalone with zero live hardware/data props.
