@@ -37,6 +37,9 @@ import time
 import sys
 import argparse
 import os
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import torch
 from ultralytics import YOLO
 
@@ -63,7 +66,88 @@ def parse_arguments():
                         help="Corridor ground plane width in meters.")
     parser.add_argument("--ground-length", type=float, default=None,
                         help="Corridor ground plane length in meters.")
+    parser.add_argument("--stream-port", type=int, default=int(os.getenv("CPR_STREAM_PORT", "5000")),
+                        help="Local HTTP MJPEG stream port for dashboard preview (default 5000, 0 disables).")
+    parser.add_argument("--no-window", action="store_true",
+                        help="Run headless without opening an OpenCV cv2.imshow GUI window.")
     return parser.parse_args()
+
+
+class FrameBroadcaster:
+    """Thread-safe holder for the latest annotated JPEG frame for HTTP MJPEG streaming."""
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._jpeg_bytes = None
+        self._cond = threading.Condition(self._lock)
+
+    def update(self, frame_bgr):
+        ok, buf = cv2.imencode(".jpg", frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        if ok:
+            with self._cond:
+                self._jpeg_bytes = buf.tobytes()
+                self._cond.notify_all()
+
+    def get_snapshot(self):
+        with self._lock:
+            return self._jpeg_bytes
+
+    def wait_next(self, timeout=1.0):
+        with self._cond:
+            self._cond.wait(timeout=timeout)
+            return self._jpeg_bytes
+
+
+def start_mjpeg_server(port: int, broadcaster: FrameBroadcaster):
+    class StreamHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            if path in ("/", "/health"):
+                payload = json.dumps({
+                    "status": "running",
+                    "video_feed": f"http://localhost:{port}/video_feed",
+                    "snapshot": f"http://localhost:{port}/snapshot.jpg"
+                }).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(payload)
+            elif path == "/snapshot.jpg":
+                jpg = broadcaster.get_snapshot()
+                if not jpg:
+                    self.send_error(503, "Camera frame not ready yet")
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(jpg)
+            elif path == "/video_feed":
+                self.send_response(200)
+                self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+                self.end_headers()
+                try:
+                    while True:
+                        jpg = broadcaster.wait_next(timeout=1.5)
+                        if not jpg:
+                            continue
+                        self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n")
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+            else:
+                self.send_error(404, "Not found")
+
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("0.0.0.0", port), StreamHandler)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    return server
 
 
 class CPRVisionMaster:
@@ -184,8 +268,16 @@ class CPRVisionMaster:
             send_rate_hz=cfg.telemetry_rate_hz
         )
 
-        # FPS Buffer
+        # FPS Buffer & MJPEG Broadcaster
         self.fps_buffer = []
+        self.broadcaster = FrameBroadcaster()
+        self.mjpeg_server = None
+        if getattr(self.args, "stream_port", 0) > 0:
+            try:
+                self.mjpeg_server = start_mjpeg_server(self.args.stream_port, self.broadcaster)
+                print(f"[CPR-Master] Live Browser Video Feed: http://localhost:{self.args.stream_port}/video_feed")
+            except OSError as e:
+                print(f"[CPR-Master] Warning: Could not bind MJPEG stream port {self.args.stream_port}: {e}")
 
     def _calculate_line_points(self):
         p1 = (int(self.w * cfg.line_start_ratio[0]), int(self.h * self.line_y_ratio))
@@ -332,10 +424,15 @@ class CPRVisionMaster:
                 avg_fps, frame_time * 1000, current_time
             )
 
-            cv2.imshow("CPR - Crowd Pressure Radar (Master Vision Engine)", frame)
+            self.broadcaster.update(frame)
 
-            # 8. Keyboard Events
-            key = cv2.waitKey(1) & 0xFF
+            if not getattr(self.args, "no_window", False):
+                cv2.imshow("CPR - Crowd Pressure Radar (Master Vision Engine)", frame)
+                # 8. Keyboard Events
+                key = cv2.waitKey(1) & 0xFF
+            else:
+                time.sleep(0.005)
+                key = 255
             if key == ord('q'):
                 break
             elif key == ord('e'):
@@ -458,9 +555,15 @@ class CPRVisionMaster:
         cv2.putText(frame, f"STATE: {c_state}", (w - 130, h - 13), cv2.FONT_HERSHEY_SIMPLEX, 0.50, c_color, 2, cv2.LINE_AA)
 
     def cleanup(self):
+        if self.mjpeg_server:
+            try:
+                self.mjpeg_server.shutdown()
+            except Exception:
+                pass
         self.camera.release()
         self.telemetry.stop()
-        cv2.destroyAllWindows()
+        if not getattr(self.args, "no_window", False):
+            cv2.destroyAllWindows()
         print("[CPR-Master] All resources released.")
 
 

@@ -144,10 +144,10 @@ class VisionConfig:
     # -------------------------------------------------------------
     # 9. Backend Integration & Telemetry Pipeline
     # -------------------------------------------------------------
-    backend_url: str = os.getenv("CPR_BACKEND_URL", "http://localhost:5050/api/telemetry")
+    backend_url: str = os.getenv("CPR_BACKEND_URL", "http://localhost:3000/api/telemetry")
     auth_token: str = os.getenv("CPR_AUTH_TOKEN", "cpr-secret-key-2026")
     device_id: str = "cpr-vision-gate-01"
-    zone_id: str = "zone-corridor-a"
+    zone_id: str = os.getenv("CPR_ZONE_ID", "zone-entry-a")
     telemetry_rate_hz: float = 2.0
     firmware_version: str = "cpr-ai-v2.5-fruin"
 

@@ -158,3 +158,7 @@ Version 26 (2026-11-27)
 
 Version 27 (2026-11-27)
 - Reverted the 7 extra Landing Page React Bits effects (AuroraGlow, ParticlesField, GradientText, TiltedCard, Magnet, LogoLoop, AnimatedContent) back to the clean simple Mintlify + base React Bits setup (BlurText, ShinyText, DecryptedText, CountUp, SpotlightCard, StarBorder, ClickSpark, RadarBackdrop) while preserving Home links, single Profile button, ESP32 & Fallback page, 1-minute refresh, and AI Space Advisor.
+
+Version 28 (2026-11-27)
+- Added built-in thread-safe HTTP MJPEG video stream server (--stream-port 5000, /video_feed and /snapshot.jpg) and --no-window mode to CPR-AI/main.py.
+- Updated CPR-AI/config.py defaults to post YOLO11n telemetry directly to http://localhost:3000/api/telemetry for zone-entry-a.
