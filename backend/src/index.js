@@ -355,8 +355,13 @@ app.post('/api/telemetry', requireDeviceAuth, (req, res) => {
       parsed.data.ownerEmail || null,
       90
     );
-  } else if (opticalHealth === 'HEALTHY' && hardwareState.systemMode === 'HARDWARE_FAILOVER') {
+  } else if (opticalHealth === 'HEALTHY' && (hardwareState.systemMode === 'HARDWARE_FAILOVER' || hardwareManager.operatingMode === 'HARDWARE_FALLBACK')) {
     hardwareState.systemMode = 'AI_VISION_PRIMARY';
+    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
+      hardwareManager.operatingMode = 'AI_CAMERA';
+      hardwareManager.addEvent('INFO', 'AUTO_RECOVERY', 'Healthy AI Camera stream restored; switched from Hardware Fallback to AI Camera mode.');
+      hardwareManager.emitChange('HARDWARE_MANAGER_UPDATE');
+    }
     console.log('[CPR-Backend] Camera reconnected. Primary AI Vision mode restored.');
   }
   updateControlLogic(targetCount);
@@ -476,6 +481,13 @@ app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
     if (typeof parsed.data.sensors.tofDistanceMm === 'number') {
       hardwareState.tofDistanceMm = parsed.data.sensors.tofDistanceMm;
     }
+    // Auto-failover to ESP32 when camera is offline and autoFailover is enabled
+    const camIsStale = !hardwareManager.yoloState?.cameraHealthy || (Date.now() - (hardwareState.lastCameraPing || 0) > 10000);
+    if (hardwareManager.operatingMode === 'AI_CAMERA' && camIsStale && storage.getConfig().autoFailover) {
+      hardwareManager.operatingMode = 'HARDWARE_FALLBACK';
+      hardwareManager.addEvent('WARN', 'AUTO_FAILOVER', `Camera offline — automatically switched to ESP32 Hardware Fallback (${device.deviceId}).`, device.deviceId);
+      hardwareManager.emitChange('HARDWARE_MANAGER_UPDATE');
+    }
     if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
       hardwareState.systemMode = 'HARDWARE_FAILOVER';
       broadcast('HARDWARE_UPDATE', hardwareState);
@@ -497,6 +509,13 @@ app.post('/api/hardware/telemetry', requireDeviceAuth, (req, res) => {
     }
     if (typeof parsed.data.sensors.tofDistanceMm === 'number') {
       hardwareState.tofDistanceMm = parsed.data.sensors.tofDistanceMm;
+    }
+    // Auto-failover to ESP32 when camera is offline and autoFailover is enabled
+    const camIsStale = !hardwareManager.yoloState?.cameraHealthy || (Date.now() - (hardwareState.lastCameraPing || 0) > 10000);
+    if (hardwareManager.operatingMode === 'AI_CAMERA' && camIsStale && storage.getConfig().autoFailover) {
+      hardwareManager.operatingMode = 'HARDWARE_FALLBACK';
+      hardwareManager.addEvent('WARN', 'AUTO_FAILOVER', `Camera offline — automatically switched to ESP32 Hardware Fallback (${device.deviceId}).`, device.deviceId);
+      hardwareManager.emitChange('HARDWARE_MANAGER_UPDATE');
     }
     if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
       hardwareState.systemMode = 'HARDWARE_FAILOVER';
