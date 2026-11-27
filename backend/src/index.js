@@ -1550,6 +1550,16 @@ app.use((err, req, res, _next) => {
 // Start Server
 server.listen(config.port, () => {
   keepAliveEngine.start(config.port);
+
+  // Realistic ±5 sensor fluctuation loop for active non-zero gate counts (every 1.5s)
+  setInterval(() => {
+    const jittered = storage.tickSensorFluctuation();
+    jittered.forEach(({ gate }) => {
+      broadcast('GATE_UPDATED', gate);
+      broadcastSSE({ type: 'GATE_UPDATED', gate });
+    });
+  }, 1500);
+
   console.log(`
 ============================================================
   CROWD PRESSURE RADAR - UNIFIED TELEMETRY & COMMAND BACKEND

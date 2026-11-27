@@ -946,6 +946,7 @@ class StorageManager {
         ...gate,
         status: 'GREEN',
         count: 0,
+        baseCount: 0,
         density: 0,
         riskScore: 0,
         servoAngle: 90,
@@ -986,6 +987,7 @@ class StorageManager {
             ...gate,
             status: 'GREEN',
             count: 0,
+            baseCount: 0,
             density: 0,
             riskScore: 0,
             servoAngle: 90,
@@ -1017,7 +1019,10 @@ class StorageManager {
     const gate = map.get(id);
     if (!gate) return null;
 
-    gate.count = Math.max(0, gate.count + delta);
+    const currentBase = gate.baseCount !== undefined && gate.baseCount > 0 ? gate.baseCount : gate.count;
+    const nextBase = Math.max(0, currentBase + delta);
+    gate.baseCount = nextBase;
+    gate.count = nextBase;
     gate.density = Math.max(0, Number((gate.count / 4.0).toFixed(2)));
     gate.riskScore = Math.min(100, Math.round(gate.count * 7));
     gate.status = gate.count >= gate.redThreshold ? 'RED' : (gate.count >= gate.amberThreshold ? 'AMBER' : 'GREEN');
@@ -1038,6 +1043,45 @@ class StorageManager {
     gate.lastUpdated = Date.now();
     if (email) this.saveUserGates();
     return gate;
+  }
+
+  tickSensorFluctuation() {
+    const updated = [];
+    const applyJitter = (map, ownerEmail = null) => {
+      for (const gate of map.values()) {
+        const base = Number(gate.baseCount || 0);
+        if (base <= 0 || gate.power === false) continue;
+
+        const maxDelta = base >= 8 ? 5 : Math.max(1, Math.min(3, Math.floor(base * 0.4)));
+        const delta = Math.floor(Math.random() * (maxDelta * 2 + 1)) - maxDelta;
+        const nextCount = Math.max(1, base + delta);
+
+        gate.count = nextCount;
+        gate.density = Math.max(0, Number((nextCount / 4.0).toFixed(2)));
+        gate.riskScore = Math.min(100, Math.round(nextCount * 7));
+        gate.status = nextCount >= (gate.redThreshold || 10) ? 'RED' : (nextCount >= (gate.amberThreshold || 5) ? 'AMBER' : 'GREEN');
+
+        if (!gate.isManualOverride) {
+          if (gate.status === 'RED') {
+            gate.servoAngle = 0;
+            gate.servoStatus = 'CLOSED (LOCKED)';
+          } else if (gate.status === 'AMBER') {
+            gate.servoAngle = 45;
+            gate.servoStatus = 'METERED (PARTIAL)';
+          } else {
+            gate.servoAngle = 90;
+            gate.servoStatus = 'OPEN';
+          }
+        }
+        updated.push({ gate: { ...gate }, email: ownerEmail });
+      }
+    };
+
+    applyJitter(this.gates, null);
+    for (const [email, map] of this.userGates.entries()) {
+      applyJitter(map, email);
+    }
+    return updated;
   }
 
   getConfig() {
