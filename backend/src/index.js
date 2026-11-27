@@ -344,6 +344,17 @@ app.post('/api/telemetry', requireDeviceAuth, (req, res) => {
   hardwareState.lastCameraPing = Date.now();
   if (opticalHealth !== 'HEALTHY' && storage.getConfig().autoFailover) {
     hardwareState.systemMode = 'HARDWARE_FAILOVER';
+    notifier.notifyEvent(
+      `optical:${parsed.data.zoneId}`,
+      '⚠️ CPR Optical Watchdog Triggered',
+      [
+        `Zone: <code>${parsed.data.zoneId}</code>`,
+        `Issue: <b>${opticalHealth}</b>`,
+        `Action: Switched to Hardware / Radar Assist mode.`
+      ],
+      parsed.data.ownerEmail || null,
+      90
+    );
   } else if (opticalHealth === 'HEALTHY' && hardwareState.systemMode === 'HARDWARE_FAILOVER') {
     hardwareState.systemMode = 'AI_VISION_PRIMARY';
     console.log('[CPR-Backend] Camera reconnected. Primary AI Vision mode restored.');
@@ -600,6 +611,19 @@ app.post('/api/gates/:id/override', requireMasterAuth, (req, res) => {
     target: updated.id,
     detail: `${updated.name} -> ${manualState}`
   });
+  if (manualState === 'FORCE_LOCK' || manualState === 'EMERGENCY_LOCK') {
+    notifier.notifyEvent(
+      `lock:${updated.id}`,
+      '🔒 CPR Manual Emergency Lock',
+      [
+        `Gate: <b>${updated.name}</b>`,
+        `Operator: ${email || 'operator'}`,
+        `Barrier: 0° (LOCKED)`
+      ],
+      email,
+      10
+    );
+  }
   broadcast('AUDIT_UPDATED', auditOverride);
   res.json({ status: 'ok', gate: updated });
 });
@@ -1348,6 +1372,20 @@ app.post('/api/notifications/test', requireMasterAuth, async (req, res) => {
       notifier.updateConfig(email, req.body);
     }
     const results = await notifier.sendTest(email);
+    res.json({ status: 'ok', results });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/notifications/send-report', requireMasterAuth, async (req, res) => {
+  try {
+    const email = req.masterUser?.email || null;
+    if (req.body && Object.keys(req.body).length > 0) {
+      notifier.updateConfig(email, req.body);
+    }
+    const gates = storage.getGates(email);
+    const results = await notifier.sendLiveGateReport(gates, email);
     res.json({ status: 'ok', results });
   } catch (err) {
     res.status(400).json({ error: err.message });

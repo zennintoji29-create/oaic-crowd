@@ -3,9 +3,9 @@ import path from 'path';
 import { config } from './config.js';
 
 const DEFAULT_CHANNEL_CONFIG = {
-  telegramEnabled: false,
-  telegramBotToken: '',
-  telegramChatId: '',
+  telegramEnabled: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  telegramChatId: process.env.TELEGRAM_CHAT_ID || '',
   whatsappEnabled: false,
   whatsappPhoneNumberId: '',
   whatsappAccessToken: '',
@@ -220,13 +220,61 @@ class AlertNotifier {
 
     const msg =
       `<b>🚨 CPR ${alert.toState} ALERT — ${alert.zoneName}</b>\n` +
-      `Zone: ${alert.zoneId}\n` +
-      `Risk Score: ${alert.score}/100 | Density: ${Number(alert.density || 0).toFixed(2)} p/m²\n` +
+      `Zone: <code>${alert.zoneId}</code>\n` +
+      `Risk Score: <b>${alert.score}/100</b> | Density: <b>${Number(alert.density || 0).toFixed(2)} p/m²</b>\n` +
       `${alert.message}`;
 
     this.dispatchToConfig(cfg, msg).catch((err) => {
       console.warn('[NOTIFIER] Alert dispatch failed:', err.message);
     });
+  }
+
+  notifyEvent(eventKey, title, details = [], email = null, cooldownSec = 60) {
+    const cfg = this.getConfig(email);
+    const hasTelegram = cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId;
+    const hasWhatsApp = cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone;
+    if (!hasTelegram && !hasWhatsApp) return;
+
+    const key = `evt:${email || 'global'}:${eventKey}`;
+    const last = this.lastSentAt.get(key) || 0;
+    if (Date.now() - last < cooldownSec * 1000) return;
+    this.lastSentAt.set(key, Date.now());
+
+    const msg = [
+      `<b>${title}</b>`,
+      ...details,
+      `Time: ${new Date().toLocaleTimeString()}`
+    ].join('\n');
+
+    this.dispatchToConfig(cfg, msg).catch((err) => {
+      console.warn('[NOTIFIER] Event dispatch failed:', err.message);
+    });
+  }
+
+  async sendLiveGateReport(gates = [], email = null) {
+    const cfg = this.getConfig(email);
+    const hasTelegram = cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId;
+    const hasWhatsApp = cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone;
+    if (!hasTelegram && !hasWhatsApp) {
+      throw new Error('Enable Telegram or WhatsApp and fill in its credentials first.');
+    }
+
+    const lines = gates.map((g) => {
+      const icon = g.status === 'RED' ? '🔴' : (g.status === 'AMBER' ? '🟡' : '🟢');
+      const net = g.netCount ?? Math.max(0, (g.entryCount ?? 0) - (g.exitCount ?? 0));
+      return (
+        `${icon} <b>${g.name}</b> (${g.status})\n` +
+        `   Count: <b>${g.count}</b> | Density: ${Number(g.density || 0).toFixed(2)} p/m² | Barrier: ${g.servoAngle}°\n` +
+        `   Flow: +${g.entryCount ?? 0} In / -${g.exitCount ?? 0} Out (Net: ${net})`
+      );
+    });
+
+    const msg =
+      `<b>📊 CPR Live Dashboard Snapshot</b>\n` +
+      `Time: ${new Date().toLocaleString()}\n\n` +
+      (lines.length > 0 ? lines.join('\n\n') : 'No gates configured.');
+
+    return this.dispatchToConfig(cfg, msg);
   }
 }
 

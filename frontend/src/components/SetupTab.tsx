@@ -8,6 +8,7 @@ import {
   fetchSystemConfig,
   NotificationChannelConfig,
   removeGate,
+  sendLiveTelegramReport,
   sendTestNotification,
   updateGateSettings,
   updateNotificationConfig,
@@ -763,62 +764,67 @@ export const SetupTab: React.FC<SetupTabProps> = ({
             </div>
           </div>
 
-          {/* Meta WhatsApp Cloud API Section */}
-          <div className="p-3.5 rounded border border-border-subtle bg-surface-sunken/50 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-text-primary">Meta WhatsApp Cloud API (Free 1,000 msgs/mo)</span>
-              <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifConfig.whatsappEnabled}
-                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappEnabled: e.target.checked }))}
-                  className="accent-[#18e299]"
-                />
-                <span>Enable WhatsApp</span>
-              </label>
+          {/* Meta WhatsApp Cloud API Section (Optional) */}
+          <details className="p-3.5 rounded border border-border-subtle bg-surface-sunken/30">
+            <summary className="flex items-center justify-between cursor-pointer text-xs font-semibold text-text-secondary">
+              <span>Optional: Meta WhatsApp Cloud API (1,000 free msgs/mo)</span>
+              <span className="text-[11px] font-normal text-text-muted">Click to expand</span>
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center justify-end">
+                <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notifConfig.whatsappEnabled}
+                    onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappEnabled: e.target.checked }))}
+                    className="accent-[#18e299]"
+                  />
+                  <span>Enable WhatsApp</span>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label htmlFor="notif-wa-phoneid" className="block text-[11px] font-medium text-text-secondary mb-1">
+                    Phone Number ID
+                  </label>
+                  <input
+                    id="notif-wa-phoneid"
+                    type="text"
+                    value={notifConfig.whatsappPhoneNumberId}
+                    onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappPhoneNumberId: e.target.value }))}
+                    placeholder="Meta Phone Number ID"
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="notif-wa-token" className="block text-[11px] font-medium text-text-secondary mb-1">
+                    Access Token
+                  </label>
+                  <input
+                    id="notif-wa-token"
+                    type="password"
+                    value={notifConfig.whatsappAccessToken}
+                    onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappAccessToken: e.target.value }))}
+                    placeholder="EAAG..."
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="notif-wa-to" className="block text-[11px] font-medium text-text-secondary mb-1">
+                    Recipient WhatsApp (with country code)
+                  </label>
+                  <input
+                    id="notif-wa-to"
+                    type="text"
+                    value={notifConfig.whatsappRecipientPhone}
+                    onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappRecipientPhone: e.target.value }))}
+                    placeholder="919876543210"
+                    className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label htmlFor="notif-wa-phoneid" className="block text-[11px] font-medium text-text-secondary mb-1">
-                  Phone Number ID
-                </label>
-                <input
-                  id="notif-wa-phoneid"
-                  type="text"
-                  value={notifConfig.whatsappPhoneNumberId}
-                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappPhoneNumberId: e.target.value }))}
-                  placeholder="Meta Phone Number ID"
-                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
-                />
-              </div>
-              <div>
-                <label htmlFor="notif-wa-token" className="block text-[11px] font-medium text-text-secondary mb-1">
-                  Access Token
-                </label>
-                <input
-                  id="notif-wa-token"
-                  type="password"
-                  value={notifConfig.whatsappAccessToken}
-                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappAccessToken: e.target.value }))}
-                  placeholder="EAAG..."
-                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
-                />
-              </div>
-              <div>
-                <label htmlFor="notif-wa-to" className="block text-[11px] font-medium text-text-secondary mb-1">
-                  Recipient WhatsApp (with country code)
-                </label>
-                <input
-                  id="notif-wa-to"
-                  type="text"
-                  value={notifConfig.whatsappRecipientPhone}
-                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappRecipientPhone: e.target.value }))}
-                  placeholder="919876543210"
-                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
-                />
-              </div>
-            </div>
-          </div>
+          </details>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
@@ -841,6 +847,34 @@ export const SetupTab: React.FC<SetupTabProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-subtle">
             <span className="text-xs font-mono text-status-clear-text">{notifStatusMsg}</span>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={notifBusy}
+                onClick={async () => {
+                  setNotifErrorMsg(null);
+                  setNotifStatusMsg(null);
+                  setNotifBusy(true);
+                  try {
+                    const res = await sendLiveTelegramReport(notifConfig);
+                    const parts: string[] = [];
+                    if (res.results?.telegram) {
+                      parts.push(res.results.telegram.ok ? 'Live gate report sent to Telegram!' : `Telegram failed: ${res.results.telegram.error}`);
+                    }
+                    if (res.results?.whatsapp) {
+                      parts.push(res.results.whatsapp.ok ? 'Live gate report sent to WhatsApp!' : `WhatsApp failed: ${res.results.whatsapp.error}`);
+                    }
+                    setNotifStatusMsg(parts.join(' | ') || 'Report sent.');
+                  } catch (err: any) {
+                    setNotifErrorMsg(err?.message || 'Failed to send live gate report');
+                  } finally {
+                    setNotifBusy(false);
+                  }
+                }}
+                className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-strong bg-surface-base hover:bg-surface-raised text-text-primary text-xs font-semibold disabled:opacity-40"
+              >
+                <Send className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+                <span>Send Live Gate Report</span>
+              </button>
               <button
                 type="button"
                 disabled={notifBusy}

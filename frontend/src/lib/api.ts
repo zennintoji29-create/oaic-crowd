@@ -531,3 +531,15 @@ export async function sendTestNotification(
   if (!res.ok) throw new Error(data.error || 'Failed to send test alert');
   return data;
 }
+
+export async function sendLiveTelegramReport(
+  configOverride?: Partial<NotificationChannelConfig>
+): Promise<{ results: Record<string, { ok: boolean; error?: string }> }> {
+  const res = await authFetch(`${API_BASE}/notifications/send-report`, {
+    method: 'POST',
+    body: JSON.stringify(configOverride || {})
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to send live gate report');
+  return data;
+}
