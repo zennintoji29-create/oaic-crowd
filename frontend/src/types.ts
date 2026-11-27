@@ -13,6 +13,7 @@ export interface TelemetryPoint {
   targetCount: number;
   entryCount: number;
   exitCount: number;
+  opticalHealth?: string;
   activeAlerts: string[];
   firmwareVersion?: string;
 }
@@ -117,6 +118,10 @@ export interface GateState {
   amberThreshold: number;  // Default 5
   redThreshold: number;    // Default 10
   cameraStreamUrl?: string;
+  entryCount?: number;
+  exitCount?: number;
+  netCount?: number;
+  opticalHealth?: string;
 }
 
 export interface SystemConfig {

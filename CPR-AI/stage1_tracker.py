@@ -22,6 +22,8 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from vision.stream import FrameBroadcaster, start_mjpeg_server
+from vision.line_counter import VirtualLineCounter
+from vision.movement import MovementTracker
 
 try:
     from integration.backend import TelemetryClient
@@ -108,9 +110,39 @@ class CPRPersonTracker:
             except OSError as e:
                 print(f"[CPR-Tracker] Warning: Could not bind stream port {self.stream_port}: {e}")
 
-        # Performance tracking
+        # Performance tracking & Sensor/Vision Fusion modules
         self.fps_history = []
         self.prev_time = time.perf_counter()
+        self.prev_centroids = {}
+        line_y = max(120, self.frame_height // 2)
+        self.line_counter = VirtualLineCounter(
+            start_pt=(40, line_y),
+            end_pt=(max(200, self.frame_width - 40), line_y),
+            debounce_seconds=1.5,
+        )
+        self.movement_tracker = MovementTracker(
+            stationary_speed_thresh=25.0,
+            stationary_dwell_thresh=3.0,
+        )
+        self._clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+
+    def _assess_optical_health(self, frame) -> tuple[str, float, float]:
+        """Evaluates frame luminance and Laplacian sharpness for optical failure watchdog."""
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        brightness = float(gray.mean())
+        sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        if brightness < 28.0:
+            return "DARKNESS_DETECTED", brightness, sharpness
+        if sharpness < 18.0:
+            return "BLUR_OR_OCCLUSION", brightness, sharpness
+        return "HEALTHY", brightness, sharpness
+
+    def _enhance_low_light(self, frame):
+        """Applies CLAHE on luminance channel for low-light YOLO detection."""
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+        l_chan, a_chan, b_chan = cv2.split(lab)
+        l_eq = self._clahe.apply(l_chan)
+        return cv2.cvtColor(cv2.merge((l_eq, a_chan, b_chan)), cv2.COLOR_LAB2BGR)
 
     def _resolve_compute_device(self) -> str:
         """Autodetects NVIDIA CUDA, Apple Silicon MPS, or CPU."""
@@ -144,17 +176,22 @@ class CPRPersonTracker:
 
         while True:
             t0 = time.perf_counter()
+            now_ts = time.time()
             ret, frame = self.cap.read()
             if not ret:
                 print("[ERROR] Camera frame drop detected. Attempting to recover...")
                 time.sleep(0.1)
                 continue
 
+            # Optical Watchdog: check darkness / blur / occlusion
+            optical_health, brightness, sharpness = self._assess_optical_health(frame)
+            infer_frame = self._enhance_low_light(frame) if optical_health == "DARKNESS_DETECTED" else frame
+
             # Run YOLO + ByteTrack
             # classes=[0] filters COCO class 0 ('person') directly in tensors
             # persist=True preserves IDs across frames in ByteTrack
             results = self.model.track(
-                source=frame,
+                source=infer_frame,
                 persist=True,
                 tracker="bytetrack.yaml",
                 classes=[0],
@@ -165,6 +202,7 @@ class CPRPersonTracker:
 
             current_people_count = 0
             tracked_ids = []
+            current_centroids = {}
 
             # Parse bounding boxes and ByteTrack IDs
             if results and len(results) > 0 and results[0].boxes is not None:
@@ -173,6 +211,8 @@ class CPRPersonTracker:
                     # Coordinates in integer pixels
                     x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
                     conf = float(box.conf[0].cpu().numpy())
+                    cx = (x1 + x2) // 2
+                    cy = (y1 + y2) // 2
                     
                     # Track ID (None if detection not yet confirmed by ByteTrack)
                     track_id = int(box.id[0].cpu().numpy()) if box.id is not None else None
@@ -180,13 +220,20 @@ class CPRPersonTracker:
                     current_people_count += 1
                     if track_id is not None:
                         tracked_ids.append(track_id)
+                        current_centroids[track_id] = (cx, cy)
+                        if track_id in self.prev_centroids:
+                            self.line_counter.check_crossing(
+                                track_id, self.prev_centroids[track_id], (cx, cy), now_ts
+                            )
+                        self.prev_centroids[track_id] = (cx, cy)
 
                     # Bounding Box Color Coding:
                     # High confidence: Cyan/Teal (#00E5FF), Lower: Light Blue
                     box_color = (255, 229, 0) if track_id is not None else (120, 120, 120)
 
-                    # Draw Bounding Box (Corner Bracket style for clean technical look)
+                    # Draw Bounding Box & Centroid
                     cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
+                    cv2.circle(frame, (cx, cy), 4, (0, 255, 180), -1)
 
                     # Draw Track Badge
                     badge_text = f"ID #{track_id} ({conf*100:.0f}%)" if track_id is not None else f"Person ({conf*100:.0f}%)"
@@ -197,18 +244,57 @@ class CPRPersonTracker:
                     cv2.putText(frame, badge_text, (x1 + 4, y1 - 5),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1, cv2.LINE_AA)
 
+            # Update movement & stop-go metrics
+            self.movement_tracker.update_tracks(current_centroids, now_ts)
+            stationary_count = self.movement_tracker.get_stationary_count()
+            speeds = [
+                t.speed_px_per_sec for t in self.movement_tracker.tracks.values()
+                if t.track_id in current_centroids
+            ]
+            avg_speed_mps = round((sum(speeds) / len(speeds)) / 120.0, 2) if speeds else 1.2
+            stop_go_index = round(stationary_count / max(1, current_people_count), 2) if current_people_count > 0 else 0.0
+
+            # Prune stale centroids
+            for tid in list(self.prev_centroids.keys()):
+                if tid not in current_centroids and tid not in self.movement_tracker.tracks:
+                    del self.prev_centroids[tid]
+
+            # Draw virtual entry/exit counting line
+            recent_evt = self.line_counter.get_recent_event_status(now_ts)
+            line_color = (0, 255, 128) if recent_evt == "ENTRY" else ((0, 165, 255) if recent_evt == "EXIT" else (24, 226, 153))
+            cv2.line(frame, self.line_counter.p1, self.line_counter.p2, line_color, 2)
+            cv2.putText(frame, "VIRTUAL COUNTING LINE (IN v / OUT ^)", (self.line_counter.p1[0], self.line_counter.p1[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, line_color, 1, cv2.LINE_AA)
+
+            active_alerts = []
+            if optical_health == "DARKNESS_DETECTED":
+                active_alerts.append("OPTICAL_DARKNESS")
+            elif optical_health == "BLUR_OR_OCCLUSION":
+                active_alerts.append("OPTICAL_BLUR")
+            if stationary_count >= 3:
+                active_alerts.append("CROWD_STALL_DETECTED")
+
+            net_inside = max(0, self.line_counter.entry_count - self.line_counter.exit_count)
+            effective_count = max(current_people_count, net_inside) if current_people_count > 0 else net_inside
+
             # 4. Asynchronous Telemetry Dispatch to Express Backend (Render / Local)
             if self.telemetry:
                 self.telemetry.send_telemetry_async({
                     "deviceId": "cpr-vision-gate-01",
                     "zoneId": self.zone_id,
-                    "timestamp": int(time.time() * 1000),
+                    "timestamp": int(now_ts * 1000),
                     "source": "computer_vision",
                     "targetCount": current_people_count,
                     "count": current_people_count,
+                    "entryCount": self.line_counter.entry_count,
+                    "exitCount": self.line_counter.exit_count,
+                    "avgSpeed": avg_speed_mps,
+                    "stopGoIndex": stop_go_index,
+                    "opticalHealth": optical_health,
+                    "activeAlerts": active_alerts,
                     "visiblePersons": current_people_count,
                     "activeTrackIds": tracked_ids,
-                    "score": round(min(100.0, current_people_count * 10.0), 1),
+                    "score": round(min(100.0, effective_count * 10.0 + (stop_go_index * 15.0)), 1),
                     "state": "RED" if current_people_count >= 10 else ("AMBER" if current_people_count >= 5 else "GREEN")
                 })
 
@@ -222,7 +308,10 @@ class CPRPersonTracker:
             avg_fps = sum(self.fps_history) / len(self.fps_history)
 
             # Draw Technical Monitoring HUD
-            self._draw_monitoring_hud(frame, current_people_count, tracked_ids, avg_fps, frame_time)
+            self._draw_monitoring_hud(
+                frame, current_people_count, tracked_ids, avg_fps, frame_time,
+                self.line_counter.entry_count, self.line_counter.exit_count, optical_health
+            )
             self.broadcaster.update(frame)
 
             try:
@@ -238,7 +327,17 @@ class CPRPersonTracker:
 
         self.cleanup()
 
-    def _draw_monitoring_hud(self, frame, count: int, ids: list, fps: float, latency: float):
+    def _draw_monitoring_hud(
+        self,
+        frame,
+        count: int,
+        ids: list,
+        fps: float,
+        latency: float,
+        entry_count: int = 0,
+        exit_count: int = 0,
+        optical_health: str = "HEALTHY",
+    ):
         """Draws an enterprise cybersecurity/IoT technical monitoring HUD."""
         h, w = frame.shape[:2]
 
@@ -246,14 +345,15 @@ class CPRPersonTracker:
         overlay = frame.copy()
         cv2.rectangle(overlay, (0, 0), (w, 48), (15, 23, 42), -1)
         # Bottom Telemetry Bar
-        cv2.rectangle(overlay, (0, h - 32), (w, h), (15, 23, 42), -1)
+        cv2.rectangle(overlay, (0, h - 36), (w, h), (15, 23, 42), -1)
         cv2.addWeighted(overlay, 0.75, frame, 0.25, 0, frame)
 
         # Title & System Badge
         cv2.putText(frame, "CPR VISION SYSTEM", (16, 28),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(frame, "RADAR v1.0", (220, 28),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1, cv2.LINE_AA)
+        opt_color = (0, 255, 128) if optical_health == "HEALTHY" else (0, 165, 255)
+        cv2.putText(frame, f"OPTICAL: {optical_health}", (225, 28),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, opt_color, 1, cv2.LINE_AA)
 
         # Backend Telemetry Network Status
         is_online = bool(self.telemetry and self.telemetry.is_connected)
@@ -273,13 +373,17 @@ class CPRPersonTracker:
         cv2.putText(frame, fps_label, (w - 430, 28),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-        # Bottom Bar: Person Count & Active Track IDs
+        # Bottom Bar: Person Count, Entry/Exit/Net Flow & Active Track IDs
+        net_inside = max(0, entry_count - exit_count)
         count_color = (0, 255, 0) if count < 5 else ((0, 165, 255) if count < 10 else (0, 0, 255))
-        cv2.putText(frame, f"VISIBLE PERSONS: {count}", (16, h - 10),
+        cv2.putText(frame, f"VISIBLE: {count}", (16, h - 12),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, count_color, 2, cv2.LINE_AA)
 
-        id_str = ", ".join(map(str, ids[:8])) + ("..." if len(ids) > 8 else "")
-        cv2.putText(frame, f"ACTIVE TRACK IDS: [{id_str}]", (240, h - 10),
+        cv2.putText(frame, f"IN: {entry_count}  OUT: {exit_count}  NET: {net_inside}", (155, h - 12),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, (24, 226, 153), 1, cv2.LINE_AA)
+
+        id_str = ", ".join(map(str, ids[:6])) + ("..." if len(ids) > 6 else "")
+        cv2.putText(frame, f"IDS: [{id_str}]", (440, h - 12),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (203, 213, 225), 1, cv2.LINE_AA)
 
     def cleanup(self):

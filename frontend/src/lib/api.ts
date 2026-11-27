@@ -152,14 +152,20 @@ export async function simulateSandbox(count: number, cameraOnline?: boolean, gat
 }
 
 export async function fetchZoneHistory(zoneId: string, minutes = 10): Promise<TelemetryPoint[]> {
-  const res = await fetch(`${API_BASE}/zones/${encodeURIComponent(zoneId)}/history?minutes=${minutes}`);
+  const token = getSessionToken();
+  const res = await fetch(`${API_BASE}/zones/${encodeURIComponent(zoneId)}/history?minutes=${minutes}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
+  });
   if (!res.ok) throw new Error('Failed to fetch zone history');
   const data = await res.json();
   return data.history;
 }
 
 export async function fetchAlerts(limit = 100): Promise<AlertRecord[]> {
-  const res = await fetch(`${API_BASE}/alerts?limit=${limit}`);
+  const token = getSessionToken();
+  const res = await fetch(`${API_BASE}/alerts?limit=${limit}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
+  });
   if (!res.ok) throw new Error('Failed to fetch alerts');
   const data = await res.json();
   return data.alerts;

@@ -12,6 +12,8 @@ export const TelemetrySchema = z.object({
   targetCount: z.coerce.number().int().min(0),
   entryCount: z.coerce.number().int().min(0),
   exitCount: z.coerce.number().int().min(0),
+  opticalHealth: z.enum(['HEALTHY', 'DARKNESS_DETECTED', 'BLUR_OR_OCCLUSION']).optional(),
+  ownerEmail: z.string().email().optional(),
   activeAlerts: z.array(z.string()).default([]),
   firmwareVersion: z.string().default('1.0.0')
 });

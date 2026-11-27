@@ -338,9 +338,12 @@ app.post('/api/telemetry', requireDeviceAuth, (req, res) => {
   }
 
   // Update camera online status & hardware control logic
-  hardwareState.cameraOnline = true;
+  const opticalHealth = parsed.data.opticalHealth || 'HEALTHY';
+  hardwareState.cameraOnline = opticalHealth === 'HEALTHY';
   hardwareState.lastCameraPing = Date.now();
-  if (hardwareState.systemMode === 'HARDWARE_FAILOVER') {
+  if (opticalHealth !== 'HEALTHY' && storage.getConfig().autoFailover) {
+    hardwareState.systemMode = 'HARDWARE_FAILOVER';
+  } else if (opticalHealth === 'HEALTHY' && hardwareState.systemMode === 'HARDWARE_FAILOVER') {
     hardwareState.systemMode = 'AI_VISION_PRIMARY';
     console.log('[CPR-Backend] Camera reconnected. Primary AI Vision mode restored.');
   }
@@ -797,6 +800,19 @@ function requireMasterAuth(req, res, next) {
   }
 }
 
+function getOptionalMasterEmail(req) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token || !config.jwtSecret) return null;
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret);
+    if (!decoded || (decoded.role !== 'master' && decoded.role !== 'operator')) return null;
+    return decoded.email || null;
+  } catch {
+    return null;
+  }
+}
+
 // POST /api/master/auth - Authenticate operator PIN or access key via bcrypt + JWT
 app.post('/api/master/auth', masterAuthLimiter, async (req, res) => {
   const rawCredential = req.body?.credential ?? req.body?.key ?? '';
@@ -1236,7 +1252,8 @@ app.get('/api/analytics', (req, res) => {
 app.get('/api/zones/:id/history', (req, res) => {
   const zoneId = req.params.id;
   const minutes = parseInt(req.query.minutes || '10', 10);
-  const history = storage.getZoneHistory(zoneId, minutes);
+  const email = getOptionalMasterEmail(req);
+  const history = storage.getZoneHistory(zoneId, minutes, email);
   res.json({ zoneId, minutes, count: history.length, history });
 });
 
@@ -1261,10 +1278,11 @@ app.put('/api/zones/:id', requireMasterAuth, (req, res) => {
   res.json({ status: 'ok', zone: updated });
 });
 
-// GET /api/alerts - Historical alert log
+// GET /api/alerts - Historical alert log (user-scoped when authenticated)
 app.get('/api/alerts', (req, res) => {
   const limit = parseInt(req.query.limit || '50', 10);
-  res.json({ alerts: storage.getAlerts(limit) });
+  const email = getOptionalMasterEmail(req);
+  res.json({ alerts: storage.getAlerts(limit, email) });
 });
 
 // POST /api/alerts/:id/ack - Acknowledge an alert (protected)
@@ -1287,10 +1305,10 @@ app.post('/api/alerts/:id/ack', requireMasterAuth, (req, res) => {
   res.json({ status: 'ok', alert: updated });
 });
 
-// GET /api/audit - Operator audit trail (protected)
+// GET /api/audit - Operator audit trail (protected, user-scoped)
 app.get('/api/audit', requireMasterAuth, (req, res) => {
   const limit = parseInt(req.query.limit || '100', 10);
-  res.json({ auditLogs: storage.getAuditLogs(limit) });
+  res.json({ auditLogs: storage.getAuditLogs(limit, req.masterUser?.email || null) });
 });
 
 // POST /api/commands - Operator commands from dashboard (protected)

@@ -176,6 +176,27 @@ export const GateCard: React.FC<GateCardProps> = ({
           </div>
         </div>
 
+        {/* Directional Flow (Entry / Exit / Net) & Optical Watchdog */}
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded bg-surface-sunken border border-border-subtle text-xs">
+          <div className="flex items-center gap-3 tabular-nums">
+            <span className="text-status-clear-text font-medium">
+              Entry: +{gate.entryCount ?? 0}
+            </span>
+            <span className="text-text-secondary font-medium">
+              Exit: -{gate.exitCount ?? 0}
+            </span>
+            <span className="text-text-primary font-semibold">
+              Net inside: {gate.netCount ?? Math.max(0, (gate.entryCount ?? 0) - (gate.exitCount ?? 0))}
+            </span>
+          </div>
+          {gate.opticalHealth && gate.opticalHealth !== 'HEALTHY' && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-status-building-bg text-status-building-text border border-status-building-border text-[11px] font-medium">
+              <Eye className="w-3 h-3" aria-hidden="true" />
+              {gate.opticalHealth === 'DARKNESS_DETECTED' ? 'Low Light (CLAHE + Radar)' : 'Blur/Occlusion (Radar Assist)'}
+            </span>
+          )}
+        </div>
+
         {/* Plain-Language Status Line */}
         <p className="text-sm text-text-secondary mb-3">{statusMeta.summary}</p>
 

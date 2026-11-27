@@ -17,12 +17,15 @@ class StorageManager {
   constructor() {
     this.zones = new Map();
     this.telemetryRingBuffers = new Map(); // zoneId -> Array of up to 1000 records
-    this.alerts = [];                      // Historical alerts list
+    this.userTelemetry = new Map();        // email -> Map<zoneId, Array of records>
+    this.alerts = [];                      // Historical alerts list (global)
+    this.userAlerts = new Map();           // email -> Array of AlertRecord
     this.auditLogs = [];                   // Operator action audit trail
     this.commandQueues = new Map();        // deviceId -> Array of queued commands
     this.rateLimiter = new Map();          // deviceId -> { count, windowStart }
     this.users = new Map();                // email -> { email, phone, passwordHash, setupComplete, createdAt }
     this.userGates = new Map();            // email -> Map<gateId, GateState>
+    this._lastTelemetrySaveMs = 0;
 
     this.initDefaultZones();
     this.initDefaultGates();
@@ -30,11 +33,131 @@ class StorageManager {
     this.ensureDataDir();
     this.loadUsers();
     this.loadUserGates();
+    this.loadPersistedHistory();
     this.hydrateFromSupabase();
   }
 
   getUserGatesFilePath() {
     return path.join(config.dataDir, 'user_gates.json');
+  }
+
+  getAlertsFilePath() {
+    return path.join(config.dataDir, 'alerts_history.json');
+  }
+
+  getAuditLogsFilePath() {
+    return path.join(config.dataDir, 'audit_logs.json');
+  }
+
+  getTelemetryFilePath() {
+    return path.join(config.dataDir, 'telemetry_history.json');
+  }
+
+  loadPersistedHistory() {
+    try {
+      const alertsFile = this.getAlertsFilePath();
+      if (fs.existsSync(alertsFile)) {
+        const raw = JSON.parse(fs.readFileSync(alertsFile, 'utf-8'));
+        if (Array.isArray(raw?.global)) this.alerts = raw.global.slice(0, 500);
+        if (raw?.users && typeof raw.users === 'object') {
+          Object.entries(raw.users).forEach(([email, list]) => {
+            if (Array.isArray(list)) this.userAlerts.set(email.toLowerCase(), list.slice(0, 500));
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[STORAGE] Could not load alerts history:', err.message);
+    }
+
+    try {
+      const auditFile = this.getAuditLogsFilePath();
+      if (fs.existsSync(auditFile)) {
+        const raw = JSON.parse(fs.readFileSync(auditFile, 'utf-8'));
+        if (Array.isArray(raw)) this.auditLogs = raw.slice(0, 500);
+      }
+    } catch (err) {
+      console.warn('[STORAGE] Could not load audit logs:', err.message);
+    }
+
+    try {
+      const teleFile = this.getTelemetryFilePath();
+      if (fs.existsSync(teleFile)) {
+        const raw = JSON.parse(fs.readFileSync(teleFile, 'utf-8'));
+        if (raw?.global && typeof raw.global === 'object') {
+          Object.entries(raw.global).forEach(([zoneId, list]) => {
+            if (Array.isArray(list)) {
+              this.telemetryRingBuffers.set(zoneId, list.slice(-config.maxPointsPerZone));
+              const zone = this.zones.get(zoneId);
+              if (zone && list.length > 0 && !zone.lastTelemetry) {
+                zone.lastTelemetry = list[list.length - 1];
+              }
+            }
+          });
+        }
+        if (raw?.users && typeof raw.users === 'object') {
+          Object.entries(raw.users).forEach(([email, zoneObj]) => {
+            if (zoneObj && typeof zoneObj === 'object') {
+              const zMap = new Map();
+              Object.entries(zoneObj).forEach(([zoneId, list]) => {
+                if (Array.isArray(list)) zMap.set(zoneId, list.slice(-config.maxPointsPerZone));
+              });
+              this.userTelemetry.set(email.toLowerCase(), zMap);
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[STORAGE] Could not load telemetry history:', err.message);
+    }
+  }
+
+  saveAlertsHistory() {
+    try {
+      this.ensureDataDir();
+      const users = {};
+      for (const [email, list] of this.userAlerts.entries()) {
+        users[email] = list.slice(0, 500);
+      }
+      fs.writeFileSync(
+        this.getAlertsFilePath(),
+        JSON.stringify({ global: this.alerts.slice(0, 500), users }, null, 2)
+      );
+    } catch (err) {
+      console.warn('[STORAGE] Could not save alerts history:', err.message);
+    }
+  }
+
+  saveAuditLogs() {
+    try {
+      this.ensureDataDir();
+      fs.writeFileSync(this.getAuditLogsFilePath(), JSON.stringify(this.auditLogs.slice(0, 500), null, 2));
+    } catch (err) {
+      console.warn('[STORAGE] Could not save audit logs:', err.message);
+    }
+  }
+
+  saveTelemetryHistory(force = false) {
+    const now = Date.now();
+    if (!force && now - this._lastTelemetrySaveMs < 5000) return;
+    this._lastTelemetrySaveMs = now;
+    try {
+      this.ensureDataDir();
+      const global = {};
+      for (const [zoneId, list] of this.telemetryRingBuffers.entries()) {
+        global[zoneId] = list.slice(-200);
+      }
+      const users = {};
+      for (const [email, zMap] of this.userTelemetry.entries()) {
+        const zObj = {};
+        for (const [zoneId, list] of zMap.entries()) {
+          zObj[zoneId] = list.slice(-200);
+        }
+        users[email] = zObj;
+      }
+      fs.writeFileSync(this.getTelemetryFilePath(), JSON.stringify({ global, users }));
+    } catch (err) {
+      console.warn('[STORAGE] Could not save telemetry history:', err.message);
+    }
   }
 
   loadUserGates() {
@@ -214,6 +337,26 @@ class StorageManager {
         this.userGates.set(normalizedNew, gatesMap);
         this.saveUserGates();
       }
+      if (this.userAlerts.has(currentUser.email)) {
+        const list = this.userAlerts.get(currentUser.email);
+        this.userAlerts.delete(currentUser.email);
+        this.userAlerts.set(normalizedNew, list);
+        this.saveAlertsHistory();
+      }
+      if (this.userTelemetry.has(currentUser.email)) {
+        const zMap = this.userTelemetry.get(currentUser.email);
+        this.userTelemetry.delete(currentUser.email);
+        this.userTelemetry.set(normalizedNew, zMap);
+        this.saveTelemetryHistory(true);
+      }
+      let auditMigrated = false;
+      this.auditLogs.forEach((entry) => {
+        if (entry.actorEmail === currentUser.email) {
+          entry.actorEmail = normalizedNew;
+          auditMigrated = true;
+        }
+      });
+      if (auditMigrated) this.saveAuditLogs();
     }
 
     this.users.set(normalizedNew, updatedUser);
@@ -373,8 +516,9 @@ class StorageManager {
     zone.lastTelemetry = record;
 
     // Check for state escalation to AMBER or RED to generate alerts
+    let generatedAlert = null;
     if (previousState !== state && (state === 'AMBER' || state === 'RED')) {
-      const alert = {
+      generatedAlert = {
         id: `alert-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         timestamp: serverTimestamp,
         zoneId,
@@ -388,8 +532,8 @@ class StorageManager {
           ? `CRITICAL: Severe crowd pressure & stall detected in ${zone.name} (Risk: ${score})`
           : `WARNING: Crowd density buildup approaching threshold in ${zone.name} (Risk: ${score})`
       };
-      this.alerts.unshift(alert);
-      dbInsertAlert(alert);
+      this.alerts.unshift(generatedAlert);
+      dbInsertAlert(generatedAlert);
 
       // Keep last 500 alerts in memory
       if (this.alerts.length > 500) {
@@ -407,6 +551,44 @@ class StorageManager {
       buffer.shift();
     }
 
+    // Scope telemetry & alerts to ownerEmail (or any user whose gates include this zoneId)
+    const targetEmails = new Set();
+    if (telemetry.ownerEmail) {
+      targetEmails.add(String(telemetry.ownerEmail).trim().toLowerCase());
+    } else {
+      for (const [email, gMap] of this.userGates.entries()) {
+        for (const g of gMap.values()) {
+          if (g.zoneId === zoneId) {
+            targetEmails.add(email);
+            break;
+          }
+        }
+      }
+    }
+
+    for (const email of targetEmails) {
+      if (!this.userTelemetry.has(email)) {
+        this.userTelemetry.set(email, new Map());
+      }
+      const zMap = this.userTelemetry.get(email);
+      if (!zMap.has(zoneId)) zMap.set(zoneId, []);
+      const uBuf = zMap.get(zoneId);
+      uBuf.push(record);
+      if (uBuf.length > config.maxPointsPerZone) uBuf.shift();
+
+      if (generatedAlert) {
+        if (!this.userAlerts.has(email)) this.userAlerts.set(email, []);
+        const uAlerts = this.userAlerts.get(email);
+        uAlerts.unshift({ ...generatedAlert, ownerEmail: email });
+        if (uAlerts.length > 500) uAlerts.pop();
+      }
+    }
+
+    if (generatedAlert) {
+      this.saveAlertsHistory();
+    }
+    this.saveTelemetryHistory(Boolean(generatedAlert));
+
     dbInsertTelemetry(record);
     return record;
   }
@@ -422,27 +604,58 @@ class StorageManager {
     }));
   }
 
-  getZoneHistory(zoneId, minutes = 10) {
-    const buffer = this.telemetryRingBuffers.get(zoneId) || [];
+  getZoneHistory(zoneId, minutes = 10, email = null) {
     const cutoffTime = Date.now() - (minutes * 60 * 1000);
+    if (email) {
+      const norm = String(email).trim().toLowerCase();
+      const userBuf = this.userTelemetry.get(norm)?.get(zoneId);
+      if (userBuf && userBuf.length > 0) {
+        return userBuf.filter(point => point.serverTimestamp >= cutoffTime);
+      }
+    }
+    const buffer = this.telemetryRingBuffers.get(zoneId) || [];
     return buffer.filter(point => point.serverTimestamp >= cutoffTime);
   }
 
-  getAlerts(limit = 100) {
+  getAlerts(limit = 100, email = null) {
+    if (email) {
+      const norm = String(email).trim().toLowerCase();
+      const userList = this.userAlerts.get(norm);
+      if (userList && userList.length > 0) {
+        return userList.slice(0, limit);
+      }
+    }
     return this.alerts.slice(0, limit);
   }
 
   acknowledgeAlert(alertId, actorEmail = 'operator', note = '') {
-    const idx = this.alerts.findIndex((a) => a.id === alertId);
-    if (idx === -1) return null;
-    const updated = {
-      ...this.alerts[idx],
+    const norm = String(actorEmail || 'operator').trim().toLowerCase();
+    const ackPatch = {
       acknowledged: true,
       acknowledgedAt: Date.now(),
       acknowledgedBy: String(actorEmail || 'operator'),
       ackNote: String(note || '').trim()
     };
-    this.alerts[idx] = updated;
+
+    let updated = null;
+    const idx = this.alerts.findIndex((a) => a.id === alertId);
+    if (idx !== -1) {
+      updated = { ...this.alerts[idx], ...ackPatch };
+      this.alerts[idx] = updated;
+    }
+
+    const uList = this.userAlerts.get(norm);
+    if (uList) {
+      const uIdx = uList.findIndex((a) => a.id === alertId);
+      if (uIdx !== -1) {
+        updated = { ...uList[uIdx], ...ackPatch };
+        uList[uIdx] = updated;
+      }
+    }
+
+    if (updated) {
+      this.saveAlertsHistory();
+    }
     return updated;
   }
 
@@ -459,10 +672,17 @@ class StorageManager {
     if (this.auditLogs.length > 500) {
       this.auditLogs.pop();
     }
+    this.saveAuditLogs();
     return entry;
   }
 
-  getAuditLogs(limit = 100) {
+  getAuditLogs(limit = 100, email = null) {
+    if (email) {
+      const norm = String(email).trim().toLowerCase();
+      return this.auditLogs
+        .filter((e) => e.actorEmail === norm || e.actorEmail === 'system-watchdog' || e.actorEmail === 'system')
+        .slice(0, limit);
+    }
     return this.auditLogs.slice(0, limit);
   }
 
@@ -546,6 +766,10 @@ class StorageManager {
         gate.count = zone.lastTelemetry.targetCount ?? gate.count;
         gate.density = zone.lastTelemetry.density ?? gate.density;
         gate.riskScore = zone.lastTelemetry.score ?? gate.riskScore;
+        gate.entryCount = zone.lastTelemetry.entryCount ?? gate.entryCount ?? 0;
+        gate.exitCount = zone.lastTelemetry.exitCount ?? gate.exitCount ?? 0;
+        gate.netCount = Math.max(0, gate.entryCount - gate.exitCount);
+        gate.opticalHealth = zone.lastTelemetry.opticalHealth || 'HEALTHY';
         gate.lastUpdated = zone.lastTelemetry.serverTimestamp || Date.now();
 
         if (gate.count >= (gate.redThreshold || 10)) {
