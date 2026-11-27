@@ -1549,6 +1549,7 @@ app.use((err, req, res, _next) => {
 
 // Start Server
 server.listen(config.port, () => {
+  keepAliveEngine.start(config.port);
   console.log(`
 ============================================================
   CROWD PRESSURE RADAR - UNIFIED TELEMETRY & COMMAND BACKEND
