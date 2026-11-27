@@ -28,7 +28,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_VL53L0X.h>
-#include <ArduinoJson.h>
 
 // -----------------------------------------------------------------------------
 // 1. WI-FI & BACKEND CONFIG (EDIT THESE BEFORE UPLOADING)
@@ -102,21 +101,20 @@ int postJson(const String& url, const String& payload, String& responseOut) {
 void registerDevice() {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  JsonDocument doc;
-  doc["deviceId"] = DEVICE_ID;
-  doc["zoneId"] = ZONE_ID;
-  doc["role"] = "TRANSMITTER_SENSOR";
-  doc["firmwareVersion"] = FW_VERSION;
-  doc["ip"] = WiFi.localIP().toString();
-  JsonArray caps = doc["capabilities"].to<JsonArray>();
-  caps.add("HLK-LD2410C");
-  caps.add("VL53L0X");
-  caps.add("LDR");
-  caps.add("SSD1306");
-  if (loraReady) caps.add("SX1278_LORA");
+  String caps = "[\"HLK-LD2410C\",\"VL53L0X\",\"LDR\",\"SSD1306\"";
+  if (loraReady) caps += ",\"SX1278_LORA\"";
+  caps += "]";
 
-  String body, resp;
-  serializeJson(doc, body);
+  String body = "{";
+  body += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
+  body += "\"zoneId\":\"" + String(ZONE_ID) + "\",";
+  body += "\"role\":\"TRANSMITTER_SENSOR\",";
+  body += "\"firmwareVersion\":\"" + String(FW_VERSION) + "\",";
+  body += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+  body += "\"capabilities\":" + caps;
+  body += "}";
+
+  String resp;
   int code = postJson(String(BACKEND_BASE) + "/api/hardware/register", body, resp);
   if (code >= 200 && code < 300) {
     registeredWithBackend = true;
@@ -132,32 +130,30 @@ void sendHeartbeat(int presence, int distanceMm, int ldrRaw) {
     registerDevice();
   }
 
-  JsonDocument doc;
-  doc["deviceId"] = DEVICE_ID;
-  doc["zoneId"] = ZONE_ID;
-  doc["uptimeSec"] = millis() / 1000;
-  doc["wifiRssi"] = WiFi.RSSI();
-  doc["firmwareVersion"] = FW_VERSION;
+  String tofVal = (distanceMm >= 0) ? String(distanceMm) : "null";
+  String body = "{";
+  body += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
+  body += "\"zoneId\":\"" + String(ZONE_ID) + "\",";
+  body += "\"uptimeSec\":" + String(millis() / 1000) + ",";
+  body += "\"wifiRssi\":" + String(WiFi.RSSI()) + ",";
+  body += "\"firmwareVersion\":\"" + String(FW_VERSION) + "\",";
+  body += "\"sensors\":{";
+  body += "\"presenceDetected\":" + String(presence == 1 ? "true" : "false") + ",";
+  body += "\"radarEnergy\":" + String(presence ? 75 : 5) + ",";
+  body += "\"radarOnline\":true,";
+  body += "\"tofDistanceMm\":" + tofVal + ",";
+  body += "\"tofOnline\":" + String(tofReady ? "true" : "false");
+  body += "}}";
 
-  JsonObject sensors = doc["sensors"].to<JsonObject>();
-  sensors["presenceDetected"] = (presence == 1);
-  sensors["radarEnergy"] = presence ? 75 : 5;
-  sensors["radarOnline"] = true;
-  if (distanceMm >= 0) {
-    sensors["tofDistanceMm"] = distanceMm;
-  } else {
-    sensors["tofDistanceMm"] = nullptr;
-  }
-  sensors["tofOnline"] = tofReady;
-
-  String body, resp;
-  serializeJson(doc, body);
+  String resp;
   int code = postJson(String(BACKEND_BASE) + "/api/hardware/heartbeat", body, resp);
   if (code >= 200 && code < 300) {
-    JsonDocument rdoc;
-    if (!deserializeJson(rdoc, resp)) {
-      const char* lvl = rdoc["targetCommand"]["alertLevel"];
-      if (lvl) dashboardAlertLevel = String(lvl);
+    if (resp.indexOf("\"alertLevel\":\"RED\"") >= 0) {
+      dashboardAlertLevel = "RED";
+    } else if (resp.indexOf("\"alertLevel\":\"AMBER\"") >= 0) {
+      dashboardAlertLevel = "AMBER";
+    } else if (resp.indexOf("\"alertLevel\":\"GREEN\"") >= 0) {
+      dashboardAlertLevel = "GREEN";
     }
     Serial.printf("[WIFI] Heartbeat OK (%d) | Alert=%s\n", code, dashboardAlertLevel.c_str());
   } else {
