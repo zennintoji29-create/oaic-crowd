@@ -490,6 +490,7 @@ const AppRoutes: React.FC = () => {
                     gates={gates}
                     worstState={worst.state}
                     hardware={hardware}
+                    hardwareManager={hardwareManager}
                     cameraStreamUrl={cameraStreamUrl}
                     onSelectZone={handleSelectZone}
                     onGateUpdated={handleGateUpdated}

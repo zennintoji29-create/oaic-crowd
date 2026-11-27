@@ -428,6 +428,18 @@ app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid heartbeat payload', details: parsed.error.format() });
   }
   const device = hardwareManager.recordHeartbeat(parsed.data, req.ip || '');
+  if (parsed.data.sensors) {
+    if (typeof parsed.data.sensors.radarEnergy === 'number') {
+      hardwareState.radarEnergy = parsed.data.sensors.radarEnergy;
+    }
+    if (typeof parsed.data.sensors.tofDistanceMm === 'number') {
+      hardwareState.tofDistanceMm = parsed.data.sensors.tofDistanceMm;
+    }
+    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
+      hardwareState.systemMode = 'HARDWARE_FAILOVER';
+      broadcast('HARDWARE_UPDATE', hardwareState);
+    }
+  }
   return res.json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
 });
 
@@ -437,6 +449,18 @@ app.post('/api/hardware/telemetry', requireDeviceAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid hardware telemetry payload', details: parsed.error.format() });
   }
   const device = hardwareManager.recordHeartbeat(parsed.data, req.ip || '');
+  if (parsed.data.sensors) {
+    if (typeof parsed.data.sensors.radarEnergy === 'number') {
+      hardwareState.radarEnergy = parsed.data.sensors.radarEnergy;
+    }
+    if (typeof parsed.data.sensors.tofDistanceMm === 'number') {
+      hardwareState.tofDistanceMm = parsed.data.sensors.tofDistanceMm;
+    }
+    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
+      hardwareState.systemMode = 'HARDWARE_FAILOVER';
+      broadcast('HARDWARE_UPDATE', hardwareState);
+    }
+  }
   return res.json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
 });
 
@@ -465,6 +489,8 @@ app.post('/api/hardware/mode', requireMasterAuth, async (req, res) => {
   if (!result.ok) {
     return res.status(504).json({ status: 'error', error: result.error, hardware: hardwareManager.getSnapshot() });
   }
+  hardwareState.systemMode = result.mode === 'HARDWARE_FALLBACK' ? 'HARDWARE_FAILOVER' : 'AI_VISION_PRIMARY';
+  broadcast('HARDWARE_UPDATE', hardwareState);
   const auditEntry = storage.addAuditLog({
     actorEmail: req.masterUser?.email || 'operator',
     action: 'HARDWARE_MODE',

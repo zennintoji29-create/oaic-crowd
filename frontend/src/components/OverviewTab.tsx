@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   ReferenceLine
 } from 'recharts';
-import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState } from '../types';
+import { ZoneInfo, CrowdState, TelemetryPoint, GateState, HardwareActuatorState, HardwareManagerSnapshot } from '../types';
 import { GateCard } from './GateCard';
 import { fetchZoneHistory, resetAllGates } from '../lib/api';
 import { formatSystemActions } from '../lib/formatter';
@@ -21,6 +21,7 @@ interface OverviewTabProps {
   gates?: GateState[];
   worstState: CrowdState;
   hardware?: HardwareActuatorState | null;
+  hardwareManager?: HardwareManagerSnapshot | null;
   cameraStreamUrl?: string;
   onSelectZone: (zoneId: string) => void;
   onGateUpdated?: (updatedGate: GateState) => void;
@@ -32,6 +33,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   gates = [],
   worstState,
   hardware,
+  hardwareManager,
   cameraStreamUrl = '',
   onSelectZone,
   onGateUpdated,
@@ -231,11 +233,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <div>
               <span className="text-sm text-neutral-400 block">Active Sensor</span>
               <span className="text-xl font-semibold text-white mt-1 block">
-                {hardware?.systemMode === 'HARDWARE_FAILOVER' ? 'Radar' : 'AI Vision'}
+                {hardwareManager?.operatingMode === 'HARDWARE_FALLBACK' || hardware?.systemMode === 'HARDWARE_FAILOVER'
+                  ? 'Radar + ToF'
+                  : 'AI Vision'}
               </span>
             </div>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
-              {hardware?.systemMode === 'HARDWARE_FAILOVER' ? '24 GHz' : 'CUDA'}
+              {hardwareManager?.operatingMode === 'HARDWARE_FALLBACK' || hardware?.systemMode === 'HARDWARE_FAILOVER'
+                ? '24 GHz'
+                : 'CUDA'}
             </span>
           </div>
           </div>
@@ -282,6 +288,66 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </SpotlightCard>
 
       </section>
+
+      {/* Live ESP32 Hardware Fallback Telemetry Strip (shown when ESP32 is online in Fallback or Camera is offline) */}
+      {hardwareManager?.esp32Connected && hardwareManager?.primaryDevice && (
+        <section className="flat-panel p-4 border-l-2 border-l-amber-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                Live ESP32 Sensor Telemetry ({hardwareManager.primaryDevice.deviceId})
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#18e299]/10 border border-[#18e299]/25 text-[#18e299]">
+                {hardwareManager.operatingMode === 'HARDWARE_FALLBACK' ? 'Hardware Fallback Active' : 'Standby Online'}
+              </span>
+            </div>
+            <span className="text-[11px] text-text-muted font-mono">
+              Zone: {hardwareManager.primaryDevice.zoneId} • RSSI: {hardwareManager.primaryDevice.wifiRssi ?? '--'} dBm
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-2.5 rounded bg-surface-sunken border border-border-subtle">
+              <span className="text-[11px] text-text-muted block">HLK-LD2410C Radar</span>
+              <span className={`font-semibold mt-0.5 block ${hardwareManager.primaryDevice.sensors.presenceDetected ? 'text-amber-300' : 'text-[#18e299]'}`}>
+                {hardwareManager.primaryDevice.sensors.presenceDetected === true
+                  ? 'Person Detected'
+                  : hardwareManager.primaryDevice.sensors.presenceDetected === false
+                  ? 'Clear'
+                  : 'Unavailable'}
+              </span>
+            </div>
+            <div className="p-2.5 rounded bg-surface-sunken border border-border-subtle">
+              <span className="text-[11px] text-text-muted block">VL53L0X ToF Distance</span>
+              <span className="font-semibold text-text-primary tabular-nums mt-0.5 block">
+                {hardwareManager.primaryDevice.sensors.tofDistanceMm !== null &&
+                hardwareManager.primaryDevice.sensors.tofDistanceMm !== undefined
+                  ? `${hardwareManager.primaryDevice.sensors.tofDistanceMm} mm`
+                  : 'Unavailable'}
+              </span>
+            </div>
+            <div className="p-2.5 rounded bg-surface-sunken border border-border-subtle">
+              <span className="text-[11px] text-text-muted block">Queue Proximity</span>
+              <span className="font-semibold text-text-primary mt-0.5 block">
+                {(() => {
+                  const d = hardwareManager.primaryDevice.sensors.tofDistanceMm;
+                  if (d === null || d === undefined) return 'Unknown';
+                  if (d < 400) return 'Close (<400mm)';
+                  if (d < 900) return 'Moderate';
+                  return 'Clear';
+                })()}
+              </span>
+            </div>
+            <div className="p-2.5 rounded bg-surface-sunken border border-border-subtle">
+              <span className="text-[11px] text-text-muted block">Actuator Target</span>
+              <span className="font-semibold text-text-primary mt-0.5 block">
+                {hardwareManager.targetCommand.alertLevel} • {hardwareManager.targetCommand.servoAngle}°
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 2. Gate Cards Grid: Gate A and Gate B Prominently Displayed */}
       <section>
