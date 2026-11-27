@@ -89,6 +89,9 @@ export const SetupTab: React.FC<SetupTabProps> = ({
     telegramEnabled: false,
     telegramBotToken: '',
     telegramChatId: '',
+    callmebotEnabled: false,
+    callmebotPhone: '',
+    callmebotApiKey: '',
     whatsappEnabled: false,
     whatsappPhoneNumberId: '',
     whatsappAccessToken: '',
@@ -764,6 +767,56 @@ export const SetupTab: React.FC<SetupTabProps> = ({
             </div>
           </div>
 
+          {/* CallMeBot WhatsApp Section (Free, 2-min personal setup) */}
+          <div className="p-3.5 rounded border border-border-subtle bg-surface-sunken/50 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-semibold text-text-primary">WhatsApp via CallMeBot (Free Personal Demo)</span>
+                <p className="text-[11px] text-text-muted">
+                  Save <span className="font-mono text-text-secondary">+34 644 71 81 99</span>, send{' '}
+                  <span className="font-mono text-[#18e299]">I allow callmebot to send me messages</span> on WhatsApp, then paste your API key below.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifConfig.callmebotEnabled}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, callmebotEnabled: e.target.checked }))}
+                  className="accent-[#18e299]"
+                />
+                <span>Enable CallMeBot</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="notif-cmb-phone" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  WhatsApp Number (with country code)
+                </label>
+                <input
+                  id="notif-cmb-phone"
+                  type="text"
+                  value={notifConfig.callmebotPhone}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, callmebotPhone: e.target.value }))}
+                  placeholder="917606911448"
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="notif-cmb-key" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  CallMeBot API Key
+                </label>
+                <input
+                  id="notif-cmb-key"
+                  type="password"
+                  value={notifConfig.callmebotApiKey}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, callmebotApiKey: e.target.value }))}
+                  placeholder="6-digit key from CallMeBot reply"
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Meta WhatsApp Cloud API Section (Optional) */}
           <details className="p-3.5 rounded border border-border-subtle bg-surface-sunken/30">
             <summary className="flex items-center justify-between cursor-pointer text-xs font-semibold text-text-secondary">
@@ -860,6 +913,9 @@ export const SetupTab: React.FC<SetupTabProps> = ({
                     if (res.results?.telegram) {
                       parts.push(res.results.telegram.ok ? 'Live gate report sent to Telegram!' : `Telegram failed: ${res.results.telegram.error}`);
                     }
+                    if (res.results?.callmebot) {
+                      parts.push(res.results.callmebot.ok ? 'Live gate report sent to CallMeBot WhatsApp!' : `CallMeBot failed: ${res.results.callmebot.error}`);
+                    }
                     if (res.results?.whatsapp) {
                       parts.push(res.results.whatsapp.ok ? 'Live gate report sent to WhatsApp!' : `WhatsApp failed: ${res.results.whatsapp.error}`);
                     }
@@ -887,6 +943,9 @@ export const SetupTab: React.FC<SetupTabProps> = ({
                     const parts: string[] = [];
                     if (res.results?.telegram) {
                       parts.push(res.results.telegram.ok ? 'Telegram sent!' : `Telegram failed: ${res.results.telegram.error}`);
+                    }
+                    if (res.results?.callmebot) {
+                      parts.push(res.results.callmebot.ok ? 'CallMeBot WhatsApp sent!' : `CallMeBot failed: ${res.results.callmebot.error}`);
                     }
                     if (res.results?.whatsapp) {
                       parts.push(res.results.whatsapp.ok ? 'WhatsApp sent!' : `WhatsApp failed: ${res.results.whatsapp.error}`);

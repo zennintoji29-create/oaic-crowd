@@ -481,6 +481,9 @@ export interface NotificationChannelConfig {
   telegramEnabled: boolean;
   telegramBotToken: string;
   telegramChatId: string;
+  callmebotEnabled: boolean;
+  callmebotPhone: string;
+  callmebotApiKey: string;
   whatsappEnabled: boolean;
   whatsappPhoneNumberId: string;
   whatsappAccessToken: string;

@@ -6,6 +6,9 @@ const DEFAULT_CHANNEL_CONFIG = {
   telegramEnabled: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
   telegramChatId: process.env.TELEGRAM_CHAT_ID || '',
+  callmebotEnabled: Boolean(process.env.CALLMEBOT_PHONE && process.env.CALLMEBOT_APIKEY),
+  callmebotPhone: process.env.CALLMEBOT_PHONE || '',
+  callmebotApiKey: process.env.CALLMEBOT_APIKEY || '',
   whatsappEnabled: false,
   whatsappPhoneNumberId: '',
   whatsappAccessToken: '',
@@ -82,6 +85,9 @@ class AlertNotifier {
       telegramEnabled: updates.telegramEnabled !== undefined ? Boolean(updates.telegramEnabled) : current.telegramEnabled,
       telegramBotToken: updates.telegramBotToken !== undefined ? String(updates.telegramBotToken).trim() : current.telegramBotToken,
       telegramChatId: updates.telegramChatId !== undefined ? String(updates.telegramChatId).trim() : current.telegramChatId,
+      callmebotEnabled: updates.callmebotEnabled !== undefined ? Boolean(updates.callmebotEnabled) : current.callmebotEnabled,
+      callmebotPhone: updates.callmebotPhone !== undefined ? String(updates.callmebotPhone).trim() : current.callmebotPhone,
+      callmebotApiKey: updates.callmebotApiKey !== undefined ? String(updates.callmebotApiKey).trim() : current.callmebotApiKey,
       whatsappEnabled: updates.whatsappEnabled !== undefined ? Boolean(updates.whatsappEnabled) : current.whatsappEnabled,
       whatsappPhoneNumberId: updates.whatsappPhoneNumberId !== undefined ? String(updates.whatsappPhoneNumberId).trim() : current.whatsappPhoneNumberId,
       whatsappAccessToken: updates.whatsappAccessToken !== undefined ? String(updates.whatsappAccessToken).trim() : current.whatsappAccessToken,
@@ -161,8 +167,31 @@ class AlertNotifier {
     return data;
   }
 
+  async sendCallMeBot(phone, apiKey, text) {
+    const cleanedPhone = String(phone || '').replace(/[^\d]/g, '');
+    if (!cleanedPhone) throw new Error('CallMeBot phone number is required');
+    const url =
+      `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(cleanedPhone)}` +
+      `&text=${encodeURIComponent(text)}` +
+      `&apikey=${encodeURIComponent(String(apiKey || '').trim())}`;
+    const res = await fetch(url);
+    const body = await res.text().catch(() => '');
+    if (!res.ok || /error/i.test(body)) {
+      throw new Error(body.slice(0, 120) || `CallMeBot HTTP ${res.status}`);
+    }
+    return { body };
+  }
+
+  hasAnyChannel(cfg) {
+    const hasTg = cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId;
+    const hasCmb = cfg.callmebotEnabled && cfg.callmebotPhone && cfg.callmebotApiKey;
+    const hasWa = cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone;
+    return Boolean(hasTg || hasCmb || hasWa);
+  }
+
   async dispatchToConfig(cfg, text) {
     const results = {};
+    const plainText = text.replace(/<[^>]+>/g, '');
 
     if (cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId) {
       try {
@@ -173,13 +202,22 @@ class AlertNotifier {
       }
     }
 
+    if (cfg.callmebotEnabled && cfg.callmebotPhone && cfg.callmebotApiKey) {
+      try {
+        await this.sendCallMeBot(cfg.callmebotPhone, cfg.callmebotApiKey, plainText);
+        results.callmebot = { ok: true };
+      } catch (err) {
+        results.callmebot = { ok: false, error: err.message };
+      }
+    }
+
     if (cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone) {
       try {
         await this.sendWhatsApp(
           cfg.whatsappPhoneNumberId,
           cfg.whatsappAccessToken,
           cfg.whatsappRecipientPhone,
-          text.replace(/<[^>]+>/g, '')
+          plainText
         );
         results.whatsapp = { ok: true };
       } catch (err) {
@@ -192,10 +230,8 @@ class AlertNotifier {
 
   async sendTest(email = null) {
     const cfg = this.getConfig(email);
-    const hasTelegram = cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId;
-    const hasWhatsApp = cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone;
-    if (!hasTelegram && !hasWhatsApp) {
-      throw new Error('Enable Telegram or WhatsApp and fill in its credentials first.');
+    if (!this.hasAnyChannel(cfg)) {
+      throw new Error('Enable Telegram, CallMeBot, or WhatsApp and fill in its credentials first.');
     }
 
     const msg =
@@ -231,9 +267,7 @@ class AlertNotifier {
 
   notifyEvent(eventKey, title, details = [], email = null, cooldownSec = 60) {
     const cfg = this.getConfig(email);
-    const hasTelegram = cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId;
-    const hasWhatsApp = cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone;
-    if (!hasTelegram && !hasWhatsApp) return;
+    if (!this.hasAnyChannel(cfg)) return;
 
     const key = `evt:${email || 'global'}:${eventKey}`;
     const last = this.lastSentAt.get(key) || 0;
@@ -253,10 +287,8 @@ class AlertNotifier {
 
   async sendLiveGateReport(gates = [], email = null) {
     const cfg = this.getConfig(email);
-    const hasTelegram = cfg.telegramEnabled && cfg.telegramBotToken && cfg.telegramChatId;
-    const hasWhatsApp = cfg.whatsappEnabled && cfg.whatsappPhoneNumberId && cfg.whatsappAccessToken && cfg.whatsappRecipientPhone;
-    if (!hasTelegram && !hasWhatsApp) {
-      throw new Error('Enable Telegram or WhatsApp and fill in its credentials first.');
+    if (!this.hasAnyChannel(cfg)) {
+      throw new Error('Enable Telegram, CallMeBot, or WhatsApp and fill in its credentials first.');
     }
 
     const lines = gates.map((g) => {
