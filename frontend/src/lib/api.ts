@@ -476,3 +476,58 @@ export async function sendMasterCommand(
   }
   return res.json();
 }
+
+export interface NotificationChannelConfig {
+  telegramEnabled: boolean;
+  telegramBotToken: string;
+  telegramChatId: string;
+  whatsappEnabled: boolean;
+  whatsappPhoneNumberId: string;
+  whatsappAccessToken: string;
+  whatsappRecipientPhone: string;
+  notifyOnAmber: boolean;
+  cooldownSeconds: number;
+}
+
+export async function fetchNotificationConfig(): Promise<NotificationChannelConfig> {
+  const res = await authFetch(`${API_BASE}/notifications/config`);
+  if (!res.ok) throw new Error('Failed to load notification settings');
+  const data = await res.json();
+  return data.config;
+}
+
+export async function updateNotificationConfig(
+  updates: Partial<NotificationChannelConfig>
+): Promise<NotificationChannelConfig> {
+  const res = await authFetch(`${API_BASE}/notifications/config`, {
+    method: 'POST',
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to save notification settings');
+  const data = await res.json();
+  return data.config;
+}
+
+export async function detectTelegramChat(
+  telegramBotToken: string
+): Promise<{ chatId: string; label: string }> {
+  const res = await authFetch(`${API_BASE}/notifications/telegram-detect`, {
+    method: 'POST',
+    body: JSON.stringify({ telegramBotToken })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Could not detect Telegram chat ID');
+  return data;
+}
+
+export async function sendTestNotification(
+  configOverride?: Partial<NotificationChannelConfig>
+): Promise<{ results: Record<string, { ok: boolean; error?: string }> }> {
+  const res = await authFetch(`${API_BASE}/notifications/test`, {
+    method: 'POST',
+    body: JSON.stringify(configOverride || {})
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to send test alert');
+  return data;
+}

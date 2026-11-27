@@ -22,6 +22,7 @@ import { storage } from './storage.js';
 import { simulator } from './simulator.js';
 import { keepAliveEngine } from './keepAlive.js';
 import { hardwareManager } from './hardwareManager.js';
+import { notifier } from './notifier.js';
 
 const app = express();
 app.set('trust proxy', 1); // Respect Render / reverse-proxy X-Forwarded-For for accurate rate limiting
@@ -1309,6 +1310,48 @@ app.post('/api/alerts/:id/ack', requireMasterAuth, (req, res) => {
 app.get('/api/audit', requireMasterAuth, (req, res) => {
   const limit = parseInt(req.query.limit || '100', 10);
   res.json({ auditLogs: storage.getAuditLogs(limit, req.masterUser?.email || null) });
+});
+
+// Notification Channels (Telegram Bot & Meta WhatsApp Cloud API)
+app.get('/api/notifications/config', requireMasterAuth, (req, res) => {
+  const email = req.masterUser?.email || null;
+  res.json({ config: notifier.getConfig(email) });
+});
+
+app.post('/api/notifications/config', requireMasterAuth, (req, res) => {
+  const email = req.masterUser?.email || null;
+  const saved = notifier.updateConfig(email, req.body || {});
+  storage.addAuditLog({
+    actorEmail: email || 'operator',
+    action: 'NOTIFICATIONS_UPDATED',
+    target: 'alerts',
+    detail: `Telegram: ${saved.telegramEnabled ? 'ON' : 'OFF'}, WhatsApp: ${saved.whatsappEnabled ? 'ON' : 'OFF'}`
+  });
+  res.json({ status: 'ok', config: saved });
+});
+
+app.post('/api/notifications/telegram-detect', requireMasterAuth, async (req, res) => {
+  try {
+    const email = req.masterUser?.email || null;
+    const token = req.body?.telegramBotToken || notifier.getConfig(email).telegramBotToken;
+    const detected = await notifier.detectTelegramChatId(token);
+    res.json({ status: 'ok', ...detected });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/notifications/test', requireMasterAuth, async (req, res) => {
+  try {
+    const email = req.masterUser?.email || null;
+    if (req.body && Object.keys(req.body).length > 0) {
+      notifier.updateConfig(email, req.body);
+    }
+    const results = await notifier.sendTest(email);
+    res.json({ status: 'ok', results });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // POST /api/commands - Operator commands from dashboard (protected)

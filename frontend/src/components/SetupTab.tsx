@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Save, Camera, ExternalLink, Sliders, Plus, Trash2 } from 'lucide-react';
+import { Save, Camera, ExternalLink, Sliders, Plus, Trash2, Bell, Send, Search } from 'lucide-react';
 import { GateState, ZoneInfo } from '../types';
 import {
   addGate,
+  detectTelegramChat,
+  fetchNotificationConfig,
   fetchSystemConfig,
+  NotificationChannelConfig,
   removeGate,
+  sendTestNotification,
   updateGateSettings,
+  updateNotificationConfig,
   updateSystemConfig,
   updateZoneConfig
 } from '../lib/api';
@@ -75,6 +80,29 @@ export const SetupTab: React.FC<SetupTabProps> = ({
         if (cfg?.cameraStreamUrl !== undefined) {
           setCameraUrl(cfg.cameraStreamUrl || '');
         }
+      })
+      .catch(() => {});
+  }, []);
+
+  const [notifConfig, setNotifConfig] = useState<NotificationChannelConfig>({
+    telegramEnabled: false,
+    telegramBotToken: '',
+    telegramChatId: '',
+    whatsappEnabled: false,
+    whatsappPhoneNumberId: '',
+    whatsappAccessToken: '',
+    whatsappRecipientPhone: '',
+    notifyOnAmber: false,
+    cooldownSeconds: 60
+  });
+  const [notifStatusMsg, setNotifStatusMsg] = useState<string | null>(null);
+  const [notifErrorMsg, setNotifErrorMsg] = useState<string | null>(null);
+  const [notifBusy, setNotifBusy] = useState(false);
+
+  useEffect(() => {
+    fetchNotificationConfig()
+      .then((cfg) => {
+        if (cfg) setNotifConfig(cfg);
       })
       .catch(() => {});
   }, []);
@@ -629,6 +657,230 @@ export const SetupTab: React.FC<SetupTabProps> = ({
           )}
         </div>
       )}
+
+      {/* 4. Alert Notifications (Telegram Bot & Meta WhatsApp Cloud API) */}
+      <div className="flat-panel p-5 space-y-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4 text-[#18e299]" aria-hidden="true" />
+            <h2 className="text-base font-semibold text-text-primary">
+              Alert Notifications (Telegram &amp; WhatsApp)
+            </h2>
+          </div>
+          <p className="text-xs text-text-secondary mt-0.5">
+            Automatically send instant RED (and optional AMBER) crowd alerts to your phone with a 60s anti-spam cooldown.
+          </p>
+        </div>
+
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setNotifErrorMsg(null);
+            setNotifStatusMsg(null);
+            setNotifBusy(true);
+            try {
+              const saved = await updateNotificationConfig(notifConfig);
+              setNotifConfig(saved);
+              setNotifStatusMsg('Notification settings saved.');
+              setTimeout(() => setNotifStatusMsg(null), 3000);
+            } catch (err: any) {
+              setNotifErrorMsg(err?.message || 'Failed to save notification settings');
+            } finally {
+              setNotifBusy(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          {/* Telegram Bot Section */}
+          <div className="p-3.5 rounded border border-border-subtle bg-surface-sunken/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-primary">Telegram Bot API (Free &amp; Unlimited)</span>
+              <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifConfig.telegramEnabled}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, telegramEnabled: e.target.checked }))}
+                  className="accent-[#18e299]"
+                />
+                <span>Enable Telegram</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="notif-tg-token" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  Bot Token (from @BotFather)
+                </label>
+                <input
+                  id="notif-tg-token"
+                  type="password"
+                  value={notifConfig.telegramBotToken}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, telegramBotToken: e.target.value }))}
+                  placeholder="1234567890:AA..."
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="notif-tg-chat" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  Chat ID (send &quot;hi&quot; to your bot, then click Detect)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="notif-tg-chat"
+                    type="text"
+                    value={notifConfig.telegramChatId}
+                    onChange={(e) => setNotifConfig((prev) => ({ ...prev, telegramChatId: e.target.value }))}
+                    placeholder="e.g. 987654321"
+                    className="flex-1 px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                  />
+                  <button
+                    type="button"
+                    disabled={notifBusy || !notifConfig.telegramBotToken.trim()}
+                    onClick={async () => {
+                      setNotifErrorMsg(null);
+                      setNotifStatusMsg(null);
+                      setNotifBusy(true);
+                      try {
+                        const detected = await detectTelegramChat(notifConfig.telegramBotToken);
+                        setNotifConfig((prev) => ({
+                          ...prev,
+                          telegramChatId: detected.chatId,
+                          telegramEnabled: true
+                        }));
+                        setNotifStatusMsg(`Detected Chat ID ${detected.chatId} (${detected.label}).`);
+                      } catch (err: any) {
+                        setNotifErrorMsg(err?.message || 'Could not detect Chat ID');
+                      } finally {
+                        setNotifBusy(false);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded border border-border-strong bg-surface-base hover:bg-surface-raised text-xs font-medium text-[#18e299] disabled:opacity-40"
+                  >
+                    <Search className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Detect</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Meta WhatsApp Cloud API Section */}
+          <div className="p-3.5 rounded border border-border-subtle bg-surface-sunken/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-primary">Meta WhatsApp Cloud API (Free 1,000 msgs/mo)</span>
+              <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifConfig.whatsappEnabled}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappEnabled: e.target.checked }))}
+                  className="accent-[#18e299]"
+                />
+                <span>Enable WhatsApp</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label htmlFor="notif-wa-phoneid" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  Phone Number ID
+                </label>
+                <input
+                  id="notif-wa-phoneid"
+                  type="text"
+                  value={notifConfig.whatsappPhoneNumberId}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappPhoneNumberId: e.target.value }))}
+                  placeholder="Meta Phone Number ID"
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="notif-wa-token" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  Access Token
+                </label>
+                <input
+                  id="notif-wa-token"
+                  type="password"
+                  value={notifConfig.whatsappAccessToken}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappAccessToken: e.target.value }))}
+                  placeholder="EAAG..."
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="notif-wa-to" className="block text-[11px] font-medium text-text-secondary mb-1">
+                  Recipient WhatsApp (with country code)
+                </label>
+                <input
+                  id="notif-wa-to"
+                  type="text"
+                  value={notifConfig.whatsappRecipientPhone}
+                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, whatsappRecipientPhone: e.target.value }))}
+                  placeholder="919876543210"
+                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notifConfig.notifyOnAmber}
+                onChange={(e) => setNotifConfig((prev) => ({ ...prev, notifyOnAmber: e.target.checked }))}
+                className="accent-[#18e299]"
+              />
+              <span>Also notify on AMBER warning (default: RED critical only)</span>
+            </label>
+          </div>
+
+          {notifErrorMsg && (
+            <p role="alert" className="text-xs text-rose-400">
+              {notifErrorMsg}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-subtle">
+            <span className="text-xs font-mono text-status-clear-text">{notifStatusMsg}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={notifBusy}
+                onClick={async () => {
+                  setNotifErrorMsg(null);
+                  setNotifStatusMsg(null);
+                  setNotifBusy(true);
+                  try {
+                    const res = await sendTestNotification(notifConfig);
+                    const parts: string[] = [];
+                    if (res.results?.telegram) {
+                      parts.push(res.results.telegram.ok ? 'Telegram sent!' : `Telegram failed: ${res.results.telegram.error}`);
+                    }
+                    if (res.results?.whatsapp) {
+                      parts.push(res.results.whatsapp.ok ? 'WhatsApp sent!' : `WhatsApp failed: ${res.results.whatsapp.error}`);
+                    }
+                    setNotifStatusMsg(parts.join(' | ') || 'Test completed.');
+                  } catch (err: any) {
+                    setNotifErrorMsg(err?.message || 'Failed to send test alert');
+                  } finally {
+                    setNotifBusy(false);
+                  }
+                }}
+                className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#18e299]/40 bg-[#18e299]/10 hover:bg-[#18e299]/20 text-[#18e299] text-xs font-semibold disabled:opacity-40"
+              >
+                <Send className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Send Test Alert</span>
+              </button>
+              <button
+                type="submit"
+                disabled={notifBusy}
+                className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-sunken hover:bg-surface-raised border border-border-strong text-text-primary rounded text-xs font-semibold transition-colors disabled:opacity-40"
+              >
+                <Save className="w-3.5 h-3.5 text-text-secondary" aria-hidden="true" />
+                <span>Save Alert Settings</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { config } from './config.js';
+import { notifier } from './notifier.js';
 import {
   isSupabaseEnabled,
   dbUpsertOperator,
@@ -586,6 +587,13 @@ class StorageManager {
 
     if (generatedAlert) {
       this.saveAlertsHistory();
+      if (targetEmails.size > 0) {
+        for (const email of targetEmails) {
+          notifier.notifyAlert(generatedAlert, email);
+        }
+      } else {
+        notifier.notifyAlert(generatedAlert, null);
+      }
     }
     this.saveTelemetryHistory(Boolean(generatedAlert));
 
