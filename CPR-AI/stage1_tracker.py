@@ -56,11 +56,13 @@ class CPRPersonTracker:
         conf_threshold: float = 0.45,
         backend_url: str = "http://localhost:3000/api/telemetry",
         stream_port: int = 5000,
+        zone_id: str = "zone-entry-a",
     ):
         self.conf_threshold = conf_threshold
         self.backend_url = os.getenv("CPR_BACKEND_URL", backend_url)
         self.auth_token = os.getenv("CPR_AUTH_KEY", "cpr-secret-key-2026")
         self.stream_port = stream_port
+        self.zone_id = os.getenv("CPR_ZONE_ID", zone_id)
 
         # 1. Device Resolution (CUDA -> MPS -> CPU)
         self.device = self._resolve_compute_device()
@@ -130,6 +132,9 @@ class CPRPersonTracker:
             print(f"  CAMERA STREAM PORT : {self.stream_port}")
             print(f"  LIVE YOLO FEED URL : http://localhost:{self.stream_port}/video_feed")
             print(f"  SNAPSHOT URL       : http://localhost:{self.stream_port}/snapshot.jpg")
+        print(f"  ACTIVE ZONE / GATE : {self.zone_id}")
+        print(f"    Gate A (default) → python stage1_tracker.py --zone zone-entry-a")
+        print(f"    Gate B           → python stage1_tracker.py --zone zone-corridor-b")
         print("  Controls: Press 'q' in the camera window to quit")
         print("=" * 65 + "\n")
         try:
@@ -196,7 +201,7 @@ class CPRPersonTracker:
             if self.telemetry:
                 self.telemetry.send_telemetry_async({
                     "deviceId": "cpr-vision-gate-01",
-                    "zoneId": "zone-entry-a",
+                    "zoneId": self.zone_id,
                     "timestamp": int(time.time() * 1000),
                     "source": "computer_vision",
                     "targetCount": current_people_count,
@@ -302,11 +307,18 @@ if __name__ == "__main__":
         default=int(os.getenv("CPR_STREAM_PORT", "5000")),
         help="HTTP MJPEG stream port (default 5000, 0 disables)",
     )
+    parser.add_argument(
+        "--zone",
+        type=str,
+        default=os.getenv("CPR_ZONE_ID", "zone-entry-a"),
+        help="Zone/gate ID to report telemetry to. Gate A: zone-entry-a (default), Gate B: zone-corridor-b",
+    )
     args = parser.parse_args()
     tracker = CPRPersonTracker(
         model_name="yolo11n.pt",
         camera_index=args.camera,
         conf_threshold=0.45,
         stream_port=args.stream_port,
+        zone_id=args.zone,
     )
     tracker.run()

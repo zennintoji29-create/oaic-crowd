@@ -58,6 +58,7 @@ export const SetupTab: React.FC<SetupTabProps> = ({
   }, [currentGate?.id]);
 
   const [cameraUrl, setCameraUrl] = useState(initialCameraUrl);
+  const [cameraGateId, setCameraGateId] = useState(gates[0]?.id || '');
   const [cameraStatusMsg, setCameraStatusMsg] = useState<string | null>(null);
   const [cameraErrorMsg, setCameraErrorMsg] = useState<string | null>(null);
   const [testPreviewKey, setTestPreviewKey] = useState(0);
@@ -275,7 +276,12 @@ export const SetupTab: React.FC<SetupTabProps> = ({
               const nextUrl = saved?.cameraStreamUrl ?? trimmed;
               setCameraUrl(nextUrl);
               onCameraUrlUpdated?.(nextUrl);
-              setCameraStatusMsg('Camera stream link saved.');
+              // If a specific gate is selected, also save to that gate's stream URL
+              if (cameraGateId && trimmed) {
+                const updatedGate = await updateGateSettings(cameraGateId, { cameraStreamUrl: trimmed });
+                onGateUpdated?.(updatedGate);
+              }
+              setCameraStatusMsg(`Camera stream link saved${cameraGateId ? ' & assigned to gate.' : '.'}`);
               setTimeout(() => setCameraStatusMsg(null), 3000);
             } catch (err: any) {
               setCameraErrorMsg(`Failed to save link: ${err.message}`);
@@ -283,6 +289,33 @@ export const SetupTab: React.FC<SetupTabProps> = ({
           }}
           className="space-y-3"
         >
+          {/* Gate Assignment Dropdown */}
+          {gates.length > 0 && (
+            <div>
+              <label htmlFor="setup-camera-gate" className="block text-xs font-medium text-text-primary mb-1">
+                Assign camera feed to gate
+              </label>
+              <select
+                id="setup-camera-gate"
+                value={cameraGateId}
+                onChange={e => setCameraGateId(e.target.value)}
+                className="w-full sm:w-72 bg-surface-base border border-border-strong text-text-primary text-xs rounded px-2.5 py-1.5 focus-visible:outline"
+              >
+                <option value="">— Global (all gates) —</option>
+                {gates.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-text-muted mt-1">
+                Telemetry from this camera will update the selected gate's people count.
+                {cameraGateId && (
+                  <span className="ml-1 text-[#18e299] font-mono">
+                    Run: python stage1_tracker.py --zone {gates.find(g => g.id === cameraGateId)?.zoneId || cameraGateId}
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
           <div>
             <label htmlFor="setup-camera-url" className="block text-xs font-medium text-text-primary mb-1">
               Camera Localhost / Stream URL

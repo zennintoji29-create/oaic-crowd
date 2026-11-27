@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { getSessionToken } from '../lib/api';
 import {
   ShieldCheck,
   Radio,
@@ -89,7 +90,9 @@ const EmeraldWaveMesh: React.FC<{ className?: string; idPrefix?: string }> = ({
 );
 
 export const Landing: React.FC = () => {
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isLoggedIn = Boolean(getSessionToken());
 
   // Real-time preview state (respects prefers-reduced-motion & user pause)
   const [previewPaused, setPreviewPaused] = useState(false);
@@ -292,18 +295,29 @@ export const Landing: React.FC = () => {
           </nav>
 
           <div className="hidden lg:flex items-center gap-2.5">
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center min-h-[36px] px-3.5 py-1.5 rounded-full text-[13px] font-medium text-neutral-300 hover:text-white transition-colors"
-            >
-              Sign in
-            </Link>
-            <a
-              href="#contact"
-              className="inline-flex items-center justify-center min-h-[36px] px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-[13px] font-semibold transition-colors"
-            >
-              Request pilot
-            </a>
+            {isLoggedIn ? (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="inline-flex items-center justify-center min-h-[36px] px-4 py-1.5 rounded-full bg-[#18e299] hover:bg-[#10d484] text-[#08090a] text-[13px] font-semibold transition-colors"
+              >
+                Go to Dashboard
+              </button>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center min-h-[36px] px-3.5 py-1.5 rounded-full text-[13px] font-medium text-neutral-300 hover:text-white transition-colors"
+                >
+                  Sign in
+                </Link>
+                <a
+                  href="#contact"
+                  className="inline-flex items-center justify-center min-h-[36px] px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-[13px] font-semibold transition-colors"
+                >
+                  Request pilot
+                </a>
+              </>
+            )}
           </div>
 
           <button
@@ -332,14 +346,24 @@ export const Landing: React.FC = () => {
                 {item.label}
               </a>
             ))}
-            <Link
-              to="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="mt-2 min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold"
-            >
-              <Lock className="w-4 h-4" aria-hidden="true" />
-              <span>Operator login</span>
-            </Link>
+            {isLoggedIn ? (
+              <button
+                onClick={() => { setMobileMenuOpen(false); navigate('/dashboard'); }}
+                className="mt-2 min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-full bg-[#18e299] hover:bg-[#10d484] text-[#08090a] text-sm font-semibold"
+              >
+                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+                <span>Go to Dashboard</span>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-2 min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-full bg-white hover:bg-neutral-200 text-[#08090a] text-sm font-semibold"
+              >
+                <Lock className="w-4 h-4" aria-hidden="true" />
+                <span>Operator login</span>
+              </Link>
+            )}
           </nav>
         )}
       </header>
@@ -396,8 +420,8 @@ export const Landing: React.FC = () => {
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </StarBorder>
                 <StarBorder
-                  as={Link}
-                  to="/login"
+                  as={isLoggedIn ? 'button' : Link}
+                  {...(isLoggedIn ? { onClick: () => navigate('/dashboard') } : { to: '/login' })}
                   color="#18e299"
                   trailColor="#0d9373"
                   stars={1}
@@ -409,8 +433,17 @@ export const Landing: React.FC = () => {
                   borderColor="rgba(255,255,255,0.14)"
                   className="min-h-[44px] px-5 py-2 text-sm font-medium hover:bg-white/[0.08] transition-colors"
                 >
-                  <Lock className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
-                  <span>Operator login</span>
+                  {isLoggedIn ? (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+                      <span>Go to Dashboard</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-[#18e299]" aria-hidden="true" />
+                      <span>Operator login</span>
+                    </>
+                  )}
                 </StarBorder>
               </div>
             </div>

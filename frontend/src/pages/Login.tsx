@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, Phone, ArrowLeft, AlertCircle, ShieldCheck, Home } from 'lucide-react';
-import { loginOperator, signupOperator, setSessionToken } from '../lib/api';
+import { loginOperator, signupOperator, setSessionToken, getSessionToken } from '../lib/api';
 import { DecryptedText, RadarBackdrop } from '../components/reactbits';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -11,6 +11,14 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+
+  // Auto-redirect to dashboard if already logged in
+  useEffect(() => {
+    if (getSessionToken()) {
+      navigate('/dashboard', { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
