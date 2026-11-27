@@ -36,6 +36,7 @@ class StorageManager {
     this.loadUserGates();
     this.loadPersistedHistory();
     this.hydrateFromSupabase();
+    notifier.setPhoneResolver((email) => this.getUserByEmail(email)?.phone || '');
   }
 
   getUserGatesFilePath() {

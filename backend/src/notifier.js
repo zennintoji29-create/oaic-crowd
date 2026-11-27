@@ -22,7 +22,12 @@ class AlertNotifier {
     this.globalConfig = { ...DEFAULT_CHANNEL_CONFIG };
     this.userConfigs = new Map();
     this.lastSentAt = new Map(); // key -> timestamp ms
+    this.phoneResolver = null;
     this.load();
+  }
+
+  setPhoneResolver(fn) {
+    this.phoneResolver = typeof fn === 'function' ? fn : null;
   }
 
   getFilePath() {
@@ -69,13 +74,21 @@ class AlertNotifier {
   }
 
   getConfig(email = null) {
+    let base = { ...this.globalConfig };
     if (email) {
       const norm = String(email).trim().toLowerCase();
       if (this.userConfigs.has(norm)) {
-        return { ...this.userConfigs.get(norm) };
+        base = { ...this.userConfigs.get(norm) };
+      }
+      if (this.phoneResolver) {
+        const accountPhone = String(this.phoneResolver(norm) || '').replace(/[^\d]/g, '');
+        if (accountPhone) {
+          if (!base.callmebotPhone) base.callmebotPhone = accountPhone;
+          if (!base.whatsappRecipientPhone) base.whatsappRecipientPhone = accountPhone;
+        }
       }
     }
-    return { ...this.globalConfig };
+    return base;
   }
 
   updateConfig(email = null, updates = {}) {

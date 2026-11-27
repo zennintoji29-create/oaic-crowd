@@ -787,19 +787,12 @@ export const SetupTab: React.FC<SetupTabProps> = ({
                 <span>Enable CallMeBot</span>
               </label>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="notif-cmb-phone" className="block text-[11px] font-medium text-text-secondary mb-1">
-                  WhatsApp Number (with country code)
-                </label>
-                <input
-                  id="notif-cmb-phone"
-                  type="text"
-                  value={notifConfig.callmebotPhone}
-                  onChange={(e) => setNotifConfig((prev) => ({ ...prev, callmebotPhone: e.target.value }))}
-                  placeholder="917606911448"
-                  className="w-full px-3 py-1.5 text-xs bg-surface-base border border-border-strong rounded font-mono text-text-primary"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+              <div className="px-3 py-1.5 rounded bg-surface-base border border-border-subtle text-xs text-text-secondary">
+                <span className="text-[11px] text-text-muted block">Account WhatsApp Number (from your profile)</span>
+                <span className="font-mono text-text-primary">
+                  {notifConfig.callmebotPhone || 'Not set (add in Profile)'}
+                </span>
               </div>
               <div>
                 <label htmlFor="notif-cmb-key" className="block text-[11px] font-medium text-text-secondary mb-1">
