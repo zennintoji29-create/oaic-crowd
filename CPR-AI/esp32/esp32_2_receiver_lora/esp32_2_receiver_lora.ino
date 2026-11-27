@@ -1,13 +1,18 @@
 /*
  * =============================================================================
- * CPR (Crowd Pressure Radar) — ESP32 #2: RECEIVER (LoRa + Buzzer + LEDs)
+ * CPR (Crowd Pressure Radar) — ESP32 #2: RECEIVER (LoRa + LEDs + Buzzer)
  * =============================================================================
  * Pin Map (Conflict-Free — avoids LoRa VSPI GPIO 18, 19, 23):
  *   LoRa SX1278 : SCK=18, MISO=19, MOSI=23, NSS=13, RST=27, DIO0=26
  *   Buzzer      : GPIO 22
  *   RED LED     : GPIO 21
  *   GREEN LED   : GPIO 25
- *   YELLOW/BLUE : GPIO 14  (moved off GPIO 23 so it doesn't conflict with LoRa MOSI!)
+ *   YELLOW LED  : GPIO 14  (moved off GPIO 23 so it doesn't conflict with LoRa MOSI)
+ *
+ * Behavior (driven by Dashboard / Master Remote / ESP32-1 over LoRa):
+ *   GREEN : Green LED ON, Buzzer OFF
+ *   AMBER : Yellow LED ON, short warning beep every 2s
+ *   RED   : Red LED ON, rapid critical alarm pulse
  * =============================================================================
  */
 
@@ -26,14 +31,36 @@
 #define GREEN_PIN   25
 #define YELLOW_PIN  14
 
+String currentAlert = "GREEN";
+unsigned long lastPacketMs = 0;
+unsigned long lastBuzzerStepMs = 0;
+bool receivedOnce = false;
+bool buzzerPulse = false;
+
 void setLights(bool r, bool y, bool g) {
   digitalWrite(RED_PIN, r ? HIGH : LOW);
   digitalWrite(YELLOW_PIN, y ? HIGH : LOW);
   digitalWrite(GREEN_PIN, g ? HIGH : LOW);
 }
 
-unsigned long lastPacketMs = 0;
-bool receivedOnce = false;
+void updateOutputs() {
+  unsigned long now = millis();
+  if (currentAlert == "RED") {
+    setLights(true, false, false);
+    if (now - lastBuzzerStepMs >= 250) {
+      lastBuzzerStepMs = now;
+      buzzerPulse = !buzzerPulse;
+      digitalWrite(BUZZER_PIN, buzzerPulse ? HIGH : LOW);
+    }
+  } else if (currentAlert == "AMBER") {
+    setLights(false, true, false);
+    unsigned long phase = now % 2000;
+    digitalWrite(BUZZER_PIN, phase < 150 ? HIGH : LOW);
+  } else {
+    setLights(false, false, true);
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -87,27 +114,24 @@ void loop() {
     if (parsed >= 4) {
       lastPacketMs = millis();
       receivedOnce = true;
-      String alertLevel = String(alertBuf);
+      currentAlert = String(alertBuf);
+      currentAlert.trim();
 
-      Serial.printf("[RX] %s (RSSI: %d dBm)\n", packet.c_str(), LoRa.packetRssi());
-
-      if (alertLevel == "RED" || (presence == 1 && distance >= 0 && distance < 400)) {
-        setLights(true, false, false);
-        digitalWrite(BUZZER_PIN, HIGH);
-      } else if (alertLevel == "AMBER" || presence == 1) {
-        setLights(false, true, false);
-        digitalWrite(BUZZER_PIN, LOW);
-      } else {
-        setLights(false, false, true);
-        digitalWrite(BUZZER_PIN, LOW);
+      if (currentAlert != "RED" && currentAlert != "AMBER" && currentAlert != "GREEN") {
+        currentAlert = (presence == 1 && distance >= 0 && distance < 350) ? "AMBER" : "GREEN";
       }
+
+      Serial.printf("[RX] %s | Alert=%s | RSSI=%d dBm\n",
+                    packet.c_str(), currentAlert.c_str(), LoRa.packetRssi());
     }
   }
 
-  if (receivedOnce && millis() - lastPacketMs > 5000) {
+  if (receivedOnce && millis() - lastPacketMs > 6000) {
     setLights(false, true, false);
     digitalWrite(BUZZER_PIN, LOW);
-    Serial.println("[WARN] LoRa link lost (>5s)");
+    Serial.println("[WARN] LoRa link lost (>6s)");
     receivedOnce = false;
+  } else {
+    updateOutputs();
   }
 }

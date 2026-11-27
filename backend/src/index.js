@@ -475,6 +475,15 @@ function applyHardwareFallbackTelemetry(device) {
     broadcast('GATE_UPDATED', g);
     broadcastSSE({ type: 'GATE_UPDATED', gate: g });
   });
+
+  if (hardwareManager.targetCommand?.alertLevel !== state) {
+    hardwareManager.issueCommand({
+      deviceId: device.deviceId,
+      type: 'SYNC_ALERT',
+      alertLevel: state,
+      source: 'HARDWARE_FALLBACK'
+    });
+  }
 }
 
 app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
@@ -878,6 +887,13 @@ app.post('/api/gates/:id/density', requireMasterAuth, (req, res) => {
 
   if (id === 'gate-a') {
     updateControlLogic(updated.count);
+  }
+  if (hardwareManager.targetCommand?.alertLevel !== updated.status) {
+    hardwareManager.issueCommand({
+      type: 'SYNC_ALERT',
+      alertLevel: updated.status,
+      source: 'MASTER_DENSITY'
+    });
   }
 
   // Inject point into storage so charts update
@@ -1309,6 +1325,15 @@ app.post('/api/master/command', requireMasterAuth, (req, res) => {
     targetGate = storage.getGate(targetGate.id, email) || resetGates[0];
     resetGates.forEach((fresh) => {
       if (fresh) broadcast('GATE_UPDATED', { ...fresh, silent: true });
+    });
+  }
+
+  if (targetGate && targetGate.id === 'gate-a') {
+    hardwareManager.issueCommand({
+      type: 'SYNC_ALERT',
+      alertLevel: targetGate.status,
+      servoAngle: targetGate.servoAngle,
+      source: 'MASTER_REMOTE'
     });
   }
 
