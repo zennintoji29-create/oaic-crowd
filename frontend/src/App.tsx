@@ -500,6 +500,7 @@ const AppRoutes: React.FC = () => {
                 {dashboardTab === 'hardware' && (
                   <HardwareControlPanel
                     snapshot={hardwareManager}
+                    gates={gates}
                     onUpdated={setHardwareManager}
                     cameraStreamUrl={cameraStreamUrl}
                   />

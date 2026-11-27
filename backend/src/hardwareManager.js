@@ -7,6 +7,7 @@ export class HardwareManager {
   constructor() {
     this.operatingMode = 'AI_CAMERA'; // 'AI_CAMERA' | 'HARDWARE_FALLBACK' | 'COMBINED_DEMO'
     this.devices = new Map();         // deviceId -> device record
+    this.zoneOverrides = new Map();   // deviceId -> assigned zoneId
     this.deviceSockets = new Map();   // deviceId -> WebSocket
     this.commandSeq = 0;
     this.lastAutoAlertSentAt = 0;
@@ -73,9 +74,10 @@ export class HardwareManager {
   registerDevice({ deviceId, zoneId = 'zone-entry-a', role = 'MASTER_ACTUATOR', firmwareVersion = '4.0.0', ip = '', capabilities = [] }) {
     const existing = this.devices.get(deviceId);
     const now = Date.now();
+    const effectiveZoneId = this.zoneOverrides.get(deviceId) || zoneId || 'zone-entry-a';
     const device = {
       deviceId,
-      zoneId,
+      zoneId: effectiveZoneId,
       role,
       firmwareVersion,
       ip: ip || existing?.ip || '',
@@ -119,6 +121,9 @@ export class HardwareManager {
 
     device.online = true;
     device.lastSeen = now;
+    if (this.zoneOverrides.has(deviceId)) {
+      device.zoneId = this.zoneOverrides.get(deviceId);
+    }
     if (ip) device.ip = ip;
     if (typeof uptimeSec === 'number') device.uptimeSec = uptimeSec;
     if (typeof wifiRssi === 'number') device.wifiRssi = wifiRssi;
@@ -154,6 +159,20 @@ export class HardwareManager {
 
     this.emitChange('HARDWARE_UPDATE');
     return device;
+  }
+
+  assignDeviceZone(deviceId, zoneId) {
+    const cleanZone = String(zoneId || 'zone-entry-a').trim();
+    const targetId = deviceId || this.getPrimaryMasterDevice()?.deviceId;
+    if (!targetId) return null;
+    this.zoneOverrides.set(targetId, cleanZone);
+    const dev = this.devices.get(targetId);
+    if (dev) {
+      dev.zoneId = cleanZone;
+    }
+    this.addEvent('INFO', 'DEVICE_ZONE_ASSIGNED', `Assigned ${targetId} to ${cleanZone}`, targetId);
+    this.emitChange('HARDWARE_UPDATE');
+    return dev || { deviceId: targetId, zoneId: cleanZone };
   }
 
   recordAck({ deviceId, seq, command, status, reportedOutputs }) {

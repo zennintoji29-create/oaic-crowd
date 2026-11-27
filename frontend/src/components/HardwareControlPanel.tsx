@@ -16,8 +16,9 @@ import {
   Terminal,
   ExternalLink
 } from 'lucide-react';
-import { HardwareManagerSnapshot, OperatingMode } from '../types';
+import { GateState, HardwareManagerSnapshot, OperatingMode } from '../types';
 import {
+  assignEsp32Gate,
   setHardwareOperatingMode,
   sendHardwareCommand,
   sendHardwareDemo
@@ -25,12 +26,14 @@ import {
 
 interface HardwareControlPanelProps {
   snapshot: HardwareManagerSnapshot | null;
+  gates?: GateState[];
   onUpdated?: (next: HardwareManagerSnapshot) => void;
   cameraStreamUrl?: string;
 }
 
 export const HardwareControlPanel: React.FC<HardwareControlPanelProps> = ({
   snapshot,
+  gates = [],
   onUpdated,
   cameraStreamUrl = ''
 }) => {
@@ -332,6 +335,40 @@ export const HardwareControlPanel: React.FC<HardwareControlPanelProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Assign ESP32 to Gate Dropdown */}
+          {gates.length > 0 && (
+            <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="esp32-gate-assign" className="text-xs text-neutral-300 font-medium">
+                Assign ESP32 Fallback Telemetry to Gate:
+              </label>
+              <select
+                id="esp32-gate-assign"
+                value={dev?.zoneId || gates[0]?.zoneId || 'zone-entry-a'}
+                disabled={!dev?.deviceId || busyAction === 'assign-gate'}
+                onChange={async (e) => {
+                  const nextZoneId = e.target.value;
+                  setBusyAction('assign-gate');
+                  setModeError(null);
+                  try {
+                    const res = await assignEsp32Gate(nextZoneId, dev?.deviceId);
+                    if (res.hardware && onUpdated) onUpdated(res.hardware);
+                  } catch (err: any) {
+                    setModeError(err?.message || 'Failed to assign gate');
+                  } finally {
+                    setBusyAction(null);
+                  }
+                }}
+                className="bg-surface-base border border-white/[0.15] text-white text-xs rounded px-2.5 py-1.5 min-w-[200px]"
+              >
+                {gates.map((g) => (
+                  <option key={g.id} value={g.zoneId}>
+                    {g.name} ({g.zoneId})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

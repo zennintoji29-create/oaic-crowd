@@ -402,6 +402,16 @@ export async function setHardwareOperatingMode(
   return data;
 }
 
+export async function assignEsp32Gate(zoneId: string, deviceId?: string): Promise<any> {
+  const res = await authFetch(`${API_BASE}/hardware/assign-zone`, {
+    method: 'POST',
+    body: JSON.stringify({ zoneId, deviceId })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to assign ESP32 to gate');
+  return data;
+}
+
 export async function sendHardwareCommand(payload: {
   deviceId?: string;
   type: 'GATE_OPEN' | 'GATE_CLOSE' | 'GATE_METER' | 'SERVO_TEST' | 'GATE_RESET' | 'BUZZER_OFF' | 'SYNC_ALERT';

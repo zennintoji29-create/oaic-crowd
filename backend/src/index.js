@@ -422,6 +422,47 @@ app.post('/api/hardware/register', requireDeviceAuth, (req, res) => {
   return res.status(201).json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
 });
 
+function computeFallbackEstimate(sensors) {
+  if (!sensors || sensors.presenceDetected !== true) return 0;
+  const dist = typeof sensors.tofDistanceMm === 'number' ? sensors.tofDistanceMm : null;
+  const energy = typeof sensors.radarEnergy === 'number' ? sensors.radarEnergy : 60;
+  let base = 4;
+  if (dist !== null && dist < 350) {
+    base = 6; // 5-7
+  } else if ((dist !== null && dist < 700) || energy >= 70) {
+    base = 4; // 3-5
+  } else {
+    base = 3; // 2-4
+  }
+  const jitter = Math.floor(Math.random() * 3) - 1; // -1, 0, +1
+  return Math.max(3, base + jitter);
+}
+
+function applyHardwareFallbackTelemetry(device) {
+  if (!device || hardwareManager.operatingMode !== 'HARDWARE_FALLBACK') return;
+  if (hardwareManager.yoloState?.cameraHealthy) return;
+  const estCount = computeFallbackEstimate(device.sensors);
+  const zoneId = device.zoneId || 'zone-entry-a';
+  const state = estCount >= 10 ? 'RED' : (estCount >= 5 ? 'AMBER' : 'GREEN');
+  const record = storage.addTelemetry({
+    deviceId: device.deviceId,
+    zoneId,
+    timestamp: Date.now(),
+    state,
+    score: Math.min(100, estCount * 12),
+    density: Number((estCount / 4.0).toFixed(2)),
+    avgSpeed: estCount >= 5 ? 0.65 : 1.2,
+    stopGoIndex: estCount >= 5 ? 0.35 : 0.1,
+    targetCount: estCount,
+    entryCount: estCount,
+    exitCount: 0,
+    activeAlerts: ['HARDWARE_FALLBACK_ACTIVE'],
+    firmwareVersion: device.firmwareVersion || '4.1.0'
+  });
+  broadcast('TELEMETRY_UPDATE', record);
+  broadcastSSE({ type: 'TELEMETRY_UPDATE', point: record, hardware: hardwareState });
+}
+
 app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
   const parsed = HardwareHeartbeatSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -438,6 +479,7 @@ app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
     if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
       hardwareState.systemMode = 'HARDWARE_FAILOVER';
       broadcast('HARDWARE_UPDATE', hardwareState);
+      applyHardwareFallbackTelemetry(device);
     }
   }
   return res.json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
@@ -459,6 +501,7 @@ app.post('/api/hardware/telemetry', requireDeviceAuth, (req, res) => {
     if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
       hardwareState.systemMode = 'HARDWARE_FAILOVER';
       broadcast('HARDWARE_UPDATE', hardwareState);
+      applyHardwareFallbackTelemetry(device);
     }
   }
   return res.json({ status: 'ok', device, targetCommand: hardwareManager.targetCommand });
@@ -480,6 +523,21 @@ app.get('/api/hardware/state', (req, res) => {
   return res.json({ status: 'ok', hardware: hardwareManager.getSnapshot() });
 });
 
+app.post('/api/hardware/assign-zone', requireMasterAuth, (req, res) => {
+  const { deviceId, zoneId } = req.body || {};
+  if (!zoneId || typeof zoneId !== 'string') {
+    return res.status(400).json({ error: 'zoneId is required' });
+  }
+  const updated = hardwareManager.assignDeviceZone(deviceId, zoneId);
+  if (!updated) {
+    return res.status(404).json({ error: 'No ESP32 device registered yet' });
+  }
+  if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
+    applyHardwareFallbackTelemetry(updated);
+  }
+  return res.json({ status: 'ok', device: updated, hardware: hardwareManager.getSnapshot() });
+});
+
 app.post('/api/hardware/mode', requireMasterAuth, async (req, res) => {
   const parsed = HardwareModeSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -491,6 +549,10 @@ app.post('/api/hardware/mode', requireMasterAuth, async (req, res) => {
   }
   hardwareState.systemMode = result.mode === 'HARDWARE_FALLBACK' ? 'HARDWARE_FAILOVER' : 'AI_VISION_PRIMARY';
   broadcast('HARDWARE_UPDATE', hardwareState);
+  if (result.mode === 'HARDWARE_FALLBACK') {
+    const primary = hardwareManager.getPrimaryMasterDevice();
+    if (primary) applyHardwareFallbackTelemetry(primary);
+  }
   const auditEntry = storage.addAuditLog({
     actorEmail: req.masterUser?.email || 'operator',
     action: 'HARDWARE_MODE',
