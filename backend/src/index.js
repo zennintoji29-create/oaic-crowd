@@ -431,20 +431,22 @@ function computeFallbackEstimate(sensors) {
   if (!sensors || sensors.presenceDetected !== true) return 0;
   const dist = typeof sensors.tofDistanceMm === 'number' ? sensors.tofDistanceMm : null;
   const energy = typeof sensors.radarEnergy === 'number' ? sensors.radarEnergy : 60;
-  let base = 4;
-  if (dist !== null && dist < 350) {
-    base = 6; // 5-7
-  } else if ((dist !== null && dist < 700) || energy >= 70) {
-    base = 4; // 3-5
-  } else {
-    base = 3; // 2-4
+  // Realistic 3-5 fluctuation for normal presence; 4-6 only if extremely close (<180mm)
+  let minVal = 3;
+  let maxVal = 5;
+  if (dist !== null && dist < 180) {
+    minVal = 4;
+    maxVal = 6;
+  } else if (dist !== null && dist > 900 && energy < 50) {
+    minVal = 2;
+    maxVal = 4;
   }
-  const jitter = Math.floor(Math.random() * 3) - 1; // -1, 0, +1
-  return Math.max(3, base + jitter);
+  return minVal + Math.floor(Math.random() * (maxVal - minVal + 1));
 }
 
 function applyHardwareFallbackTelemetry(device) {
-  if (!device || hardwareManager.operatingMode !== 'HARDWARE_FALLBACK') return;
+  const mode = hardwareManager.operatingMode;
+  if (!device || (mode !== 'HARDWARE_FALLBACK' && mode !== 'COMBINED_DEMO')) return;
   if (hardwareManager.yoloState?.cameraHealthy) return;
   const estCount = computeFallbackEstimate(device.sensors);
   const zoneId = device.zoneId || 'zone-entry-a';
@@ -466,6 +468,13 @@ function applyHardwareFallbackTelemetry(device) {
   });
   broadcast('TELEMETRY_UPDATE', record);
   broadcastSSE({ type: 'TELEMETRY_UPDATE', point: record, hardware: hardwareState });
+
+  // Broadcast GATE_UPDATED immediately so Overview Gate Cards update without polling delay
+  const syncedGates = storage.getGates(null).filter((g) => g.zoneId === zoneId);
+  syncedGates.forEach((g) => {
+    broadcast('GATE_UPDATED', g);
+    broadcastSSE({ type: 'GATE_UPDATED', gate: g });
+  });
 }
 
 app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
@@ -488,7 +497,7 @@ app.post('/api/hardware/heartbeat', requireDeviceAuth, (req, res) => {
       hardwareManager.addEvent('WARN', 'AUTO_FAILOVER', `Camera offline — automatically switched to ESP32 Hardware Fallback (${device.deviceId}).`, device.deviceId);
       hardwareManager.emitChange('HARDWARE_MANAGER_UPDATE');
     }
-    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
+    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK' || (hardwareManager.operatingMode === 'COMBINED_DEMO' && camIsStale)) {
       hardwareState.systemMode = 'HARDWARE_FAILOVER';
       broadcast('HARDWARE_UPDATE', hardwareState);
       applyHardwareFallbackTelemetry(device);
@@ -517,7 +526,7 @@ app.post('/api/hardware/telemetry', requireDeviceAuth, (req, res) => {
       hardwareManager.addEvent('WARN', 'AUTO_FAILOVER', `Camera offline — automatically switched to ESP32 Hardware Fallback (${device.deviceId}).`, device.deviceId);
       hardwareManager.emitChange('HARDWARE_MANAGER_UPDATE');
     }
-    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK') {
+    if (hardwareManager.operatingMode === 'HARDWARE_FALLBACK' || (hardwareManager.operatingMode === 'COMBINED_DEMO' && camIsStale)) {
       hardwareState.systemMode = 'HARDWARE_FAILOVER';
       broadcast('HARDWARE_UPDATE', hardwareState);
       applyHardwareFallbackTelemetry(device);
