@@ -773,7 +773,7 @@ export const SetupTab: React.FC<SetupTabProps> = ({
               <div>
                 <span className="text-xs font-semibold text-text-primary">WhatsApp via CallMeBot (Free Personal Demo)</span>
                 <p className="text-[11px] text-text-muted">
-                  Save <span className="font-mono text-text-secondary">+34 644 71 81 99</span>, send{' '}
+                  Save <span className="font-mono text-text-secondary">+34 644 99 26 98</span>, send{' '}
                   <span className="font-mono text-[#18e299]">I allow callmebot to send me messages</span> on WhatsApp, then paste your API key below.
                 </p>
               </div>
